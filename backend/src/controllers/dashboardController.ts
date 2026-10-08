@@ -1,0 +1,299 @@
+import { Response } from 'express';
+import { prisma } from '../prisma/client';
+import { AuthenticatedRequest } from '../middleware/auth';
+
+const MONTH_NAMES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+const FULL_MONTH_NAMES = [
+  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+];
+
+export async function getDashboardOverview(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const userId = req.userId!;
+    const now = new Date();
+    const currentMonth = req.query.month ? parseInt(req.query.month as string) : (now.getMonth() + 1);
+    const currentYear = req.query.year ? parseInt(req.query.year as string) : now.getFullYear();
+
+    // 1. User Profile
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true, savingsGoal: true, createdAt: true },
+    });
+
+    if (!user) {
+      res.status(404).json({ message: 'Usuário não encontrado' });
+      return;
+    }
+
+    // 2. Fixed Expenses for the specified month/year
+    const fixedExpenses = await prisma.fixedExpense.findMany({
+      where: { userId },
+      include: {
+        payments: {
+          where: { month: currentMonth, year: currentYear },
+        },
+      },
+      orderBy: { dueDay: 'asc' },
+    });
+
+    const fixedFormatted = fixedExpenses.map((exp) => {
+      const payment = exp.payments[0];
+      const isPaid = payment ? payment.isPaid : false;
+      const hasCustomAmount = payment?.amount !== null && payment?.amount !== undefined;
+      const effectiveAmount = hasCustomAmount ? payment!.amount! : exp.amount;
+      return {
+        id: exp.id,
+        description: exp.description,
+        amount: effectiveAmount,
+        baseAmount: exp.amount,
+        hasCustomAmount,
+        dueDay: exp.dueDay,
+        firstDueDate: exp.firstDueDate,
+        endDate: exp.endDate,
+        category: exp.category,
+        isPaid,
+        paidAt: payment?.paidAt || null,
+      };
+    });
+
+    const fixedTotal = fixedFormatted.reduce((acc, curr) => acc + curr.amount, 0);
+    const fixedPaidCount = fixedFormatted.filter((e) => e.isPaid).length;
+    const fixedTotalCount = fixedFormatted.length;
+    const fixedOrganizedPct = fixedTotalCount > 0 ? Math.round((fixedPaidCount / fixedTotalCount) * 100) : 0;
+
+    // 3. Variable Expenses for the specified month/year
+    const startOfMonth = new Date(Date.UTC(currentYear, currentMonth - 1, 1, 0, 0, 0, 0));
+    const endOfMonth = new Date(Date.UTC(currentYear, currentMonth, 0, 23, 59, 59, 999));
+
+    const variableExpenses = await prisma.variableExpense.findMany({
+      where: {
+        userId,
+        date: { gte: startOfMonth, lte: endOfMonth },
+      },
+      orderBy: { date: 'desc' },
+    });
+
+    const variableTotal = variableExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+    const totalExpenses = fixedTotal + variableTotal;
+
+    // 4. Revenues for the specified month/year
+    const revenues = await prisma.revenue.findMany({
+      where: {
+        userId,
+        date: { gte: startOfMonth, lte: endOfMonth },
+      },
+      orderBy: { date: 'desc' },
+    });
+
+    const totalRevenues = revenues.reduce((acc, curr) => acc + curr.amount, 0);
+
+    // 5. Savings
+    const savingsItems = await prisma.savings.findMany({
+      where: { userId },
+      orderBy: { date: 'desc' },
+    });
+
+    const totalSavings = savingsItems.reduce((acc, curr) => acc + curr.amount, 0);
+    const savingsGoal = user.savingsGoal || 0;
+    const savingsPct = savingsGoal > 0 ? Math.min(Math.round((totalSavings / savingsGoal) * 100), 100) : 0;
+
+    // 6. Current Month Net Balance
+    const saldoDisponivel = totalRevenues - totalExpenses;
+
+    // 7. Previous month metrics for real growth calculation
+    const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+    const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+    const startOfPrevMonth = new Date(Date.UTC(prevYear, prevMonth - 1, 1, 0, 0, 0, 0));
+    const endOfPrevMonth = new Date(Date.UTC(prevYear, prevMonth, 0, 23, 59, 59, 999));
+
+    const [prevRevenues, prevVariable] = await Promise.all([
+      prisma.revenue.findMany({
+        where: { userId, date: { gte: startOfPrevMonth, lte: endOfPrevMonth } },
+      }),
+      prisma.variableExpense.findMany({
+        where: { userId, date: { gte: startOfPrevMonth, lte: endOfPrevMonth } },
+      }),
+    ]);
+
+    const prevTotalRevenues = prevRevenues.reduce((acc, curr) => acc + curr.amount, 0);
+    const prevTotalExpenses = fixedTotal + prevVariable.reduce((acc, curr) => acc + curr.amount, 0);
+    const prevSaldo = prevTotalRevenues - prevTotalExpenses;
+
+    const receitasGrowthPct =
+      prevTotalRevenues > 0
+        ? Math.round(((totalRevenues - prevTotalRevenues) / prevTotalRevenues) * 1000) / 10
+        : 0;
+
+    const saldoGrowthPct =
+      prevSaldo > 0
+        ? Math.round(((saldoDisponivel - prevSaldo) / prevSaldo) * 1000) / 10
+        : 0;
+
+    // 8. Upcoming Bills (pending fixed expenses with effective amounts)
+    const upcomingBills = fixedFormatted
+      .filter((e) => !e.isPaid)
+      .map((e) => {
+        const monthLabel = FULL_MONTH_NAMES[currentMonth - 1]?.slice(0, 3) || 'mês';
+        return {
+          id: e.id,
+          description: e.description,
+          category: e.category,
+          amount: e.amount,
+          hasCustomAmount: e.hasCustomAmount,
+          dueDay: e.dueDay,
+          dueDateFormatted: `Vence em ${e.dueDay} de ${monthLabel}.`,
+          type: 'fixed',
+        };
+      });
+
+    // 9. Unified Transactions (Histórico de transações: todas as entradas e saídas do mês)
+    const transactions = [
+      ...revenues.map((r) => {
+        const d = new Date(r.date);
+        const day = String(d.getUTCDate()).padStart(2, '0');
+        const mLabel = FULL_MONTH_NAMES[d.getUTCMonth()]?.slice(0, 3) || '';
+        return {
+          id: `rev-${r.id}`,
+          originalId: r.id,
+          type: 'revenue' as const, // Entrada
+          description: r.description,
+          category: r.category,
+          amount: r.amount,
+          date: r.date,
+          dateFormatted: `${day} de ${mLabel}.`,
+          isPaid: true,
+          status: 'received' as const,
+          statusLabel: 'Recebido',
+        };
+      }),
+      ...variableExpenses.map((v) => {
+        const d = new Date(v.date);
+        const day = String(d.getUTCDate()).padStart(2, '0');
+        const mLabel = FULL_MONTH_NAMES[d.getUTCMonth()]?.slice(0, 3) || '';
+        return {
+          id: `var-${v.id}`,
+          originalId: v.id,
+          type: 'variable_expense' as const, // Saída variável
+          description: v.description,
+          category: v.category,
+          amount: v.amount,
+          date: v.date,
+          dateFormatted: `${day} de ${mLabel}.`,
+          isPaid: true,
+          status: 'paid' as const,
+          statusLabel: 'Pago',
+        };
+      }),
+      ...fixedFormatted
+        .filter((f) => f.isPaid)
+        .map((f) => {
+          const dueDate = new Date(Date.UTC(currentYear, currentMonth - 1, Math.min(f.dueDay, 28), 12, 0, 0));
+          const mLabel = FULL_MONTH_NAMES[currentMonth - 1]?.slice(0, 3) || '';
+          const txDate = f.paidAt ? new Date(f.paidAt) : dueDate;
+          const day = String(txDate.getUTCDate()).padStart(2, '0');
+          return {
+            id: `fix-${f.id}`,
+            originalId: f.id,
+            type: 'fixed_expense' as const, // Saída fixa efetuada
+            description: f.description,
+            category: f.category,
+            amount: f.amount,
+            hasCustomAmount: f.hasCustomAmount,
+            dueDay: f.dueDay,
+            date: txDate,
+            dateFormatted: `${day} de ${mLabel}.`,
+            isPaid: true,
+            status: 'paid' as const,
+            statusLabel: 'Pago',
+          };
+        }),
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    // 10. Recent Revenues (for backwards compatibility)
+    const recentRevenues = revenues.slice(0, 5).map((r) => {
+      const d = new Date(r.date);
+      const day = String(d.getUTCDate()).padStart(2, '0');
+      const mLabel = FULL_MONTH_NAMES[d.getUTCMonth()]?.slice(0, 3) || '';
+      return {
+        id: r.id,
+        description: r.description,
+        category: r.category,
+        amount: r.amount,
+        dateFormatted: `${r.category} • ${day} de ${mLabel}.`,
+      };
+    });
+
+    // 11. 6-Month Chart Calculation (kept for optional analytics)
+    const chartData = [];
+    for (let i = 5; i >= 0; i--) {
+      let targetMonth = currentMonth - i;
+      let targetYear = currentYear;
+      while (targetMonth <= 0) {
+        targetMonth += 12;
+        targetYear -= 1;
+      }
+
+      const mStart = new Date(Date.UTC(targetYear, targetMonth - 1, 1, 0, 0, 0, 0));
+      const mEnd = new Date(Date.UTC(targetYear, targetMonth, 0, 23, 59, 59, 999));
+
+      const [mRevs, mVars] = await Promise.all([
+        prisma.revenue.findMany({
+          where: { userId, date: { gte: mStart, lte: mEnd } },
+          select: { amount: true },
+        }),
+        prisma.variableExpense.findMany({
+          where: { userId, date: { gte: mStart, lte: mEnd } },
+          select: { amount: true },
+        }),
+      ]);
+
+      const mTotalRev = mRevs.reduce((acc, c) => acc + c.amount, 0);
+      const mTotalVar = mVars.reduce((acc, c) => acc + c.amount, 0);
+
+      chartData.push({
+        name: MONTH_NAMES[targetMonth - 1],
+        month: targetMonth,
+        year: targetYear,
+        receitas: mTotalRev,
+        despesas: (fixedTotal > 0 ? fixedTotal : 0) + mTotalVar,
+      });
+    }
+
+    res.json({
+      user: {
+        name: user.name,
+        email: user.email,
+        savingsGoal: user.savingsGoal,
+        createdAt: user.createdAt,
+      },
+      currentMonth,
+      currentYear,
+      kpis: {
+        saldoDisponivel,
+        saldoGrowthPct,
+        receitasTotais: totalRevenues,
+        receitasGrowthPct,
+        despesasTotais: totalExpenses,
+        despesasSubtitle: 'Fixas e variáveis',
+        naPoupanca: totalSavings,
+        totalPoupancaAcumulada: totalSavings,
+        poupancaGoalPct: savingsPct,
+      },
+      sidebarStatus: {
+        organizedPercentage: fixedOrganizedPct,
+        text:
+          fixedTotalCount > 0
+            ? `Você já organizou ${fixedOrganizedPct}% das despesas fixas.`
+            : 'Cadastre suas despesas fixas para acompanhar a organização do mês.',
+      },
+      chartData,
+      upcomingBills,
+      recentRevenues,
+      transactions,
+    });
+  } catch (error) {
+    console.error('getDashboardOverview error:', error);
+    res.status(500).json({ message: 'Erro ao carregar dados da visão geral' });
+  }
+}

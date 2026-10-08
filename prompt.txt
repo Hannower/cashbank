@@ -1,0 +1,44 @@
+### INSTRUÇÃO (A AÇÃO CENTRAL)
+Aja como um desenvolvedor web senior.
+
+---
+
+### CONTEXTO (O CENÁRIO DE FUNDO)
+Preciso de um aplicativo de controle financeiro, onde será possível registrar, consultar e editar todas as despesas e receitas do usuário.
+
+---
+
+### EXEMPLOS (PADRÃO OURO DE ENTRADA/SAÍDA)
+Use como referência os seguintes arquivos:
+<dados>
+1-login.PNG
+2-tela-principal.PNG
+3-despesas-fixas.PNG
+4-despesas-fixas-cadastro-modal.PNG
+5-despesas-fixas-editar-modal.PNG
+6-despesas-variaveis.PNG
+7-despesas-variaveis-cadastro-modal.PNG
+8-despesas-variveis-editar-modal.PNG
+9-receitas.PNG
+10-receitas-cadastro-modal.PNG
+11-Poupanca.PNG
+12-poupanca-cadastro-modal.PNG
+</dados>
+
+---
+
+### TAREFA FINAL (O GATILHO IMEDIATO)
+Crie um sistema de controle financeiro onde será possível administrar todas as despesas e receitas do usuário.
+
+Use os arquivos de imagem como modelo.
+
+Ferramentas: react, node.js, express, typescript, supabase/prisma, e o que achar necessário.
+
+As informações do banco de dados estão no .env.
+
+Faça responsivo.
+
+Faça com as pastas de frontend e backend separadas.
+
+Todas as telas de receita, despesa e poupança devem ser um CRUD, com opções de cadastrar, editar e excluir transações.
+

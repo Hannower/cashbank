@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id               String                @id @default(uuid())
+  name             String
+  email            String                @unique
+  password         String
+  savingsGoal      Float                 @default(2720.0) // Target amount for savings goal (e.g. 1850 / 2720 = ~68%)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  fixedExpenses    FixedExpense[]
+  fixedExpensePayments FixedExpensePayment[]
+  variableExpenses VariableExpense[]
+  revenues         Revenue[]
+  savings          Savings[]
+}
+
+model FixedExpense {
+  id           String                @id @default(uuid())
+  userId       String
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  description  String
+  amount       Float
+  dueDay       Int
+  firstDueDate DateTime
+  endDate      DateTime?
+  category     String
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  payments     FixedExpensePayment[]
+}
+
+model FixedExpensePayment {
+  id             String       @id @default(uuid())
+  fixedExpenseId String
+  fixedExpense   FixedExpense @relation(fields: [fixedExpenseId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  month          Int          // 1 - 12
+  year           Int          // 2025, 2026, etc.
+  isPaid         Boolean      @default(false)
+  paidAt         DateTime?
+  amount         Float?       // Custom amount override for this specific month (e.g. Fatura Nubank, Luz)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([fixedExpenseId, month, year])
+}
+
+model VariableExpense {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  description String
+  amount      Float
+  date        DateTime
+  category    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Revenue {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  description String
+  amount      Float
+  date        DateTime
+  category    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Savings {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  description String
+  amount      Float
+  date        DateTime
+  objective   String   @default("Poupança")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
