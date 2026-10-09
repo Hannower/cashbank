@@ -42,7 +42,7 @@ export async function getVariableExpenses(req: AuthenticatedRequest, res: Respon
 export async function createVariableExpense(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const userId = req.userId!;
-    const { description, amount, date, category } = req.body;
+    const { description, amount, date, category, pixKey } = req.body;
 
     if (!description || amount === undefined || !date || !category) {
       res.status(400).json({ message: 'Todos os campos obrigatórios devem ser preenchidos' });
@@ -56,6 +56,7 @@ export async function createVariableExpense(req: AuthenticatedRequest, res: Resp
         amount: parseFloat(amount),
         date: new Date(date),
         category,
+        pixKey: pixKey ? String(pixKey).trim() : null,
       },
     });
 
@@ -70,7 +71,7 @@ export async function updateVariableExpense(req: AuthenticatedRequest, res: Resp
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const { description, amount, date, category } = req.body;
+    const { description, amount, date, category, pixKey } = req.body;
 
     const existing = await prisma.variableExpense.findFirst({
       where: { id, userId },
@@ -88,6 +89,7 @@ export async function updateVariableExpense(req: AuthenticatedRequest, res: Resp
         amount: amount !== undefined ? parseFloat(amount) : existing.amount,
         date: date ? new Date(date) : existing.date,
         category: category ?? existing.category,
+        pixKey: pixKey !== undefined ? (pixKey ? String(pixKey).trim() : null) : existing.pixKey,
       },
     });
 

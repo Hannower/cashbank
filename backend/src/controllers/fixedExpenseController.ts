@@ -43,6 +43,7 @@ export async function getFixedExpenses(req: AuthenticatedRequest, res: Response)
         firstDueDate: exp.firstDueDate,
         endDate: exp.endDate,
         category: exp.category,
+        pixKey: exp.pixKey,
         isPaid,
         paidAt: payment?.paidAt || null,
       };
@@ -75,7 +76,7 @@ export async function getFixedExpenses(req: AuthenticatedRequest, res: Response)
 export async function createFixedExpense(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const userId = req.userId!;
-    const { description, amount, firstDueDate, endDate, category } = req.body;
+    const { description, amount, firstDueDate, endDate, category, pixKey } = req.body;
 
     if (!description || amount === undefined || !firstDueDate || !category) {
       res.status(400).json({ message: 'Todos os campos obrigatórios devem ser preenchidos' });
@@ -94,6 +95,7 @@ export async function createFixedExpense(req: AuthenticatedRequest, res: Respons
         firstDueDate: firstDate,
         endDate: endDate ? new Date(endDate) : null,
         category,
+        pixKey: pixKey ? String(pixKey).trim() : null,
       },
     });
 
@@ -108,7 +110,7 @@ export async function updateFixedExpense(req: AuthenticatedRequest, res: Respons
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const { description, amount, firstDueDate, endDate, category } = req.body;
+    const { description, amount, firstDueDate, endDate, category, pixKey } = req.body;
 
     const existing = await prisma.fixedExpense.findFirst({
       where: { id, userId },
@@ -136,6 +138,7 @@ export async function updateFixedExpense(req: AuthenticatedRequest, res: Respons
         endDate: endDate !== undefined ? (endDate ? new Date(endDate) : null) : existing.endDate,
         category: category ?? existing.category,
         dueDay,
+        pixKey: pixKey !== undefined ? (pixKey ? String(pixKey).trim() : null) : existing.pixKey,
       },
     });
 

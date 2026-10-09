@@ -57,6 +57,7 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
         firstDueDate: exp.firstDueDate,
         endDate: exp.endDate,
         category: exp.category,
+        pixKey: exp.pixKey,
         isPaid,
         paidAt: payment?.paidAt || null,
       };
@@ -148,6 +149,7 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
           hasCustomAmount: e.hasCustomAmount,
           dueDay: e.dueDay,
           dueDateFormatted: `Vence em ${e.dueDay} de ${monthLabel}.`,
+          pixKey: e.pixKey,
           type: 'fixed',
         };
       });
@@ -183,6 +185,7 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
           description: v.description,
           category: v.category,
           amount: v.amount,
+          pixKey: (v as any).pixKey || null,
           date: v.date,
           dateFormatted: `${day} de ${mLabel}.`,
           isPaid: true,
@@ -206,6 +209,7 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
             amount: f.amount,
             hasCustomAmount: f.hasCustomAmount,
             dueDay: f.dueDay,
+            pixKey: f.pixKey || null,
             date: txDate,
             dateFormatted: `${day} de ${mLabel}.`,
             isPaid: true,
@@ -265,6 +269,22 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
       });
     }
 
+    // 12. Monthly Expense Categories breakdown
+    const categoryTotals: Record<string, number> = {};
+    for (const exp of fixedFormatted) {
+      categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + exp.amount;
+    }
+    for (const v of variableExpenses) {
+      categoryTotals[v.category] = (categoryTotals[v.category] || 0) + v.amount;
+    }
+    const categoriesList = Object.entries(categoryTotals)
+      .map(([name, total]) => ({
+        name,
+        total,
+        percentage: totalExpenses > 0 ? Math.round((total / totalExpenses) * 100) : 0,
+      }))
+      .sort((a, b) => b.total - a.total);
+
     res.json({
       user: {
         name: user.name,
@@ -293,6 +313,7 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
             : 'Cadastre suas despesas fixas para acompanhar a organização do mês.',
       },
       chartData,
+      categories: categoriesList,
       upcomingBills,
       recentRevenues,
       transactions,

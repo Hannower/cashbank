@@ -16,6 +16,10 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
+  PieChart,
+  QrCode,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -27,6 +31,29 @@ interface DashboardViewProps {
   onNavigate: (tab: NavTab) => void;
   onOpenQuickLaunch: () => void;
 }
+
+const getCategoryColor = (category: string) => {
+  switch (category) {
+    case 'Moradia':
+      return { bg: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8', bar: '#3b82f6', dot: '#2563eb' };
+    case 'Alimentação':
+      return { bg: '#fffbeb', border: '#fde68a', text: '#b45309', bar: '#f59e0b', dot: '#d97706' };
+    case 'Transporte':
+      return { bg: '#f0f9ff', border: '#bae6fd', text: '#0369a1', bar: '#0ea5e9', dot: '#0284c7' };
+    case 'Streaming':
+      return { bg: '#faf5ff', border: '#e9d5ff', text: '#6b21a8', bar: '#a855f7', dot: '#9333ea' };
+    case 'Lazer':
+      return { bg: '#fdf2f8', border: '#fbcfe8', text: '#be185d', bar: '#ec4899', dot: '#db2777' };
+    case 'Saúde':
+      return { bg: '#fef2f2', border: '#fecaca', text: '#b91c1c', bar: '#ef4444', dot: '#dc2626' };
+    case 'Educação':
+      return { bg: '#f0fdfa', border: '#99f6e4', text: '#0f766e', bar: '#14b8a6', dot: '#0d9488' };
+    case 'Serviços':
+      return { bg: '#f8fafc', border: '#e2e8f0', text: '#334155', bar: '#64748b', dot: '#475569' };
+    default:
+      return { bg: '#f8fafc', border: '#e2e8f0', text: '#475569', bar: '#94a3b8', dot: '#64748b' };
+  }
+};
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpenQuickLaunch }) => {
   const { user } = useAuth();
@@ -41,6 +68,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
   const [selectedAnnualYear, setSelectedAnnualYear] = useState<number>(() => selectedMonth.year);
   const [annualData, setAnnualData] = useState<any>(null);
   const [annualLoading, setAnnualLoading] = useState(false);
+  const [copiedPixId, setCopiedPixId] = useState<string | null>(null);
+
+  const handleCopyPix = async (id: string, key: string) => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(key);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = key;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopiedPixId(id);
+      setTimeout(() => setCopiedPixId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy Pix:', err);
+    }
+  };
 
   const fetchDashboardData = async (month: number, year: number) => {
     try {
@@ -473,6 +520,84 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
         </div>
       </div>
 
+      {/* Gastos por Categoria (Visão Mensal) */}
+      <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 10 }}>
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--text-main, #0f172a)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <PieChart size={18} color="#15803d" />
+              Gastos por categoria em {FULL_MONTH_NAMES[selectedMonth.month - 1]} de {selectedMonth.year}
+            </h3>
+            <p style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)', margin: '2px 0 0' }}>
+              Distribuição proporcional das despesas fixas e variáveis deste mês
+            </p>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary, #64748b)' }}>
+            Total de despesas: <strong style={{ color: 'var(--text-main, #0f172a)', fontSize: 13 }}>{formatCurrency(data?.kpis?.despesasTotais ?? 0)}</strong>
+          </div>
+        </div>
+
+        {!data?.categories || data.categories.length === 0 ? (
+          <div
+            style={{
+              padding: '24px 16px',
+              textAlign: 'center',
+              color: 'var(--text-muted, #94a3b8)',
+              fontSize: 13,
+              backgroundColor: 'var(--bg-item, #f8fafc)',
+              borderRadius: 10,
+              border: '1px solid var(--border-color, #f1f5f9)',
+            }}
+          >
+            Nenhuma despesa registrada em {selectedMonth.label} de {selectedMonth.year}.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
+            {data.categories.map((cat: any) => {
+              const theme = getCategoryColor(cat.name);
+              return (
+                <div
+                  key={cat.name}
+                  style={{
+                    padding: 14,
+                    borderRadius: 12,
+                    backgroundColor: theme.bg,
+                    border: `1px solid ${theme.border}`,
+                    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: theme.dot }} />
+                      <span style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>
+                        {cat.name}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: theme.text }}>
+                      {cat.percentage}%
+                    </span>
+                  </div>
+                  <div style={{ width: '100%', height: 6, backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+                    <div
+                      style={{
+                        width: `${Math.min(cat.percentage, 100)}%`,
+                        height: '100%',
+                        backgroundColor: theme.bar,
+                        borderRadius: 3,
+                        transition: 'width 0.4s ease',
+                      }}
+                    />
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>
+                    {formatCurrency(cat.total)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Row 2: Histórico de Transações & Próximos Vencimentos */}
       <div
         style={{
@@ -652,25 +777,51 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                     </div>
 
                     {/* Right: Status and Amount */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                      {isFixed && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {isFixed && (
+                          <span
+                            className="badge-paid"
+                            style={{ fontSize: 11, padding: '2px 8px' }}
+                          >
+                            Pago
+                          </span>
+                        )}
                         <span
-                          className="badge-paid"
-                          style={{ fontSize: 11, padding: '2px 8px' }}
+                          style={{
+                            fontSize: 14,
+                            fontWeight: 800,
+                            color: isRevenue ? '#16a34a' : 'var(--text-main, #0f172a)',
+                            whiteSpace: 'nowrap',
+                          }}
                         >
-                          Pago
+                          {isRevenue ? `+ ${formatCurrency(tx.amount)}` : `- ${formatCurrency(tx.amount)}`}
                         </span>
+                      </div>
+                      {tx.pixKey && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopyPix(tx.id, tx.pixKey)}
+                          title={`Chave Pix: ${tx.pixKey}`}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 3,
+                            padding: '2px 6px',
+                            borderRadius: 5,
+                            backgroundColor: copiedPixId === tx.id ? '#15803d' : '#ecfdf5',
+                            color: copiedPixId === tx.id ? '#ffffff' : '#047857',
+                            border: '1px solid #a7f3d0',
+                            fontSize: 10,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <QrCode size={10} />
+                          {copiedPixId === tx.id ? 'Pix copiado!' : 'Copiar Pix'}
+                        </button>
                       )}
-                      <span
-                        style={{
-                          fontSize: 14,
-                          fontWeight: 800,
-                          color: isRevenue ? '#16a34a' : 'var(--text-main, #0f172a)',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {isRevenue ? `+ ${formatCurrency(tx.amount)}` : `- ${formatCurrency(tx.amount)}`}
-                      </span>
                     </div>
                   </div>
                 );
@@ -779,6 +930,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                     <div>{formatCurrency(bill.amount)}</div>
                     {bill.hasCustomAmount && (
                       <span style={{ fontSize: 10, color: '#b45309', fontWeight: 600 }}>Ajustado</span>
+                    )}
+                    {bill.pixKey && (
+                      <div style={{ marginTop: 4 }}>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyPix(bill.id, bill.pixKey)}
+                          title={`Chave Pix: ${bill.pixKey}`}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            padding: '2px 7px',
+                            borderRadius: 5,
+                            backgroundColor: copiedPixId === bill.id ? '#15803d' : '#ecfdf5',
+                            color: copiedPixId === bill.id ? '#ffffff' : '#047857',
+                            border: '1px solid #a7f3d0',
+                            fontSize: 10,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <QrCode size={10} />
+                          {copiedPixId === bill.id ? 'Pix copiado!' : 'Copiar Pix'}
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1114,48 +1291,82 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
         </div>
 
         {/* Despesas por Categoria no Ano */}
-        {annualData?.categories && annualData.categories.length > 0 && (
-          <div className="card" style={{ padding: 24, marginBottom: 24 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 16px', color: 'var(--text-main, #0f172a)' }}>
-              Gastos por categoria em {selectedAnnualYear}
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
-              {annualData.categories.map((cat: any) => (
-                <div
-                  key={cat.name}
-                  style={{
-                    padding: 14,
-                    borderRadius: 12,
-                    backgroundColor: 'var(--bg-item, #f8fafc)',
-                    border: '1px solid var(--border-color, #f1f5f9)',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-main, #0f172a)' }}>
-                      {cat.name}
-                    </span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted, #64748b)' }}>
-                      {cat.percentage}%
-                    </span>
-                  </div>
-                  <div style={{ width: '100%', height: 6, backgroundColor: 'var(--border-input, #e2e8f0)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
-                    <div
-                      style={{
-                        width: `${Math.min(cat.percentage, 100)}%`,
-                        height: '100%',
-                        backgroundColor: '#ea580c',
-                        borderRadius: 3,
-                      }}
-                    />
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>
-                    {formatCurrency(cat.total)}
-                  </div>
-                </div>
-              ))}
+        <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 10 }}>
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--text-main, #0f172a)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <PieChart size={18} color="#15803d" />
+                Gastos por categoria em {selectedAnnualYear}
+              </h3>
+              <p style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)', margin: '2px 0 0' }}>
+                Consolidação anual de despesas fixas e variáveis por categoria
+              </p>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary, #64748b)' }}>
+              Total no ano: <strong style={{ color: 'var(--text-main, #0f172a)', fontSize: 13 }}>{formatCurrency(annualData?.kpis?.totalAnnualExpenses ?? 0)}</strong>
             </div>
           </div>
-        )}
+
+          {!annualData?.categories || annualData.categories.length === 0 ? (
+            <div
+              style={{
+                padding: '24px 16px',
+                textAlign: 'center',
+                color: 'var(--text-muted, #94a3b8)',
+                fontSize: 13,
+                backgroundColor: 'var(--bg-item, #f8fafc)',
+                borderRadius: 10,
+                border: '1px solid var(--border-color, #f1f5f9)',
+              }}
+            >
+              Nenhum gasto registrado em {selectedAnnualYear}.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
+              {annualData.categories.map((cat: any) => {
+                const theme = getCategoryColor(cat.name);
+                return (
+                  <div
+                    key={cat.name}
+                    style={{
+                      padding: 14,
+                      borderRadius: 12,
+                      backgroundColor: theme.bg,
+                      border: `1px solid ${theme.border}`,
+                      transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: theme.dot }} />
+                        <span style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>
+                          {cat.name}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: theme.text }}>
+                        {cat.percentage}%
+                      </span>
+                    </div>
+                    <div style={{ width: '100%', height: 6, backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+                      <div
+                        style={{
+                          width: `${Math.min(cat.percentage, 100)}%`,
+                          height: '100%',
+                          backgroundColor: theme.bar,
+                          borderRadius: 3,
+                          transition: 'width 0.4s ease',
+                        }}
+                      />
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>
+                      {formatCurrency(cat.total)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     )
   )}
