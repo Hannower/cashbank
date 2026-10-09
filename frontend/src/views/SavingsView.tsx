@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   Plus,
+  MinusCircle,
+  ArrowDownRight,
   Pencil,
   Trash2,
   PiggyBank,
@@ -25,15 +27,22 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<SavingsItem | null>(null);
   const [deletingItem, setDeletingItem] = useState<SavingsItem | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Form states
+  // Form states (Guardar)
   const [formDesc, setFormDesc] = useState('');
   const [formAmount, setFormAmount] = useState('');
   const [formDate, setFormDate] = useState('');
   const [formObjective, setFormObjective] = useState('Poupança');
+
+  // Form states (Retirar)
+  const [withdrawDesc, setWithdrawDesc] = useState('');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawDate, setWithdrawDate] = useState('');
+  const [withdrawObjective, setWithdrawObjective] = useState('Resgate');
 
   const fetchSavings = async () => {
     try {
@@ -61,10 +70,19 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
     setIsCreateModalOpen(true);
   };
 
+  const openWithdrawModal = () => {
+    setWithdrawDesc('Retirada de poupança');
+    setWithdrawAmount('');
+    const today = new Date().toISOString().split('T')[0];
+    setWithdrawDate(today);
+    setWithdrawObjective('Resgate');
+    setIsWithdrawModalOpen(true);
+  };
+
   const openEditModal = (item: SavingsItem) => {
     setEditingItem(item);
     setFormDesc(item.description);
-    setFormAmount(String(item.amount));
+    setFormAmount(String(Math.abs(item.amount)));
     setFormDate(item.date ? item.date.split('T')[0] : '');
     setFormObjective(item.objective);
   };
@@ -77,7 +95,7 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
       setActionLoading(true);
       await api.createSavings({
         description: formDesc,
-        amount: parseFloat(formAmount.replace(',', '.')),
+        amount: Math.abs(parseFloat(formAmount.replace(',', '.'))),
         date: formDate,
         objective: formObjective,
       });
@@ -92,15 +110,48 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
     }
   };
 
+  const handleWithdrawSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!withdrawDesc || !withdrawAmount || !withdrawDate) return;
+
+    const val = parseFloat(withdrawAmount.replace(',', '.'));
+    if (isNaN(val) || val <= 0) {
+      alert('Por favor, informe um valor válido para a retirada.');
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      await api.createSavings({
+        description: withdrawDesc,
+        amount: -Math.abs(val),
+        date: withdrawDate,
+        objective: withdrawObjective || 'Resgate',
+      });
+      setIsWithdrawModalOpen(false);
+      await fetchSavings();
+      onDataChanged?.();
+    } catch (err) {
+      console.error('Error withdrawing from savings:', err);
+      alert('Erro ao retirar dinheiro da poupança.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem || !formDesc || !formAmount || !formDate) return;
 
     try {
       setActionLoading(true);
+      const isWithdraw = editingItem.amount < 0;
+      const parsedVal = Math.abs(parseFloat(formAmount.replace(',', '.')));
+      const finalAmount = isWithdraw ? -parsedVal : parsedVal;
+
       await api.updateSavings(editingItem.id, {
         description: formDesc,
-        amount: parseFloat(formAmount.replace(',', '.')),
+        amount: finalAmount,
         date: formDate,
         objective: formObjective,
       });
@@ -166,9 +217,33 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
           </p>
         </div>
 
-        <button className="btn-primary" onClick={openCreateModal}>
-          <Plus size={18} /> Guardar dinheiro
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <button
+            onClick={openWithdrawModal}
+            style={{
+              backgroundColor: '#dc2626',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: 10,
+              padding: '10px 18px',
+              fontWeight: 600,
+              fontSize: 14,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 2px 6px rgba(220, 38, 38, 0.25)',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#b91c1c')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#dc2626')}
+          >
+            <MinusCircle size={18} /> Retirar dinheiro
+          </button>
+          <button className="btn-primary" onClick={openCreateModal}>
+            <Plus size={18} /> Guardar dinheiro
+          </button>
+        </div>
       </div>
 
       {/* Hero Banner */}
@@ -222,7 +297,7 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
           }}
         >
           <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', margin: 0 }}>
-            Aportes recentes
+            Movimentações da poupança
           </h3>
           <span style={{ fontSize: 12, color: '#94a3b8' }}>
             {savings.length} registro{savings.length !== 1 ? 's' : ''}
@@ -261,98 +336,117 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
               ) : savings.length === 0 ? (
                 <tr>
                   <td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
-                    Nenhum aporte registrado ainda. Clique em "+ Guardar dinheiro" acima para adicionar.
+                    Nenhuma movimentação registrada ainda. Utilize os botões acima para guardar ou retirar dinheiro.
                   </td>
                 </tr>
               ) : (
-                savings.map((item) => (
-                  <tr
-                    key={item.id}
-                    style={{
-                      borderBottom: '1px solid #f8fafc',
-                      transition: 'background-color 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fafbfc')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  >
-                    {/* Descrição with Piggy Icon */}
-                    <td style={{ padding: '16px 24px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div
-                          style={{
-                            width: 34,
-                            height: 34,
-                            borderRadius: 8,
-                            backgroundColor: '#ede9fe',
-                            color: '#7c3aed',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                          }}
-                        >
-                          <PiggyBank size={17} />
+                savings.map((item) => {
+                  const isWithdrawal = item.amount < 0;
+                  return (
+                    <tr
+                      key={item.id}
+                      style={{
+                        borderBottom: '1px solid #f8fafc',
+                        transition: 'background-color 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fafbfc')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      {/* Descrição with Piggy / Withdrawal Icon */}
+                      <td style={{ padding: '16px 24px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div
+                            style={{
+                              width: 34,
+                              height: 34,
+                              borderRadius: 8,
+                              backgroundColor: isWithdrawal ? '#fee2e2' : '#ede9fe',
+                              color: isWithdrawal ? '#dc2626' : '#7c3aed',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {isWithdrawal ? <ArrowDownRight size={17} /> : <PiggyBank size={17} />}
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
+                              {item.description}
+                            </div>
+                            {isWithdrawal && (
+                              <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>
+                                Retirada
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
-                          {item.description}
-                        </span>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Objetivo */}
-                    <td style={{ padding: '16px 20px', fontSize: 13, color: '#64748b' }}>
-                      {item.objective}
-                    </td>
+                      {/* Objetivo */}
+                      <td style={{ padding: '16px 20px', fontSize: 13, color: '#64748b' }}>
+                        {item.objective}
+                      </td>
 
-                    {/* Data */}
-                    <td style={{ padding: '16px 20px', fontSize: 13, color: '#64748b' }}>
-                      {formatDate(item.date)}
-                    </td>
+                      {/* Data */}
+                      <td style={{ padding: '16px 20px', fontSize: 13, color: '#64748b' }}>
+                        {formatDate(item.date)}
+                      </td>
 
-                    {/* Valor (Green positive) */}
-                    <td style={{ padding: '16px 20px', fontSize: 14, fontWeight: 700, color: '#16a34a' }}>
-                      + {formatCurrency(item.amount)}
-                    </td>
+                      {/* Valor (Green positive / Red negative) */}
+                      <td
+                        style={{
+                          padding: '16px 20px',
+                          fontSize: 14,
+                          fontWeight: 700,
+                          color: isWithdrawal ? '#dc2626' : '#16a34a',
+                        }}
+                      >
+                        {isWithdrawal
+                          ? `- ${formatCurrency(Math.abs(item.amount))}`
+                          : `+ ${formatCurrency(item.amount)}`}
+                      </td>
 
-                    {/* Ações */}
-                    <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
-                        <button
-                          onClick={() => openEditModal(item)}
-                          title="Editar"
-                          style={{
-                            color: '#94a3b8',
-                            padding: 6,
-                            borderRadius: 6,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
-                        >
-                          <Pencil size={16} />
-                        </button>
-                        <button
-                          onClick={() => setDeletingItem(item)}
-                          title="Excluir"
-                          style={{
-                            color: '#94a3b8',
-                            padding: 6,
-                            borderRadius: 6,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      {/* Ações */}
+                      <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+                          <button
+                            onClick={() => openEditModal(item)}
+                            title="Editar"
+                            style={{
+                              color: '#94a3b8',
+                              padding: 6,
+                              borderRadius: 6,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            onClick={() => setDeletingItem(item)}
+                            title="Excluir"
+                            style={{
+                              color: '#94a3b8',
+                              padding: 6,
+                              borderRadius: 6,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -467,6 +561,151 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
               disabled={actionLoading}
             >
               {actionLoading ? 'Salvando...' : 'Guardar valor'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Retirar Modal */}
+      <Modal
+        isOpen={isWithdrawModalOpen}
+        onClose={() => setIsWithdrawModalOpen(false)}
+        title="Retirar da poupança"
+        subtitle="Registre uma retirada ou resgate da sua reserva guardada."
+        icon={<MinusCircle size={22} color="#dc2626" />}
+      >
+        <form onSubmit={handleWithdrawSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Balance card */}
+          <div
+            style={{
+              padding: '12px 16px',
+              borderRadius: 10,
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fecaca',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <span style={{ fontSize: 13, color: '#991b1b', fontWeight: 500 }}>
+              Saldo atual na poupança:
+            </span>
+            <span style={{ fontSize: 14, color: '#dc2626', fontWeight: 800 }}>
+              {formatCurrency(totalSaved)}
+            </span>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+              Descrição
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="Ex: Resgate para emergência"
+              value={withdrawDesc}
+              onChange={(e) => setWithdrawDesc(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '11px 14px',
+                borderRadius: 10,
+                border: '1px solid #cbd5e1',
+                outline: 'none',
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                Valor da retirada
+              </label>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#dc2626', fontWeight: 600, fontSize: 13 }}>
+                  R$
+                </span>
+                <input
+                  type="text"
+                  required
+                  placeholder="0,00"
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '11px 14px 11px 38px',
+                    borderRadius: 10,
+                    border: '1px solid #cbd5e1',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                Data
+              </label>
+              <input
+                type="date"
+                required
+                value={withdrawDate}
+                onChange={(e) => setWithdrawDate(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '11px 14px',
+                  borderRadius: 10,
+                  border: '1px solid #cbd5e1',
+                  outline: 'none',
+                }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+              Objetivo / Motivo
+            </label>
+            <input
+              type="text"
+              placeholder="Resgate"
+              value={withdrawObjective}
+              onChange={(e) => setWithdrawObjective(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '11px 14px',
+                borderRadius: 10,
+                border: '1px solid #cbd5e1',
+                outline: 'none',
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 12 }}>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setIsWithdrawModalOpen(false)}
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={actionLoading}
+              style={{
+                backgroundColor: '#dc2626',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: 10,
+                padding: '10px 20px',
+                fontWeight: 600,
+                fontSize: 14,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#b91c1c')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#dc2626')}
+            >
+              {actionLoading ? 'Processando...' : 'Confirmar retirada'}
             </button>
           </div>
         </form>

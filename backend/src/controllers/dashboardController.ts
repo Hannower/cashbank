@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { prisma } from '../prisma/client';
 import { AuthenticatedRequest } from '../middleware/auth';
+import { isFixedExpenseActiveInMonth } from '../utils/expenseUtils';
 
 const MONTH_NAMES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 const FULL_MONTH_NAMES = [
@@ -26,8 +27,8 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
       return;
     }
 
-    // 2. Fixed Expenses for the specified month/year
-    const fixedExpenses = await prisma.fixedExpense.findMany({
+    // 2. Fixed Expenses for the specified month/year (filtered by active status)
+    const allFixedExpenses = await prisma.fixedExpense.findMany({
       where: { userId },
       include: {
         payments: {
@@ -36,6 +37,10 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
       },
       orderBy: { dueDay: 'asc' },
     });
+
+    const fixedExpenses = allFixedExpenses.filter((exp) =>
+      isFixedExpenseActiveInMonth(exp.firstDueDate, exp.endDate, currentMonth, currentYear)
+    );
 
     const fixedFormatted = fixedExpenses.map((exp) => {
       const payment = exp.payments[0];
@@ -297,3 +302,132 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
     res.status(500).json({ message: 'Erro ao carregar dados da visão geral' });
   }
 }
+
+export async function getDashboardAnnual(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const userId = req.userId!;
+    const year = parseInt(req.query.year as string) || new Date().getFullYear();
+
+    const startOfYear = new Date(Date.UTC(year, 0, 1, 0, 0, 0, 0));
+    const endOfYear = new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999));
+
+    const [user, revenues, variableExpenses, fixedExpenses, savings] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true, createdAt: true },
+      }),
+      prisma.revenue.findMany({
+        where: { userId, date: { gte: startOfYear, lte: endOfYear } },
+        orderBy: { date: 'asc' },
+      }),
+      prisma.variableExpense.findMany({
+        where: { userId, date: { gte: startOfYear, lte: endOfYear } },
+        orderBy: { date: 'asc' },
+      }),
+      prisma.fixedExpense.findMany({
+        where: { userId },
+        include: {
+          payments: {
+            where: { year },
+          },
+        },
+        orderBy: { dueDay: 'asc' },
+      }),
+      prisma.savings.findMany({
+        where: { userId, date: { gte: startOfYear, lte: endOfYear } },
+        orderBy: { date: 'asc' },
+      }),
+    ]);
+
+    const MONTH_LABELS = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    const SHORT_MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+    const categoryTotals: Record<string, number> = {};
+    const monthsData = [];
+    let totalAnnualRevenues = 0;
+    let totalAnnualExpenses = 0;
+    const totalAnnualSavings = savings.reduce((acc, curr) => acc + curr.amount, 0);
+
+    for (let m = 1; m <= 12; m++) {
+      // Month revenues
+      const mRevs = revenues.filter((r) => {
+        const d = new Date(r.date);
+        return d.getUTCMonth() + 1 === m;
+      });
+      const monthRevTotal = mRevs.reduce((acc, curr) => acc + curr.amount, 0);
+
+      // Month variable expenses
+      const mVars = variableExpenses.filter((v) => {
+        const d = new Date(v.date);
+        return d.getUTCMonth() + 1 === m;
+      });
+      const monthVarTotal = mVars.reduce((acc, curr) => {
+        categoryTotals[curr.category] = (categoryTotals[curr.category] || 0) + curr.amount;
+        return acc + curr.amount;
+      }, 0);
+
+      // Month fixed expenses (only those active in month m of year)
+      const mFixed = fixedExpenses.filter((f) =>
+        isFixedExpenseActiveInMonth(f.firstDueDate, f.endDate, m, year)
+      );
+      const monthFixedTotal = mFixed.reduce((acc, curr) => {
+        const payment = curr.payments.find((p) => p.month === m);
+        const effectiveAmount =
+          payment?.amount !== null && payment?.amount !== undefined ? payment.amount : curr.amount;
+        categoryTotals[curr.category] = (categoryTotals[curr.category] || 0) + effectiveAmount;
+        return acc + effectiveAmount;
+      }, 0);
+
+      const monthExpensesTotal = monthVarTotal + monthFixedTotal;
+      const monthSaldo = monthRevTotal - monthExpensesTotal;
+
+      totalAnnualRevenues += monthRevTotal;
+      totalAnnualExpenses += monthExpensesTotal;
+
+      monthsData.push({
+        month: m,
+        name: SHORT_MONTHS[m - 1],
+        fullName: MONTH_LABELS[m - 1],
+        receitas: monthRevTotal,
+        despesas: monthExpensesTotal,
+        saldo: monthSaldo,
+        fixedCount: mFixed.length,
+        varCount: mVars.length,
+        revCount: mRevs.length,
+      });
+    }
+
+    const saldoAnual = totalAnnualRevenues - totalAnnualExpenses;
+
+    const categoriesList = Object.entries(categoryTotals)
+      .map(([name, total]) => ({
+        name,
+        total,
+        percentage: totalAnnualExpenses > 0 ? Math.round((total / totalAnnualExpenses) * 100) : 0,
+      }))
+      .sort((a, b) => b.total - a.total);
+
+    res.json({
+      year,
+      user: {
+        name: user?.name,
+        createdAt: user?.createdAt,
+      },
+      kpis: {
+        totalAnnualRevenues,
+        totalAnnualExpenses,
+        saldoAnual,
+        totalAnnualSavings,
+      },
+      months: monthsData,
+      categories: categoriesList,
+    });
+  } catch (error) {
+    console.error('getDashboardAnnual error:', error);
+    res.status(500).json({ message: 'Erro ao carregar dados anuais' });
+  }
+}
+

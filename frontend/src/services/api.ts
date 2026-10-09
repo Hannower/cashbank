@@ -72,6 +72,10 @@ export const api = {
     const y = year !== undefined ? year : now.getFullYear();
     return request<any>(`/dashboard/overview?month=${m}&year=${y}`);
   },
+  getDashboardAnnual: (year?: number) => {
+    const y = year !== undefined ? year : new Date().getFullYear();
+    return request<any>(`/dashboard/annual?year=${y}`);
+  },
 
   // Fixed Expenses
   getFixedExpenses: (month?: number, year?: number) => {

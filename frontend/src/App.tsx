@@ -118,7 +118,7 @@ export const App: React.FC = () => {
           onToggleTheme={toggleTheme}
         />
 
-        <main style={{ flex: 1, paddingBottom: 40, width: '100%', boxSizing: 'border-box', minWidth: 0 }}>
+        <main style={{ flex: 1, paddingTop: 70, paddingBottom: 40, width: '100%', boxSizing: 'border-box', minWidth: 0 }}>
           {currentTab === 'dashboard' && (
             <DashboardView
               onNavigate={(tab) => setCurrentTab(tab)}

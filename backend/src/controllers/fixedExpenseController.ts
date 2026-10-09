@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { prisma } from '../prisma/client';
 import { AuthenticatedRequest } from '../middleware/auth';
+import { isFixedExpenseActiveInMonth } from '../utils/expenseUtils';
 
 export async function getFixedExpenses(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
@@ -8,7 +9,7 @@ export async function getFixedExpenses(req: AuthenticatedRequest, res: Response)
     const month = parseInt(req.query.month as string) || (new Date().getMonth() + 1);
     const year = parseInt(req.query.year as string) || new Date().getFullYear();
 
-    const expenses = await prisma.fixedExpense.findMany({
+    const allExpenses = await prisma.fixedExpense.findMany({
       where: { userId },
       include: {
         payments: {
@@ -17,6 +18,13 @@ export async function getFixedExpenses(req: AuthenticatedRequest, res: Response)
       },
       orderBy: { dueDay: 'asc' },
     });
+
+    // Filter expenses active in this specific month/year:
+    // If endDate is set, retire the expense starting from the following month.
+    // If endDate is not set, keep it active every month after firstDueDate.
+    const expenses = allExpenses.filter((exp) =>
+      isFixedExpenseActiveInMonth(exp.firstDueDate, exp.endDate, month, year)
+    );
 
     // Format list with payment status and custom monthly amount override
     const formatted = expenses.map((exp) => {

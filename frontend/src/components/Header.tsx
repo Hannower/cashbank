@@ -29,6 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header
+      className="app-header"
       style={{
         height: 70,
         backgroundColor: 'var(--bg-sidebar, #ffffff)',
@@ -37,12 +38,13 @@ export const Header: React.FC<HeaderProps> = ({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '0 36px',
-        position: 'sticky',
+        position: 'fixed',
         top: 0,
-        zIndex: 20,
-        width: '100%',
-        maxWidth: '100%',
+        right: 0,
+        left: 250,
+        zIndex: 30,
         boxSizing: 'border-box',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -117,11 +119,12 @@ export const Header: React.FC<HeaderProps> = ({
 
       <style>{`
         @media (max-width: 900px) {
+          .app-header {
+            left: 0 !important;
+            padding: 0 16px !important;
+          }
           .header-mobile-toggle {
             display: flex !important;
-          }
-          header {
-            padding: 0 16px !important;
           }
         }
       `}</style>

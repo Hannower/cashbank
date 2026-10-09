@@ -5,6 +5,7 @@ import {
   Plus,
   ArrowDownLeft,
   ArrowUpRight,
+  ArrowRight,
   Calendar,
   PiggyBank,
   CheckCircle2,
@@ -12,12 +13,15 @@ import {
   CreditCard,
   ShoppingBag,
   ListFilter,
+  BarChart3,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { NavTab } from '../components/Sidebar';
 import { MonthSelector } from '../components/MonthSelector';
-import { MonthItem, getInitialMonthItem, FULL_MONTH_NAMES } from '../utils/dateUtils';
+import { MonthItem, getInitialMonthItem, FULL_MONTH_NAMES, MONTH_LABELS } from '../utils/dateUtils';
 
 interface DashboardViewProps {
   onNavigate: (tab: NavTab) => void;
@@ -32,6 +36,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
   const [loading, setLoading] = useState(true);
   const [transactionFilter, setTransactionFilter] = useState<'all' | 'revenues' | 'expenses'>('all');
 
+  // Annual View state
+  const [viewMode, setViewMode] = useState<'monthly' | 'annual'>('monthly');
+  const [selectedAnnualYear, setSelectedAnnualYear] = useState<number>(() => selectedMonth.year);
+  const [annualData, setAnnualData] = useState<any>(null);
+  const [annualLoading, setAnnualLoading] = useState(false);
+
   const fetchDashboardData = async (month: number, year: number) => {
     try {
       setLoading(true);
@@ -44,9 +54,40 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
     }
   };
 
+  const fetchAnnualData = async (year: number) => {
+    try {
+      setAnnualLoading(true);
+      const res = await api.getDashboardAnnual(year);
+      setAnnualData(res);
+    } catch (err) {
+      console.error('Failed to load annual dashboard data:', err);
+    } finally {
+      setAnnualLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchDashboardData(selectedMonth.month, selectedMonth.year);
   }, [selectedMonth.month, selectedMonth.year]);
+
+  const handleChangeAnnualYear = (delta: number) => {
+    const nextYear = selectedAnnualYear + delta;
+    setSelectedAnnualYear(nextYear);
+    fetchAnnualData(nextYear);
+  };
+
+  const handleOpenMonthFromAnnual = (monthNum: number) => {
+    const now = new Date();
+    const item: MonthItem = {
+      month: monthNum,
+      year: selectedAnnualYear,
+      label: MONTH_LABELS[monthNum - 1],
+      yearLabel: String(selectedAnnualYear),
+      isCurrent: monthNum === now.getMonth() + 1 && selectedAnnualYear === now.getFullYear(),
+    };
+    setSelectedMonth(item);
+    setViewMode('monthly');
+  };
 
   const formatCurrency = (val?: number) => {
     if (val === undefined || isNaN(val)) return 'R$ 0,00';
@@ -142,8 +183,129 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
         </div>
       </div>
 
-      {/* Month Carousel Selector */}
-      <MonthSelector
+      {/* View Mode Toggle: Mensal vs Anual */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 18,
+          flexWrap: 'wrap',
+          gap: 12,
+        }}
+      >
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            backgroundColor: 'var(--bg-card, #ffffff)',
+            padding: 4,
+            borderRadius: 12,
+            border: '1px solid var(--border-color, #e2e8f0)',
+            boxShadow: 'var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.03))',
+          }}
+        >
+          <button
+            onClick={() => setViewMode('monthly')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 18px',
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              backgroundColor: viewMode === 'monthly' ? '#15803d' : 'transparent',
+              color: viewMode === 'monthly' ? '#ffffff' : 'var(--text-secondary, #64748b)',
+            }}
+          >
+            <Calendar size={16} /> Visão Mensal
+          </button>
+          <button
+            onClick={() => {
+              setViewMode('annual');
+              if (!annualData || annualData.year !== selectedAnnualYear) {
+                fetchAnnualData(selectedAnnualYear);
+              }
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 18px',
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              backgroundColor: viewMode === 'annual' ? '#15803d' : 'transparent',
+              color: viewMode === 'annual' ? '#ffffff' : 'var(--text-secondary, #64748b)',
+            }}
+          >
+            <BarChart3 size={16} /> Painel Anual
+          </button>
+        </div>
+
+        {viewMode === 'annual' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={() => handleChangeAnnualYear(-1)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '7px 14px',
+                borderRadius: 8,
+                backgroundColor: 'var(--bg-card, #ffffff)',
+                border: '1px solid var(--border-color, #e2e8f0)',
+                color: 'var(--text-main, #0f172a)',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+              title="Ano anterior"
+            >
+              <ChevronLeft size={16} /> {selectedAnnualYear - 1}
+            </button>
+            <span
+              style={{
+                fontSize: 15,
+                fontWeight: 800,
+                color: 'var(--text-main, #0f172a)',
+                padding: '0 8px',
+              }}
+            >
+              Exercício {selectedAnnualYear}
+            </span>
+            <button
+              onClick={() => handleChangeAnnualYear(1)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '7px 14px',
+                borderRadius: 8,
+                backgroundColor: 'var(--bg-card, #ffffff)',
+                border: '1px solid var(--border-color, #e2e8f0)',
+                color: 'var(--text-main, #0f172a)',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+              title="Próximo ano"
+            >
+              {selectedAnnualYear + 1} <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {viewMode === 'monthly' ? (
+        <>
+          {/* Month Carousel Selector */}
+          <MonthSelector
         selectedMonth={selectedMonth}
         onSelectMonth={(m) => setSelectedMonth(m)}
         createdAt={user?.createdAt}
@@ -625,6 +787,378 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
           </div>
         </div>
       </div>
+    </>
+  ) : (
+    /* Annual View Panel */
+    annualLoading ? (
+      <div className="card" style={{ padding: 60, textAlign: 'center', color: '#64748b' }}>
+        <Loader2 size={30} className="animate-spin" color="#15803d" style={{ margin: '0 auto 12px' }} />
+        <div>Carregando demonstrativo anual de {selectedAnnualYear}...</div>
+      </div>
+    ) : (
+      <div className="animate-fade-in">
+        {/* Annual KPI Cards */}
+        <div className="kpi-cards-grid" style={{ marginBottom: 24 }}>
+          {/* Saldo Anual */}
+          <div
+            style={{
+              background: (annualData?.kpis?.saldoAnual ?? 0) < 0
+                ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
+                : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
+              borderRadius: 16,
+              padding: 24,
+              color: 'white',
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: (annualData?.kpis?.saldoAnual ?? 0) < 0
+                ? '0 4px 12px rgba(220, 38, 38, 0.28)'
+                : '0 4px 12px rgba(21, 128, 61, 0.25)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              minHeight: 140,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.9)', fontWeight: 500 }}>
+                Saldo acumulado no ano
+              </span>
+              <button
+                onClick={() => setShowBalance(!showBalance)}
+                style={{ color: 'white', opacity: 0.85, padding: 4, display: 'flex', alignItems: 'center' }}
+                title={showBalance ? 'Ocultar saldo' : 'Mostrar saldo'}
+              >
+                {showBalance ? <Eye size={18} /> : <EyeOff size={18} />}
+              </button>
+            </div>
+
+            <div style={{ margin: '14px 0 10px' }}>
+              <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.5px' }}>
+                {showBalance ? formatCurrency(annualData?.kpis?.saldoAnual ?? 0) : '••••••'}
+              </span>
+            </div>
+
+            <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.85)' }}>
+              Balanço consolidado de {selectedAnnualYear}
+            </div>
+          </div>
+
+          {/* Receitas Anuais */}
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 140 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-muted, #64748b)', fontWeight: 500 }}>Receitas do ano</span>
+              <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#ecfdf5', color: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ArrowDownLeft size={18} />
+              </div>
+            </div>
+
+            <div style={{ margin: '14px 0 10px' }}>
+              <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-main, #0f172a)', letterSpacing: '-0.5px' }}>
+                {showBalance ? formatCurrency(annualData?.kpis?.totalAnnualRevenues ?? 0) : '••••••'}
+              </span>
+            </div>
+
+            <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>
+              Entradas de jan a dez
+            </div>
+          </div>
+
+          {/* Despesas Anuais */}
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 140 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-muted, #64748b)', fontWeight: 500 }}>Despesas do ano</span>
+              <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Calendar size={18} />
+              </div>
+            </div>
+
+            <div style={{ margin: '14px 0 10px' }}>
+              <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-main, #0f172a)', letterSpacing: '-0.5px' }}>
+                {showBalance ? formatCurrency(annualData?.kpis?.totalAnnualExpenses ?? 0) : '••••••'}
+              </span>
+            </div>
+
+            <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)' }}>
+              Fixas e variáveis acumuladas
+            </div>
+          </div>
+
+          {/* Na Poupança */}
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 140 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-muted, #64748b)', fontWeight: 500 }}>Poupança no ano</span>
+              <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#f3e8ff', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <PiggyBank size={18} />
+              </div>
+            </div>
+
+            <div style={{ margin: '14px 0 10px' }}>
+              <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-main, #0f172a)', letterSpacing: '-0.5px' }}>
+                {showBalance ? formatCurrency(annualData?.kpis?.totalAnnualSavings ?? 0) : '••••••'}
+              </span>
+            </div>
+
+            <div style={{ fontSize: 12, color: '#15803d', fontWeight: 600 }}>
+              Reserva guardada no período
+            </div>
+          </div>
+        </div>
+
+        {/* Gráfico Comparativo Mês a Mês */}
+        <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--text-main, #0f172a)' }}>
+                Comparativo de receitas e despesas por mês
+              </h3>
+              <p style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)', margin: '2px 0 0' }}>
+                Evolução financeira ao longo dos 12 meses de {selectedAnnualYear} (clique em um mês para abrir)
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 12, fontWeight: 600 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: '#16a34a' }} />
+                <span style={{ color: 'var(--text-secondary, #64748b)' }}>Receitas</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: '#ea580c' }} />
+                <span style={{ color: 'var(--text-secondary, #64748b)' }}>Despesas</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bars container */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(12, 1fr)',
+              gap: 8,
+              alignItems: 'flex-end',
+              height: 160,
+              paddingTop: 16,
+              borderBottom: '1px solid var(--border-color, #e2e8f0)',
+            }}
+          >
+            {(annualData?.months || []).map((m: any) => {
+              const maxVal = Math.max(1, ...(annualData?.months || []).map((item: any) => Math.max(item.receitas, item.despesas)));
+              const revHeight = m.receitas > 0 ? Math.max(6, Math.round((m.receitas / maxVal) * 120)) : 4;
+              const expHeight = m.despesas > 0 ? Math.max(6, Math.round((m.despesas / maxVal) * 120)) : 4;
+
+              return (
+                <div
+                  key={m.month}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    height: '100%',
+                    justifyContent: 'flex-end',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => handleOpenMonthFromAnnual(m.month)}
+                  title={`${m.fullName}: Receitas ${formatCurrency(m.receitas)} | Despesas ${formatCurrency(m.despesas)} | Saldo ${formatCurrency(m.saldo)} (Clique para abrir)`}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, width: '100%', justifyContent: 'center' }}>
+                    <div
+                      style={{
+                        width: '42%',
+                        maxWidth: 16,
+                        height: revHeight,
+                        backgroundColor: m.receitas > 0 ? '#16a34a' : 'rgba(22, 163, 74, 0.2)',
+                        borderRadius: '3px 3px 0 0',
+                        transition: 'height 0.3s ease',
+                      }}
+                    />
+                    <div
+                      style={{
+                        width: '42%',
+                        maxWidth: 16,
+                        height: expHeight,
+                        backgroundColor: m.despesas > 0 ? '#ea580c' : 'rgba(234, 88, 12, 0.2)',
+                        borderRadius: '3px 3px 0 0',
+                        transition: 'height 0.3s ease',
+                      }}
+                    />
+                  </div>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: 'var(--text-muted, #94a3b8)',
+                      marginTop: 8,
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {m.name}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Tabela Demonstrativa Mês a Mês */}
+        <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 24 }}>
+          <div
+            style={{
+              padding: '20px 24px',
+              borderBottom: '1px solid var(--border-color, #f1f5f9)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--text-main, #0f172a)' }}>
+                Detalhamento mensal consolidado
+              </h3>
+              <p style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)', margin: '2px 0 0' }}>
+                Todos os meses do ano com demonstrativo de receitas, despesas e saldo
+              </p>
+            </div>
+            <span style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)' }}>
+              {selectedAnnualYear} • 12 meses
+            </span>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: 640 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-color, #f1f5f9)', backgroundColor: 'var(--bg-item, #fafbfc)' }}>
+                  <th style={{ padding: '12px 24px', fontSize: 11, fontWeight: 700, color: 'var(--text-muted, #94a3b8)', letterSpacing: '0.5px' }}>
+                    MÊS
+                  </th>
+                  <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: 'var(--text-muted, #94a3b8)', letterSpacing: '0.5px' }}>
+                    RECEITAS
+                  </th>
+                  <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: 'var(--text-muted, #94a3b8)', letterSpacing: '0.5px' }}>
+                    DESPESAS
+                  </th>
+                  <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: 'var(--text-muted, #94a3b8)', letterSpacing: '0.5px' }}>
+                    SALDO DO MÊS
+                  </th>
+                  <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: 'var(--text-muted, #94a3b8)', letterSpacing: '0.5px' }}>
+                    MOVIMENTAÇÕES
+                  </th>
+                  <th style={{ padding: '12px 24px', fontSize: 11, fontWeight: 700, color: 'var(--text-muted, #94a3b8)', letterSpacing: '0.5px', textAlign: 'right' }}>
+                    AÇÃO
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {(annualData?.months || []).map((m: any) => {
+                  const isMonthNegative = m.saldo < 0;
+                  return (
+                    <tr
+                      key={m.month}
+                      style={{
+                        borderBottom: '1px solid var(--border-color, #f8fafc)',
+                        transition: 'background-color 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-item-hover, #fafbfc)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <td style={{ padding: '16px 24px' }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>
+                          {m.fullName}
+                        </span>
+                      </td>
+                      <td style={{ padding: '16px 20px', fontSize: 14, fontWeight: 700, color: '#16a34a' }}>
+                        + {formatCurrency(m.receitas)}
+                      </td>
+                      <td style={{ padding: '16px 20px', fontSize: 14, fontWeight: 700, color: '#ea580c' }}>
+                        - {formatCurrency(m.despesas)}
+                      </td>
+                      <td style={{ padding: '16px 20px', fontSize: 14, fontWeight: 800, color: isMonthNegative ? '#dc2626' : '#16a34a' }}>
+                        {formatCurrency(m.saldo)}
+                      </td>
+                      <td style={{ padding: '16px 20px', fontSize: 12, color: 'var(--text-muted, #64748b)' }}>
+                        {m.fixedCount} fixas • {m.varCount} variáveis • {m.revCount} receitas
+                      </td>
+                      <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                        <button
+                          onClick={() => handleOpenMonthFromAnnual(m.month)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '6px 14px',
+                            borderRadius: 8,
+                            backgroundColor: 'var(--bg-item, #f1f5f9)',
+                            color: 'var(--text-main, #0f172a)',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            border: '1px solid var(--border-color, #e2e8f0)',
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#15803d';
+                            e.currentTarget.style.color = '#ffffff';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--bg-item, #f1f5f9)';
+                            e.currentTarget.style.color = 'var(--text-main, #0f172a)';
+                          }}
+                        >
+                          Ver mês <ArrowRight size={13} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Despesas por Categoria no Ano */}
+        {annualData?.categories && annualData.categories.length > 0 && (
+          <div className="card" style={{ padding: 24, marginBottom: 24 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 16px', color: 'var(--text-main, #0f172a)' }}>
+              Gastos por categoria em {selectedAnnualYear}
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
+              {annualData.categories.map((cat: any) => (
+                <div
+                  key={cat.name}
+                  style={{
+                    padding: 14,
+                    borderRadius: 12,
+                    backgroundColor: 'var(--bg-item, #f8fafc)',
+                    border: '1px solid var(--border-color, #f1f5f9)',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-main, #0f172a)' }}>
+                      {cat.name}
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted, #64748b)' }}>
+                      {cat.percentage}%
+                    </span>
+                  </div>
+                  <div style={{ width: '100%', height: 6, backgroundColor: 'var(--border-input, #e2e8f0)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+                    <div
+                      style={{
+                        width: `${Math.min(cat.percentage, 100)}%`,
+                        height: '100%',
+                        backgroundColor: '#ea580c',
+                        borderRadius: 3,
+                      }}
+                    />
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>
+                    {formatCurrency(cat.total)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  )}
 
       <style>{`
         @media (max-width: 1024px) {

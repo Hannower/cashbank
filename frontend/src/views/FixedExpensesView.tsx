@@ -602,7 +602,7 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
               }}
             />
             <span style={{ fontSize: 11, color: '#94a3b8', marginTop: 4, display: 'block' }}>
-              Deixe em branco para repetir sem prazo final.
+              Deixe em branco para repetir todo mês. Ao definir uma data final, a despesa será retirada a partir do mês seguinte.
             </span>
           </div>
 
@@ -752,7 +752,7 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
               }}
             />
             <span style={{ fontSize: 11, color: '#94a3b8', marginTop: 4, display: 'block' }}>
-              Deixe em branco para repetir sem prazo final.
+              Deixe em branco para repetir todo mês. Ao definir uma data final, a despesa será retirada a partir do mês seguinte.
             </span>
           </div>
 
