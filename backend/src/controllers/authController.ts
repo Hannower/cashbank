@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../prisma/client';
 import { AuthenticatedRequest } from '../middleware/auth';
+import { sendPasswordResetEmail } from '../utils/emailService';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'cashbank-super-secret-jwt-key-2025';
 
@@ -210,18 +211,21 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     const origin = req.headers.origin || 'http://localhost:3000';
     const resetUrl = `${origin}/?resetToken=${encodeURIComponent(token)}`;
 
-    console.log(`[PASSWORD RESET] Link generated for ${user.email}: ${resetUrl}`);
+    // Send email to user's registered inbox
+    await sendPasswordResetEmail({
+      to: user.email,
+      name: user.name,
+      resetUrl,
+    });
 
     res.json({
-      message: 'Link de recuperação de senha enviado com sucesso!',
-      resetUrl,
+      message: 'Link de recuperação de senha enviado para o seu e-mail com sucesso!',
       email: user.email,
-      name: user.name,
       expiresIn: '1 hora',
     });
   } catch (error) {
     console.error('forgotPassword error:', error);
-    res.status(500).json({ message: 'Erro ao gerar link de recuperação de senha' });
+    res.status(500).json({ message: 'Erro ao enviar link de recuperação de senha' });
   }
 }
 

@@ -5,6 +5,9 @@ import {
   Trash2,
   CreditCard,
   Loader2,
+  Copy,
+  QrCode,
+  Check,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -19,9 +22,10 @@ interface VariableExpense {
   amount: number;
   date: string;
   category: string;
+  pixKey?: string | null;
 }
 
-const CATEGORIES = ['Alimentação', 'Transporte', 'Lazer', 'Saúde', 'Educação', 'Moradia', 'Outros'];
+const CATEGORIES = ['Alimentação', 'Transporte', 'Lazer', 'Streaming', 'Saúde', 'Educação', 'Moradia', 'Outros'];
 
 export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataChanged }) => {
   const { user } = useAuth();
@@ -41,6 +45,48 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
   const [formAmount, setFormAmount] = useState('');
   const [formDate, setFormDate] = useState('');
   const [formCategory, setFormCategory] = useState('Alimentação');
+  const [formPixKey, setFormPixKey] = useState('');
+  const [copiedPixId, setCopiedPixId] = useState<string | null>(null);
+  const [copiedFormPix, setCopiedFormPix] = useState(false);
+
+  const handleCopyPix = async (id: string, key: string) => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(key);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = key;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopiedPixId(id);
+      setTimeout(() => setCopiedPixId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy Pix:', err);
+    }
+  };
+
+  const handleCopyFormPix = async () => {
+    if (!formPixKey) return;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(formPixKey);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = formPixKey;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopiedFormPix(true);
+      setTimeout(() => setCopiedFormPix(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy Pix:', err);
+    }
+  };
 
   const fetchExpenses = async () => {
     try {
@@ -65,6 +111,8 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
     const today = new Date().toISOString().split('T')[0];
     setFormDate(today);
     setFormCategory('Alimentação');
+    setFormPixKey('');
+    setCopiedFormPix(false);
     setIsCreateModalOpen(true);
   };
 
@@ -74,6 +122,8 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
     setFormAmount(String(exp.amount));
     setFormDate(exp.date ? exp.date.split('T')[0] : '');
     setFormCategory(exp.category);
+    setFormPixKey(exp.pixKey || '');
+    setCopiedFormPix(false);
   };
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
@@ -87,6 +137,7 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
         amount: parseFloat(formAmount.replace(',', '.')),
         date: formDate,
         category: formCategory,
+        pixKey: formPixKey.trim() || null,
       });
       setIsCreateModalOpen(false);
       await fetchExpenses();
@@ -110,6 +161,7 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
         amount: parseFloat(formAmount.replace(',', '.')),
         date: formDate,
         category: formCategory,
+        pixKey: formPixKey.trim() || null,
       });
       setEditingExpense(null);
       await fetchExpenses();
@@ -305,9 +357,54 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
                         >
                           <CreditCard size={17} />
                         </div>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
-                          {exp.description}
-                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
+                            {exp.description}
+                          </span>
+                          {exp.pixKey && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  backgroundColor: '#ecfdf5',
+                                  color: '#065f46',
+                                  padding: '2px 8px',
+                                  borderRadius: 6,
+                                  border: '1px solid #a7f3d0',
+                                }}
+                                title={`Chave Pix: ${exp.pixKey}`}
+                              >
+                                <QrCode size={11} /> Pix: {exp.pixKey.length > 18 ? `${exp.pixKey.slice(0, 16)}...` : exp.pixKey}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyPix(exp.id, exp.pixKey!)}
+                                title="Copiar chave Pix"
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 3,
+                                  padding: '2px 7px',
+                                  borderRadius: 5,
+                                  backgroundColor: copiedPixId === exp.id ? '#15803d' : '#f1f5f9',
+                                  color: copiedPixId === exp.id ? '#ffffff' : '#334155',
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  border: '1px solid #e2e8f0',
+                                  transition: 'all 0.15s ease',
+                                }}
+                              >
+                                {copiedPixId === exp.id ? <Check size={11} /> : <Copy size={11} />}
+                                {copiedPixId === exp.id ? 'Copiado!' : 'Copiar'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
 
@@ -470,6 +567,80 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
             </select>
           </div>
 
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#334155' }}>
+                Chave Pix <span style={{ color: '#94a3b8', fontWeight: 400 }}>(opcional)</span>
+              </label>
+              {formPixKey && (
+                <button
+                  type="button"
+                  onClick={() => handleCopyFormPix()}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '2px 8px',
+                    borderRadius: 6,
+                    backgroundColor: copiedFormPix ? '#dcfce7' : '#f1f5f9',
+                    color: copiedFormPix ? '#15803d' : '#475569',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    border: '1px solid #cbd5e1',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {copiedFormPix ? <Check size={12} /> : <Copy size={12} />}
+                  {copiedFormPix ? 'Copiado!' : 'Copiar'}
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="text"
+                placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória"
+                value={formPixKey}
+                onChange={(e) => {
+                  setFormPixKey(e.target.value);
+                  setCopiedFormPix(false);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '11px 14px',
+                  borderRadius: 10,
+                  border: '1px solid #cbd5e1',
+                  outline: 'none',
+                }}
+              />
+              {formPixKey && (
+                <button
+                  type="button"
+                  onClick={() => handleCopyFormPix()}
+                  title="Copiar chave Pix"
+                  style={{
+                    padding: '0 14px',
+                    borderRadius: 10,
+                    backgroundColor: copiedFormPix ? '#15803d' : '#f8fafc',
+                    color: copiedFormPix ? '#ffffff' : '#334155',
+                    border: '1px solid #cbd5e1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {copiedFormPix ? <Check size={14} /> : <Copy size={14} />}
+                  {copiedFormPix ? 'Copiado' : 'Copiar'}
+                </button>
+              )}
+            </div>
+          </div>
+
           <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 12 }}>
             <button
               type="button"
@@ -584,6 +755,80 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#334155' }}>
+                Chave Pix <span style={{ color: '#94a3b8', fontWeight: 400 }}>(opcional)</span>
+              </label>
+              {formPixKey && (
+                <button
+                  type="button"
+                  onClick={() => handleCopyFormPix()}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '2px 8px',
+                    borderRadius: 6,
+                    backgroundColor: copiedFormPix ? '#dcfce7' : '#f1f5f9',
+                    color: copiedFormPix ? '#15803d' : '#475569',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    border: '1px solid #cbd5e1',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {copiedFormPix ? <Check size={12} /> : <Copy size={12} />}
+                  {copiedFormPix ? 'Copiado!' : 'Copiar'}
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="text"
+                placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória"
+                value={formPixKey}
+                onChange={(e) => {
+                  setFormPixKey(e.target.value);
+                  setCopiedFormPix(false);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '11px 14px',
+                  borderRadius: 10,
+                  border: '1px solid #cbd5e1',
+                  outline: 'none',
+                }}
+              />
+              {formPixKey && (
+                <button
+                  type="button"
+                  onClick={() => handleCopyFormPix()}
+                  title="Copiar chave Pix"
+                  style={{
+                    padding: '0 14px',
+                    borderRadius: 10,
+                    backgroundColor: copiedFormPix ? '#15803d' : '#f8fafc',
+                    color: copiedFormPix ? '#ffffff' : '#334155',
+                    border: '1px solid #cbd5e1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {copiedFormPix ? <Check size={14} /> : <Copy size={14} />}
+                  {copiedFormPix ? 'Copiado' : 'Copiar'}
+                </button>
+              )}
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 12 }}>

@@ -14,6 +14,8 @@ import {
   AlertCircle,
   Send,
   ExternalLink,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -24,6 +26,7 @@ export const LoginView: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,16 +37,16 @@ export const LoginView: React.FC = () => {
   const [recoveryEmail, setRecoveryEmail] = useState('');
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
-  const [generatedResetUrl, setGeneratedResetUrl] = useState<string | null>(null);
-  const [copiedLink, setCopiedLink] = useState(false);
 
-  // Active Reset via Token state (when URL has ?resetToken=... or user opens link)
+  // Active Reset via Token state (when URL has ?resetToken=... or user opens link from email)
   const [activeResetToken, setActiveResetToken] = useState<string | null>(null);
   const [tokenValidationState, setTokenValidationState] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
   const [tokenUserInfo, setTokenUserInfo] = useState<{ email: string; name: string } | null>(null);
   const [tokenErrorMessage, setTokenErrorMessage] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [tokenResetLoading, setTokenResetLoading] = useState(false);
   const [tokenResetError, setTokenResetError] = useState<string | null>(null);
   const [tokenResetSuccess, setTokenResetSuccess] = useState(false);
@@ -77,8 +80,6 @@ export const LoginView: React.FC = () => {
     setRecoveryEmail(email || '');
     setRecoveryStep(1);
     setRecoveryError(null);
-    setGeneratedResetUrl(null);
-    setCopiedLink(false);
     setShowRecoveryModal(true);
   };
 
@@ -91,37 +92,12 @@ export const LoginView: React.FC = () => {
     setRecoveryError(null);
     setRecoveryLoading(true);
     try {
-      const res = await api.forgotPassword({ email: recoveryEmail.trim() });
-      setGeneratedResetUrl(res.resetUrl);
+      await api.forgotPassword({ email: recoveryEmail.trim() });
       setRecoveryStep(2);
     } catch (err: any) {
       setRecoveryError(err.message || 'Nenhuma conta cadastrada com este e-mail.');
     } finally {
       setRecoveryLoading(false);
-    }
-  };
-
-  const handleCopyLink = () => {
-    if (generatedResetUrl) {
-      navigator.clipboard.writeText(generatedResetUrl);
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2500);
-    }
-  };
-
-  const handleOpenResetLinkDirectly = () => {
-    if (generatedResetUrl) {
-      try {
-        const url = new URL(generatedResetUrl);
-        const token = url.searchParams.get('resetToken');
-        if (token) {
-          setShowRecoveryModal(false);
-          setActiveResetToken(token);
-          validateResetToken(token);
-        }
-      } catch {
-        window.location.href = generatedResetUrl;
-      }
     }
   };
 
@@ -483,21 +459,43 @@ export const LoginView: React.FC = () => {
                   style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }}
                 />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '12px 14px 12px 42px',
+                    padding: '12px 42px 12px 42px',
                     borderRadius: 10,
                     border: '1px solid #cbd5e1',
                     outline: 'none',
+                    boxSizing: 'border-box',
                   }}
                   onFocus={(e) => (e.target.style.borderColor = '#15803d')}
                   onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: 12,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    padding: 4,
+                    cursor: 'pointer',
+                    color: '#94a3b8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  title={showPassword ? 'Ocultar senha' : 'Exibir senha'}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
             </div>
 
@@ -780,96 +778,102 @@ export const LoginView: React.FC = () => {
               </form>
             )}
 
-            {/* Step 2: Link Sent Confirmation & Direct Access */}
+            {/* Step 2: Link Sent Confirmation */}
             {recoveryStep === 2 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '10px 0' }}>
                 <div
                   style={{
-                    backgroundColor: '#f0fdf4',
-                    border: '1px solid #dcfce7',
-                    borderRadius: 12,
-                    padding: '14px 16px',
+                    width: 56,
+                    height: 56,
+                    borderRadius: 28,
+                    backgroundColor: '#dcfce7',
+                    color: '#15803d',
                     display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 12,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: 16,
                   }}
                 >
-                  <CheckCircle2 size={20} color="#15803d" style={{ flexShrink: 0, marginTop: 2 }} />
-                  <div style={{ fontSize: 13, color: '#166534', lineHeight: 1.5 }}>
-                    Link de recuperação enviado para <strong>{recoveryEmail}</strong>. Por motivos de segurança, ele só pode ser utilizado através do link fornecido.
-                  </div>
+                  <Mail size={28} />
                 </div>
 
-                {generatedResetUrl && (
-                  <div
-                    style={{
-                      backgroundColor: '#f8fafc',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: 12,
-                      padding: '14px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 10,
-                    }}
-                  >
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#334155' }}>
-                      Link de redefinição de senha gerado:
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <input
-                        type="text"
-                        readOnly
-                        value={generatedResetUrl}
-                        style={{
-                          flex: 1,
-                          fontSize: 11,
-                          padding: '8px 10px',
-                          borderRadius: 8,
-                          border: '1px solid #cbd5e1',
-                          backgroundColor: '#ffffff',
-                          color: '#64748b',
-                          outline: 'none',
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={handleCopyLink}
-                        className="btn-secondary"
-                        style={{ padding: '8px 12px', fontSize: 12, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}
-                        title="Copiar link"
-                      >
-                        {copiedLink ? <Check size={14} color="#15803d" /> : <Copy size={14} />}
-                        {copiedLink ? 'Copiado!' : 'Copiar'}
-                      </button>
-                    </div>
+                <h4 style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', margin: '0 0 8px' }}>
+                  Verifique seu e-mail!
+                </h4>
 
-                    <button
-                      type="button"
-                      onClick={handleOpenResetLinkDirectly}
-                      className="btn-primary"
-                      style={{
-                        width: '100%',
-                        padding: '10px',
-                        fontSize: 13,
-                        marginTop: 4,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 8,
-                      }}
-                    >
-                      <ExternalLink size={15} /> Acessar Link e Redefinir Senha
-                    </button>
+                <p style={{ fontSize: 13, color: '#475569', lineHeight: 1.6, margin: '0 0 16px' }}>
+                  Enviamos o link de recuperação de senha para:<br />
+                  <strong style={{ color: '#0f172a', fontSize: 14 }}>{recoveryEmail}</strong>
+                </p>
+
+                <div
+                  style={{
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 12,
+                    padding: '16px',
+                    textAlign: 'left',
+                    width: '100%',
+                    marginBottom: 18,
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#334155', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <CheckCircle2 size={15} color="#15803d" /> Como prosseguir:
                   </div>
-                )}
+                  <ol style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: '#64748b', lineHeight: 1.6 }}>
+                    <li>Acesse sua caixa de entrada no seu provedor de e-mail.</li>
+                    <li>Abra a mensagem com o assunto <strong>"Recuperação de Senha - CashBank"</strong>.</li>
+                    <li>Clique no botão seguro <strong>"Redefinir Minha Senha"</strong>.</li>
+                    <li>Você será direcionado diretamente para cadastrar sua nova senha.</li>
+                  </ol>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: '#eff6ff',
+                    border: '1px solid #dbeafe',
+                    borderRadius: 10,
+                    padding: '10px 14px',
+                    fontSize: 12,
+                    color: '#1e40af',
+                    marginBottom: 20,
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    textAlign: 'left',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  🔒 <strong>Segurança da sua conta:</strong> Por proteção dos seus dados, a troca de senha só é autorizada através do link enviado exclusivamente para a sua caixa de entrada.
+                </div>
 
                 <button
                   type="button"
                   onClick={() => setShowRecoveryModal(false)}
-                  className="btn-secondary"
-                  style={{ width: '100%', padding: '11px', marginTop: 4 }}
+                  className="btn-primary"
+                  style={{ width: '100%', padding: '12px', fontSize: 14 }}
                 >
-                  Fechar
+                  Entendi, vou checar meu e-mail
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecoveryStep(1);
+                    setRecoveryError(null);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#15803d',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    marginTop: 12,
+                    padding: 4,
+                  }}
+                >
+                  Não encontrou? Tentar outro e-mail
                 </button>
               </div>
             )}
@@ -1050,14 +1054,14 @@ export const LoginView: React.FC = () => {
                             style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }}
                           />
                           <input
-                            type="password"
+                            type={showNewPassword ? 'text' : 'password'}
                             required
                             placeholder="Mínimo de 6 caracteres"
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
                             style={{
                               width: '100%',
-                              padding: '11px 14px 11px 42px',
+                              padding: '11px 42px 11px 42px',
                               border: '1px solid #cbd5e1',
                               borderRadius: 10,
                               fontSize: 14,
@@ -1067,6 +1071,27 @@ export const LoginView: React.FC = () => {
                             onFocus={(e) => (e.target.style.borderColor = '#15803d')}
                             onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
                           />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                            style={{
+                              position: 'absolute',
+                              right: 12,
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: 'none',
+                              border: 'none',
+                              padding: 4,
+                              cursor: 'pointer',
+                              color: '#94a3b8',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                            title={showNewPassword ? 'Ocultar senha' : 'Exibir senha'}
+                          >
+                            {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
                         </div>
                       </div>
 
@@ -1089,14 +1114,14 @@ export const LoginView: React.FC = () => {
                             style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }}
                           />
                           <input
-                            type="password"
+                            type={showConfirmPassword ? 'text' : 'password'}
                             required
                             placeholder="Repita sua nova senha"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             style={{
                               width: '100%',
-                              padding: '11px 14px 11px 42px',
+                              padding: '11px 42px 11px 42px',
                               border: '1px solid #cbd5e1',
                               borderRadius: 10,
                               fontSize: 14,
@@ -1106,6 +1131,27 @@ export const LoginView: React.FC = () => {
                             onFocus={(e) => (e.target.style.borderColor = '#15803d')}
                             onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
                           />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            style={{
+                              position: 'absolute',
+                              right: 12,
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: 'none',
+                              border: 'none',
+                              padding: 4,
+                              cursor: 'pointer',
+                              color: '#94a3b8',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                            title={showConfirmPassword ? 'Ocultar senha' : 'Exibir senha'}
+                          >
+                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
                         </div>
                       </div>
 

@@ -33,6 +33,7 @@ model FixedExpense {
   firstDueDate DateTime
   endDate      DateTime?
   category     String
+  pixKey       String?
   createdAt    DateTime              @default(now())
   updatedAt    DateTime              @updatedAt
   payments     FixedExpensePayment[]
@@ -63,6 +64,7 @@ model VariableExpense {
   amount      Float
   date        DateTime
   category    String
+  pixKey      String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
