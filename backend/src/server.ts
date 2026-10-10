@@ -8,6 +8,7 @@ import variableExpenseRoutes from './routes/variableExpenseRoutes';
 import revenueRoutes from './routes/revenueRoutes';
 import savingsRoutes from './routes/savingsRoutes';
 import piggyBankRoutes from './routes/piggyBankRoutes';
+import creditCardRoutes from './routes/creditCardRoutes';
 
 dotenv.config();
 
@@ -45,6 +46,7 @@ app.use('/api/variable-expenses', variableExpenseRoutes);
 app.use('/api/revenues', revenueRoutes);
 app.use('/api/savings', savingsRoutes);
 app.use('/api/piggy-banks', piggyBankRoutes);
+app.use('/api/credit-cards', creditCardRoutes);
 
 // Error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
