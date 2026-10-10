@@ -172,8 +172,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
   });
 
   const filteredTransactions = rawTransactions.filter((t) => {
-    if (transactionFilter === 'revenues') return t.type === 'revenue';
-    if (transactionFilter === 'expenses') return t.type === 'variable_expense' || t.type === 'fixed_expense';
+    if (transactionFilter === 'revenues') return t.type === 'revenue' || t.type === 'savings_withdraw';
+    if (transactionFilter === 'expenses') return t.type === 'variable_expense' || t.type === 'fixed_expense' || t.type === 'savings_deposit';
     return true;
   });
 
@@ -691,6 +691,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
               filteredTransactions.map((tx: any) => {
                 const isRevenue = tx.type === 'revenue';
                 const isFixed = tx.type === 'fixed_expense';
+                const isSavingsDeposit = tx.type === 'savings_deposit';
+                const isSavingsWithdraw = tx.type === 'savings_withdraw';
+                const isSavings = isSavingsDeposit || isSavingsWithdraw;
+                const isPositive = isRevenue || isSavingsWithdraw;
 
                 return (
                   <div
@@ -704,12 +708,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                           width: 38,
                           height: 38,
                           borderRadius: 10,
-                          backgroundColor: isRevenue
+                          backgroundColor: isSavings
+                            ? (isSavingsDeposit ? '#ecfdf5' : '#f3e8ff')
+                            : isRevenue
                             ? '#ecfdf5'
                             : isFixed
                             ? '#ffedd5'
                             : '#f3e8ff',
-                          color: isRevenue
+                          color: isSavings
+                            ? (isSavingsDeposit ? '#15803d' : '#7c3aed')
+                            : isRevenue
                             ? '#15803d'
                             : isFixed
                             ? '#ea580c'
@@ -720,7 +728,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                           flexShrink: 0,
                         }}
                       >
-                        {isRevenue ? (
+                        {isSavings ? (
+                          <PiggyBank size={18} />
+                        ) : isRevenue ? (
                           <ArrowDownLeft size={18} />
                         ) : isFixed ? (
                           <CreditCard size={18} />
@@ -740,19 +750,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                               fontWeight: 700,
                               padding: '1px 6px',
                               borderRadius: 4,
-                              backgroundColor: isRevenue
+                              backgroundColor: isSavingsDeposit
+                                ? '#dcfce7'
+                                : isSavingsWithdraw
+                                ? '#ede9fe'
+                                : isRevenue
                                 ? '#dcfce7'
                                 : isFixed
                                 ? '#ffedd5'
                                 : '#f3e8ff',
-                              color: isRevenue
+                              color: isSavingsDeposit
+                                ? '#15803d'
+                                : isSavingsWithdraw
+                                ? '#7c3aed'
+                                : isRevenue
                                 ? '#15803d'
                                 : isFixed
                                 ? '#ea580c'
                                 : '#7c3aed',
                             }}
                           >
-                            {isRevenue ? 'Receita' : isFixed ? 'Fixa' : 'Variável'}
+                            {isSavingsDeposit
+                              ? 'Cofrinho'
+                              : isSavingsWithdraw
+                              ? 'Resgate'
+                              : isRevenue
+                              ? 'Receita'
+                              : isFixed
+                              ? 'Fixa'
+                              : 'Variável'}
                           </span>
                           {isFixed && tx.hasCustomAmount && (
                             <span
@@ -791,11 +817,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                           style={{
                             fontSize: 14,
                             fontWeight: 800,
-                            color: isRevenue ? '#16a34a' : 'var(--text-main, #0f172a)',
+                            color: isPositive ? '#16a34a' : 'var(--text-main, #0f172a)',
                             whiteSpace: 'nowrap',
                           }}
                         >
-                          {isRevenue ? `+ ${formatCurrency(tx.amount)}` : `- ${formatCurrency(tx.amount)}`}
+                          {isPositive ? `+ ${formatCurrency(tx.amount)}` : `- ${formatCurrency(tx.amount)}`}
                         </span>
                       </div>
                       {tx.pixKey && (
@@ -803,20 +829,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                           type="button"
                           onClick={() => handleCopyPix(tx.id, tx.pixKey)}
                           title={`Chave Pix: ${tx.pixKey}`}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 3,
-                            padding: '2px 6px',
-                            borderRadius: 5,
-                            backgroundColor: copiedPixId === tx.id ? '#15803d' : '#ecfdf5',
-                            color: copiedPixId === tx.id ? '#ffffff' : '#047857',
-                            border: '1px solid #a7f3d0',
-                            fontSize: 10,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                          }}
+                          className={`btn-pix-copy-emerald ${copiedPixId === tx.id ? 'copied' : ''}`}
                         >
                           <QrCode size={10} />
                           {copiedPixId === tx.id ? 'Pix copiado!' : 'Copiar Pix'}
@@ -937,20 +950,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                           type="button"
                           onClick={() => handleCopyPix(bill.id, bill.pixKey)}
                           title={`Chave Pix: ${bill.pixKey}`}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            padding: '2px 7px',
-                            borderRadius: 5,
-                            backgroundColor: copiedPixId === bill.id ? '#15803d' : '#ecfdf5',
-                            color: copiedPixId === bill.id ? '#ffffff' : '#047857',
-                            border: '1px solid #a7f3d0',
-                            fontSize: 10,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                          }}
+                          className={`btn-pix-copy-emerald ${copiedPixId === bill.id ? 'copied' : ''}`}
                         >
                           <QrCode size={10} />
                           {copiedPixId === bill.id ? 'Pix copiado!' : 'Copiar Pix'}
@@ -1229,12 +1229,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                   return (
                     <tr
                       key={m.month}
-                      style={{
-                        borderBottom: '1px solid var(--border-color, #f8fafc)',
-                        transition: 'background-color 0.15s ease',
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-item-hover, #fafbfc)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                      className="data-table-row"
                     >
                       <td style={{ padding: '16px 24px' }}>
                         <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>

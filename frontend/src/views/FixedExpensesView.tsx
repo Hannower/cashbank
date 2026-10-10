@@ -371,238 +371,388 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
           </span>
         </div>
 
-        {/* Table Content */}
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: 650 }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: '#fafbfc' }}>
-                <th style={{ padding: '12px 24px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
-                  DESCRIÇÃO
-                </th>
-                <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
-                  CATEGORIA
-                </th>
-                <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
-                  PERÍODO
-                </th>
-                <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
-                  VALOR
-                </th>
-                <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
-                  STATUS
-                </th>
-                <th style={{ padding: '12px 24px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px', textAlign: 'right' }}>
-                  AÇÕES
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={6} style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
-                    <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px' }} />
-                    Carregando despesas fixas...
-                  </td>
+        {/* Desktop Table */}
+        <div className="desktop-table-wrapper">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: 650 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: '#fafbfc' }}>
+                  <th style={{ padding: '12px 24px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
+                    DESCRIÇÃO
+                  </th>
+                  <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
+                    CATEGORIA
+                  </th>
+                  <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
+                    PERÍODO
+                  </th>
+                  <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
+                    VALOR
+                  </th>
+                  <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
+                    STATUS
+                  </th>
+                  <th style={{ padding: '12px 24px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px', textAlign: 'right' }}>
+                    AÇÕES
+                  </th>
                 </tr>
-              ) : expenses.length === 0 ? (
-                <tr>
-                  <td colSpan={6} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
-                    Nenhuma despesa fixa cadastrada para este mês. Clique em "+ Cadastrar despesa" acima para adicionar.
-                  </td>
-                </tr>
-              ) : (
-                expenses.map((exp) => (
-                  <tr
-                    key={exp.id}
-                    style={{
-                      borderBottom: '1px solid #f8fafc',
-                      transition: 'background-color 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fafbfc')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  >
-                    {/* Descrição with Orange Icon */}
-                    <td style={{ padding: '16px 24px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div
-                          style={{
-                            width: 34,
-                            height: 34,
-                            borderRadius: 8,
-                            backgroundColor: '#ffedd5',
-                            color: '#ea580c',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                          }}
-                        >
-                          <CalendarCheck2 size={17} />
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr className="empty-row">
+                    <td colSpan={6} style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
+                      <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px' }} />
+                      Carregando despesas fixas...
+                    </td>
+                  </tr>
+                ) : expenses.length === 0 ? (
+                  <tr className="empty-row">
+                    <td colSpan={6} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
+                      Nenhuma despesa fixa cadastrada para este mês. Clique em "+ Cadastrar despesa" acima para adicionar.
+                    </td>
+                  </tr>
+                ) : (
+                  expenses.map((exp) => (
+                    <tr
+                      key={exp.id}
+                      className="data-table-row"
+                    >
+                      {/* Descrição with Orange Icon */}
+                      <td style={{ padding: '16px 24px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div
+                            style={{
+                              width: 34,
+                              height: 34,
+                              borderRadius: 8,
+                              backgroundColor: '#ffedd5',
+                              color: '#ea580c',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <CalendarCheck2 size={17} />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
+                              {exp.description}
+                            </span>
+                            {exp.pixKey && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                                <span
+                                  className="pix-pill"
+                                  title={`Chave Pix: ${exp.pixKey}`}
+                                >
+                                  <QrCode size={11} /> Pix: {exp.pixKey.length > 18 ? `${exp.pixKey.slice(0, 16)}...` : exp.pixKey}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyPix(exp.id, exp.pixKey!)}
+                                  title="Copiar chave Pix"
+                                  className={`btn-pix-copy ${copiedPixId === exp.id ? 'copied' : ''}`}
+                                >
+                                  {copiedPixId === exp.id ? <Check size={11} /> : <Copy size={11} />}
+                                  {copiedPixId === exp.id ? 'Copiado!' : 'Copiar'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      </td>
+
+                      {/* Categoria */}
+                      <td style={{ padding: '16px 20px', fontSize: 13, color: '#64748b' }}>
+                        {exp.category}
+                      </td>
+
+                      {/* Período */}
+                      <td style={{ padding: '16px 20px', fontSize: 13, color: '#64748b' }}>
+                        {formatPeriod(exp)}
+                      </td>
+
+                      {/* Valor com opção de ajuste mensal */}
+                      <td style={{ padding: '16px 20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                           <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
-                            {exp.description}
+                            {formatCurrency(exp.amount)}
                           </span>
-                          {exp.pixKey && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                              <span
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: 4,
-                                  fontSize: 11,
-                                  fontWeight: 600,
-                                  backgroundColor: '#ecfdf5',
-                                  color: '#065f46',
-                                  padding: '2px 8px',
-                                  borderRadius: 6,
-                                  border: '1px solid #a7f3d0',
-                                }}
-                                title={`Chave Pix: ${exp.pixKey}`}
-                              >
-                                <QrCode size={11} /> Pix: {exp.pixKey.length > 18 ? `${exp.pixKey.slice(0, 16)}...` : exp.pixKey}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleCopyPix(exp.id, exp.pixKey!)}
-                                title="Copiar chave Pix"
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: 3,
-                                  padding: '2px 7px',
-                                  borderRadius: 5,
-                                  backgroundColor: copiedPixId === exp.id ? '#15803d' : '#f1f5f9',
-                                  color: copiedPixId === exp.id ? '#ffffff' : '#334155',
-                                  fontSize: 11,
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
-                                  border: '1px solid #e2e8f0',
-                                  transition: 'all 0.15s ease',
-                                }}
-                              >
-                                {copiedPixId === exp.id ? <Check size={11} /> : <Copy size={11} />}
-                                {copiedPixId === exp.id ? 'Copiado!' : 'Copiar'}
-                              </button>
-                            </div>
-                          )}
+                          <button
+                            onClick={() => openAdjustMonthModal(exp)}
+                            title={`Ajustar valor especificamente para ${selectedMonth.label} (ideal para contas que variam como Fatura Nubank, Luz)`}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              fontSize: 11,
+                              padding: '3px 8px',
+                              borderRadius: 6,
+                              backgroundColor: exp.hasCustomAmount ? '#fef3c7' : '#f8fafc',
+                              color: exp.hasCustomAmount ? '#b45309' : '#475569',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              border: exp.hasCustomAmount ? '1px solid #fde68a' : '1px solid #e2e8f0',
+                              transition: 'all 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = exp.hasCustomAmount ? '#fde68a' : '#f1f5f9';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = exp.hasCustomAmount ? '#fef3c7' : '#f8fafc';
+                            }}
+                          >
+                            <Pencil size={11} />
+                            {exp.hasCustomAmount ? 'Ajustado' : 'Ajustar mês'}
+                          </button>
                         </div>
-                      </div>
-                    </td>
+                        {exp.hasCustomAmount && (
+                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+                            Padrão: {formatCurrency(exp.baseAmount ?? exp.amount)}
+                          </div>
+                        )}
+                      </td>
 
-                    {/* Categoria */}
-                    <td style={{ padding: '16px 20px', fontSize: 13, color: '#64748b' }}>
-                      {exp.category}
-                    </td>
-
-                    {/* Período */}
-                    <td style={{ padding: '16px 20px', fontSize: 13, color: '#64748b' }}>
-                      {formatPeriod(exp)}
-                    </td>
-
-                    {/* Valor com opção de ajuste mensal */}
-                    <td style={{ padding: '16px 20px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
-                          {formatCurrency(exp.amount)}
-                        </span>
+                      {/* Status Badge (Clickable Toggle) */}
+                      <td style={{ padding: '16px 20px' }}>
                         <button
-                          onClick={() => openAdjustMonthModal(exp)}
-                          title={`Ajustar valor especificamente para ${selectedMonth.label} (ideal para contas que variam como Fatura Nubank, Luz)`}
+                          onClick={() => handleTogglePayment(exp)}
+                          title="Clique para alternar status de pagamento"
+                          className={exp.isPaid ? 'badge-paid' : 'badge-pending'}
+                          style={{ cursor: 'pointer', transition: 'transform 0.1s' }}
+                        >
+                          {exp.isPaid ? (
+                            <>
+                              <Check size={13} /> Pago
+                            </>
+                          ) : (
+                            <>
+                              <Clock size={13} /> Pendente
+                            </>
+                          )}
+                        </button>
+                      </td>
+
+                      {/* Ações */}
+                      <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+                          <button
+                            onClick={() => openEditModal(exp)}
+                            title="Editar"
+                            style={{
+                              color: '#94a3b8',
+                              padding: 6,
+                              borderRadius: 6,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            onClick={() => setDeletingExpense(exp)}
+                            title="Excluir"
+                            style={{
+                              color: '#94a3b8',
+                              padding: 6,
+                              borderRadius: 6,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Mobile Cards (Responsive compact cards resembling Dashboard transactions, preserving all info) */}
+        <div className="mobile-cards-wrapper">
+          {loading ? (
+            <div style={{ padding: 30, textAlign: 'center', color: '#64748b' }}>
+              <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px' }} />
+              Carregando despesas fixas...
+            </div>
+          ) : expenses.length === 0 ? (
+            <div style={{ padding: 24, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
+              Nenhuma despesa fixa cadastrada para este mês.
+            </div>
+          ) : (
+            expenses.map((exp) => (
+              <div key={exp.id} className="expense-mobile-item">
+                <div className="expense-mobile-header">
+                  <div className="expense-mobile-main">
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 10,
+                        backgroundColor: '#ffedd5',
+                        color: '#ea580c',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <CalendarCheck2 size={18} />
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span className="expense-mobile-title">{exp.description}</span>
+                        <span
                           style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            fontSize: 11,
-                            padding: '3px 8px',
-                            borderRadius: 6,
-                            backgroundColor: exp.hasCustomAmount ? '#fef3c7' : '#f8fafc',
-                            color: exp.hasCustomAmount ? '#b45309' : '#475569',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            border: exp.hasCustomAmount ? '1px solid #fde68a' : '1px solid #e2e8f0',
-                            transition: 'all 0.15s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = exp.hasCustomAmount ? '#fde68a' : '#f1f5f9';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = exp.hasCustomAmount ? '#fef3c7' : '#f8fafc';
+                            fontSize: 10,
+                            fontWeight: 700,
+                            padding: '1px 6px',
+                            borderRadius: 4,
+                            backgroundColor: '#f1f5f9',
+                            color: '#475569',
                           }}
                         >
-                          <Pencil size={11} />
-                          {exp.hasCustomAmount ? 'Ajustado' : 'Ajustar mês'}
-                        </button>
+                          {exp.category}
+                        </span>
+                        {exp.hasCustomAmount && (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              padding: '1px 6px',
+                              borderRadius: 4,
+                              backgroundColor: '#fef3c7',
+                              color: '#b45309',
+                            }}
+                            title="Valor ajustado no mês"
+                          >
+                            Ajustado
+                          </span>
+                        )}
                       </div>
-                      {exp.hasCustomAmount && (
-                        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
-                          Padrão: {formatCurrency(exp.baseAmount ?? exp.amount)}
-                        </div>
-                      )}
-                    </td>
+                      <div className="expense-mobile-subtitle">
+                        <span>{formatPeriod(exp)}</span>
+                      </div>
+                    </div>
+                  </div>
 
-                    {/* Status Badge (Clickable Toggle) */}
-                    <td style={{ padding: '16px 20px' }}>
+                  {/* Right: Amount & Paid/Pending Toggle */}
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
+                      {formatCurrency(exp.amount)}
+                    </div>
+                    <div style={{ marginTop: 4 }}>
                       <button
                         onClick={() => handleTogglePayment(exp)}
-                        title="Clique para alternar status de pagamento"
+                        title="Alternar pagamento"
                         className={exp.isPaid ? 'badge-paid' : 'badge-pending'}
-                        style={{ cursor: 'pointer', transition: 'transform 0.1s' }}
+                        style={{ cursor: 'pointer', fontSize: 11, padding: '2px 8px' }}
                       >
                         {exp.isPaid ? (
                           <>
-                            <Check size={13} /> Pago
+                            <Check size={12} /> Pago
                           </>
                         ) : (
                           <>
-                            <Clock size={13} /> Pendente
+                            <Clock size={12} /> Pendente
                           </>
                         )}
                       </button>
-                    </td>
+                    </div>
+                  </div>
+                </div>
 
-                    {/* Ações */}
-                    <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
-                        <button
-                          onClick={() => openEditModal(exp)}
-                          title="Editar"
-                          style={{
-                            color: '#94a3b8',
-                            padding: 6,
-                            borderRadius: 6,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
-                        >
-                          <Pencil size={16} />
-                        </button>
-                        <button
-                          onClick={() => setDeletingExpense(exp)}
-                          title="Excluir"
-                          style={{
-                            color: '#94a3b8',
-                            padding: 6,
-                            borderRadius: 6,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                {/* Pix row if present */}
+                {exp.pixKey && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', paddingLeft: 48 }}>
+                    <span className="pix-pill" title={`Chave Pix: ${exp.pixKey}`}>
+                      <QrCode size={11} /> Pix: {exp.pixKey.length > 20 ? `${exp.pixKey.slice(0, 18)}...` : exp.pixKey}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyPix(exp.id, exp.pixKey!)}
+                      title="Copiar chave Pix"
+                      className={`btn-pix-copy ${copiedPixId === exp.id ? 'copied' : ''}`}
+                    >
+                      {copiedPixId === exp.id ? <Check size={11} /> : <Copy size={11} />}
+                      {copiedPixId === exp.id ? 'Copiado!' : 'Copiar'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Footer: Month adjustment & actions */}
+                <div className="expense-mobile-footer">
+                  <button
+                    onClick={() => openAdjustMonthModal(exp)}
+                    title="Ajustar valor especificamente para este mês"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      fontSize: 11,
+                      padding: '3px 8px',
+                      borderRadius: 6,
+                      backgroundColor: exp.hasCustomAmount ? '#fef3c7' : 'transparent',
+                      color: exp.hasCustomAmount ? '#b45309' : '#64748b',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      border: exp.hasCustomAmount ? '1px solid #fde68a' : '1px solid var(--border-input, #e2e8f0)',
+                    }}
+                  >
+                    <Pencil size={11} />
+                    {exp.hasCustomAmount ? `Ajustado (padrão: ${formatCurrency(exp.baseAmount ?? exp.amount)})` : 'Ajustar este mês'}
+                  </button>
+
+                  <div className="expense-mobile-actions">
+                    <button
+                      onClick={() => openEditModal(exp)}
+                      title="Editar"
+                      style={{
+                        color: '#94a3b8',
+                        padding: '6px 8px',
+                        borderRadius: 6,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        fontSize: 12,
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                    >
+                      <Pencil size={14} /> Editar
+                    </button>
+                    <button
+                      onClick={() => setDeletingExpense(exp)}
+                      title="Excluir"
+                      style={{
+                        color: '#94a3b8',
+                        padding: '6px 8px',
+                        borderRadius: 6,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        fontSize: 12,
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                    >
+                      <Trash2 size={14} /> Excluir
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -735,20 +885,7 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
                 <button
                   type="button"
                   onClick={() => handleCopyFormPix()}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '2px 8px',
-                    borderRadius: 6,
-                    backgroundColor: copiedFormPix ? '#dcfce7' : '#f1f5f9',
-                    color: copiedFormPix ? '#15803d' : '#475569',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    border: '1px solid #cbd5e1',
-                    transition: 'all 0.15s ease',
-                  }}
+                  className={`btn-pix-copy ${copiedFormPix ? 'copied' : ''}`}
                 >
                   {copiedFormPix ? <Check size={12} /> : <Copy size={12} />}
                   {copiedFormPix ? 'Copiado!' : 'Copiar'}
@@ -777,21 +914,7 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
                   type="button"
                   onClick={() => handleCopyFormPix()}
                   title="Copiar chave Pix"
-                  style={{
-                    padding: '0 14px',
-                    borderRadius: 10,
-                    backgroundColor: copiedFormPix ? '#15803d' : '#f8fafc',
-                    color: copiedFormPix ? '#ffffff' : '#334155',
-                    border: '1px solid #cbd5e1',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    whiteSpace: 'nowrap',
-                  }}
+                  className={`btn-pix-copy-input ${copiedFormPix ? 'copied' : ''}`}
                 >
                   {copiedFormPix ? <Check size={14} /> : <Copy size={14} />}
                   {copiedFormPix ? 'Copiado' : 'Copiar'}
@@ -959,20 +1082,7 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
                 <button
                   type="button"
                   onClick={() => handleCopyFormPix()}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '2px 8px',
-                    borderRadius: 6,
-                    backgroundColor: copiedFormPix ? '#dcfce7' : '#f1f5f9',
-                    color: copiedFormPix ? '#15803d' : '#475569',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    border: '1px solid #cbd5e1',
-                    transition: 'all 0.15s ease',
-                  }}
+                  className={`btn-pix-copy ${copiedFormPix ? 'copied' : ''}`}
                 >
                   {copiedFormPix ? <Check size={12} /> : <Copy size={12} />}
                   {copiedFormPix ? 'Copiado!' : 'Copiar'}
@@ -1001,21 +1111,7 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
                   type="button"
                   onClick={() => handleCopyFormPix()}
                   title="Copiar chave Pix"
-                  style={{
-                    padding: '0 14px',
-                    borderRadius: 10,
-                    backgroundColor: copiedFormPix ? '#15803d' : '#f8fafc',
-                    color: copiedFormPix ? '#ffffff' : '#334155',
-                    border: '1px solid #cbd5e1',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    whiteSpace: 'nowrap',
-                  }}
+                  className={`btn-pix-copy-input ${copiedFormPix ? 'copied' : ''}`}
                 >
                   {copiedFormPix ? <Check size={14} /> : <Copy size={14} />}
                   {copiedFormPix ? 'Copiado' : 'Copiar'}

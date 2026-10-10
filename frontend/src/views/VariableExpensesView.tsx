@@ -293,178 +293,284 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
           </span>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: 600 }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: '#fafbfc' }}>
-                <th style={{ padding: '12px 24px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
-                  DESCRIÇÃO
-                </th>
-                <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
-                  CATEGORIA
-                </th>
-                <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
-                  DATA
-                </th>
-                <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
-                  VALOR
-                </th>
-                <th style={{ padding: '12px 24px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px', textAlign: 'right' }}>
-                  AÇÕES
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
-                    <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px' }} />
-                    Carregando despesas variáveis...
-                  </td>
+        {/* Desktop Table */}
+        <div className="desktop-table-wrapper">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: 600 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: '#fafbfc' }}>
+                  <th style={{ padding: '12px 24px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
+                    DESCRIÇÃO
+                  </th>
+                  <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
+                    CATEGORIA
+                  </th>
+                  <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
+                    DATA
+                  </th>
+                  <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
+                    VALOR
+                  </th>
+                  <th style={{ padding: '12px 24px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px', textAlign: 'right' }}>
+                    AÇÕES
+                  </th>
                 </tr>
-              ) : expenses.length === 0 ? (
-                <tr>
-                  <td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
-                    Nenhuma despesa variável cadastrada para {selectedMonth.label}. Clique em "+ Cadastrar despesa" acima para adicionar.
-                  </td>
-                </tr>
-              ) : (
-                expenses.map((exp) => (
-                  <tr
-                    key={exp.id}
-                    style={{
-                      borderBottom: '1px solid #f8fafc',
-                      transition: 'background-color 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fafbfc')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  >
-                    {/* Descrição with Card Icon */}
-                    <td style={{ padding: '16px 24px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div
-                          style={{
-                            width: 34,
-                            height: 34,
-                            borderRadius: 8,
-                            backgroundColor: '#ffedd5',
-                            color: '#ea580c',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                          }}
-                        >
-                          <CreditCard size={17} />
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
-                            {exp.description}
-                          </span>
-                          {exp.pixKey && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                              <span
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: 4,
-                                  fontSize: 11,
-                                  fontWeight: 600,
-                                  backgroundColor: '#ecfdf5',
-                                  color: '#065f46',
-                                  padding: '2px 8px',
-                                  borderRadius: 6,
-                                  border: '1px solid #a7f3d0',
-                                }}
-                                title={`Chave Pix: ${exp.pixKey}`}
-                              >
-                                <QrCode size={11} /> Pix: {exp.pixKey.length > 18 ? `${exp.pixKey.slice(0, 16)}...` : exp.pixKey}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleCopyPix(exp.id, exp.pixKey!)}
-                                title="Copiar chave Pix"
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: 3,
-                                  padding: '2px 7px',
-                                  borderRadius: 5,
-                                  backgroundColor: copiedPixId === exp.id ? '#15803d' : '#f1f5f9',
-                                  color: copiedPixId === exp.id ? '#ffffff' : '#334155',
-                                  fontSize: 11,
-                                  fontWeight: 600,
-                                  cursor: 'pointer',
-                                  border: '1px solid #e2e8f0',
-                                  transition: 'all 0.15s ease',
-                                }}
-                              >
-                                {copiedPixId === exp.id ? <Check size={11} /> : <Copy size={11} />}
-                                {copiedPixId === exp.id ? 'Copiado!' : 'Copiar'}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Categoria */}
-                    <td style={{ padding: '16px 20px', fontSize: 13, color: '#64748b' }}>
-                      {exp.category}
-                    </td>
-
-                    {/* Data */}
-                    <td style={{ padding: '16px 20px', fontSize: 13, color: '#64748b' }}>
-                      {formatDate(exp.date)}
-                    </td>
-
-                    {/* Valor (Red negative) */}
-                    <td style={{ padding: '16px 20px', fontSize: 14, fontWeight: 700, color: '#b45309' }}>
-                      - {formatCurrency(exp.amount)}
-                    </td>
-
-                    {/* Ações */}
-                    <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
-                        <button
-                          onClick={() => openEditModal(exp)}
-                          title="Editar"
-                          style={{
-                            color: '#94a3b8',
-                            padding: 6,
-                            borderRadius: 6,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
-                        >
-                          <Pencil size={16} />
-                        </button>
-                        <button
-                          onClick={() => setDeletingExpense(exp)}
-                          title="Excluir"
-                          style={{
-                            color: '#94a3b8',
-                            padding: 6,
-                            borderRadius: 6,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr className="empty-row">
+                    <td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
+                      <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px' }} />
+                      Carregando despesas variáveis...
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : expenses.length === 0 ? (
+                  <tr className="empty-row">
+                    <td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
+                      Nenhuma despesa variável cadastrada para {selectedMonth.label}. Clique em "+ Cadastrar despesa" acima para adicionar.
+                    </td>
+                  </tr>
+                ) : (
+                  expenses.map((exp) => (
+                    <tr
+                      key={exp.id}
+                      className="data-table-row"
+                    >
+                      {/* Descrição with Card Icon */}
+                      <td style={{ padding: '16px 24px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div
+                            style={{
+                              width: 34,
+                              height: 34,
+                              borderRadius: 8,
+                              backgroundColor: '#ffedd5',
+                              color: '#ea580c',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <CreditCard size={17} />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
+                              {exp.description}
+                            </span>
+                            {exp.pixKey && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                                <span
+                                  className="pix-pill"
+                                  title={`Chave Pix: ${exp.pixKey}`}
+                                >
+                                  <QrCode size={11} /> Pix: {exp.pixKey.length > 18 ? `${exp.pixKey.slice(0, 16)}...` : exp.pixKey}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyPix(exp.id, exp.pixKey!)}
+                                  title="Copiar chave Pix"
+                                  className={`btn-pix-copy ${copiedPixId === exp.id ? 'copied' : ''}`}
+                                >
+                                  {copiedPixId === exp.id ? <Check size={11} /> : <Copy size={11} />}
+                                  {copiedPixId === exp.id ? 'Copiado!' : 'Copiar'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Categoria */}
+                      <td style={{ padding: '16px 20px', fontSize: 13, color: '#64748b' }}>
+                        {exp.category}
+                      </td>
+
+                      {/* Data */}
+                      <td style={{ padding: '16px 20px', fontSize: 13, color: '#64748b' }}>
+                        {formatDate(exp.date)}
+                      </td>
+
+                      {/* Valor (Red negative) */}
+                      <td style={{ padding: '16px 20px', fontSize: 14, fontWeight: 700, color: '#b45309' }}>
+                        - {formatCurrency(exp.amount)}
+                      </td>
+
+                      {/* Ações */}
+                      <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+                          <button
+                            onClick={() => openEditModal(exp)}
+                            title="Editar"
+                            style={{
+                              color: '#94a3b8',
+                              padding: 6,
+                              borderRadius: 6,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            onClick={() => setDeletingExpense(exp)}
+                            title="Excluir"
+                            style={{
+                              color: '#94a3b8',
+                              padding: 6,
+                              borderRadius: 6,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Mobile Cards (Responsive compact cards resembling Dashboard transactions, preserving all info) */}
+        <div className="mobile-cards-wrapper">
+          {loading ? (
+            <div style={{ padding: 30, textAlign: 'center', color: '#64748b' }}>
+              <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px' }} />
+              Carregando despesas variáveis...
+            </div>
+          ) : expenses.length === 0 ? (
+            <div style={{ padding: 24, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
+              Nenhuma despesa variável cadastrada para {selectedMonth.label}.
+            </div>
+          ) : (
+            expenses.map((exp) => (
+              <div key={exp.id} className="expense-mobile-item">
+                <div className="expense-mobile-header">
+                  <div className="expense-mobile-main">
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 10,
+                        backgroundColor: '#ffedd5',
+                        color: '#ea580c',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <CreditCard size={18} />
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span className="expense-mobile-title">{exp.description}</span>
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            padding: '1px 6px',
+                            borderRadius: 4,
+                            backgroundColor: '#f1f5f9',
+                            color: '#475569',
+                          }}
+                        >
+                          {exp.category}
+                        </span>
+                      </div>
+                      <div className="expense-mobile-subtitle">
+                        <span>{formatDate(exp.date)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: 15,
+                      fontWeight: 800,
+                      color: '#b45309',
+                      whiteSpace: 'nowrap',
+                      textAlign: 'right',
+                      flexShrink: 0,
+                    }}
+                  >
+                    - {formatCurrency(exp.amount)}
+                  </div>
+                </div>
+
+                {/* Pix row if present */}
+                {exp.pixKey && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', paddingLeft: 48 }}>
+                    <span className="pix-pill" title={`Chave Pix: ${exp.pixKey}`}>
+                      <QrCode size={11} /> Pix: {exp.pixKey.length > 20 ? `${exp.pixKey.slice(0, 18)}...` : exp.pixKey}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyPix(exp.id, exp.pixKey!)}
+                      title="Copiar chave Pix"
+                      className={`btn-pix-copy ${copiedPixId === exp.id ? 'copied' : ''}`}
+                    >
+                      {copiedPixId === exp.id ? <Check size={11} /> : <Copy size={11} />}
+                      {copiedPixId === exp.id ? 'Copiado!' : 'Copiar'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Footer: Date & Actions */}
+                <div className="expense-mobile-footer">
+                  <div style={{ fontSize: 12, color: '#64748b' }}>
+                    Data: <strong style={{ color: 'var(--text-main, #0f172a)' }}>{formatDate(exp.date)}</strong>
+                  </div>
+                  <div className="expense-mobile-actions">
+                    <button
+                      onClick={() => openEditModal(exp)}
+                      title="Editar"
+                      style={{
+                        color: '#94a3b8',
+                        padding: '6px 8px',
+                        borderRadius: 6,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        fontSize: 12,
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                    >
+                      <Pencil size={14} /> Editar
+                    </button>
+                    <button
+                      onClick={() => setDeletingExpense(exp)}
+                      title="Excluir"
+                      style={{
+                        color: '#94a3b8',
+                        padding: '6px 8px',
+                        borderRadius: 6,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        fontSize: 12,
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                    >
+                      <Trash2 size={14} /> Excluir
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -576,20 +682,7 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
                 <button
                   type="button"
                   onClick={() => handleCopyFormPix()}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '2px 8px',
-                    borderRadius: 6,
-                    backgroundColor: copiedFormPix ? '#dcfce7' : '#f1f5f9',
-                    color: copiedFormPix ? '#15803d' : '#475569',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    border: '1px solid #cbd5e1',
-                    transition: 'all 0.15s ease',
-                  }}
+                  className={`btn-pix-copy ${copiedFormPix ? 'copied' : ''}`}
                 >
                   {copiedFormPix ? <Check size={12} /> : <Copy size={12} />}
                   {copiedFormPix ? 'Copiado!' : 'Copiar'}
@@ -618,21 +711,7 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
                   type="button"
                   onClick={() => handleCopyFormPix()}
                   title="Copiar chave Pix"
-                  style={{
-                    padding: '0 14px',
-                    borderRadius: 10,
-                    backgroundColor: copiedFormPix ? '#15803d' : '#f8fafc',
-                    color: copiedFormPix ? '#ffffff' : '#334155',
-                    border: '1px solid #cbd5e1',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    whiteSpace: 'nowrap',
-                  }}
+                  className={`btn-pix-copy-input ${copiedFormPix ? 'copied' : ''}`}
                 >
                   {copiedFormPix ? <Check size={14} /> : <Copy size={14} />}
                   {copiedFormPix ? 'Copiado' : 'Copiar'}
@@ -766,20 +845,7 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
                 <button
                   type="button"
                   onClick={() => handleCopyFormPix()}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '2px 8px',
-                    borderRadius: 6,
-                    backgroundColor: copiedFormPix ? '#dcfce7' : '#f1f5f9',
-                    color: copiedFormPix ? '#15803d' : '#475569',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    border: '1px solid #cbd5e1',
-                    transition: 'all 0.15s ease',
-                  }}
+                  className={`btn-pix-copy ${copiedFormPix ? 'copied' : ''}`}
                 >
                   {copiedFormPix ? <Check size={12} /> : <Copy size={12} />}
                   {copiedFormPix ? 'Copiado!' : 'Copiar'}
@@ -808,21 +874,7 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
                   type="button"
                   onClick={() => handleCopyFormPix()}
                   title="Copiar chave Pix"
-                  style={{
-                    padding: '0 14px',
-                    borderRadius: 10,
-                    backgroundColor: copiedFormPix ? '#15803d' : '#f8fafc',
-                    color: copiedFormPix ? '#ffffff' : '#334155',
-                    border: '1px solid #cbd5e1',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    whiteSpace: 'nowrap',
-                  }}
+                  className={`btn-pix-copy-input ${copiedFormPix ? 'copied' : ''}`}
                 >
                   {copiedFormPix ? <Check size={14} /> : <Copy size={14} />}
                   {copiedFormPix ? 'Copiado' : 'Copiar'}

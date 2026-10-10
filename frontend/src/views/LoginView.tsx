@@ -16,6 +16,8 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -50,6 +52,25 @@ export const LoginView: React.FC = () => {
   const [tokenResetLoading, setTokenResetLoading] = useState(false);
   const [tokenResetError, setTokenResetError] = useState<string | null>(null);
   const [tokenResetSuccess, setTokenResetSuccess] = useState(false);
+
+  // Theme toggle state
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    return localStorage.getItem('cashbank_theme') === 'dark' || document.body.classList.contains('dark-theme');
+  });
+
+  const toggleTheme = () => {
+    setIsDark((prev) => {
+      const next = !prev;
+      if (next) {
+        document.body.classList.add('dark-theme');
+        localStorage.setItem('cashbank_theme', 'dark');
+      } else {
+        document.body.classList.remove('dark-theme');
+        localStorage.setItem('cashbank_theme', 'light');
+      }
+      return next;
+    });
+  };
 
   // Check URL on load for ?resetToken=
   useEffect(() => {
@@ -167,11 +188,12 @@ export const LoginView: React.FC = () => {
 
   return (
     <div
+      className="login-page-wrapper"
       style={{
         display: 'flex',
         minHeight: '100vh',
         width: '100%',
-        backgroundColor: '#ffffff',
+        position: 'relative',
       }}
     >
       {/* Left green panel */}
@@ -306,6 +328,7 @@ export const LoginView: React.FC = () => {
 
       {/* Right Login / Register Card */}
       <div
+        className="login-right-panel"
         style={{
           flex: 1,
           display: 'flex',
@@ -313,9 +336,22 @@ export const LoginView: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'center',
           padding: '40px 24px',
-          backgroundColor: '#ffffff',
+          position: 'relative',
         }}
       >
+        {/* Floating Theme Toggle */}
+        <div style={{ position: 'absolute', top: 24, right: 24, zIndex: 10 }}>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="login-theme-toggle"
+            title={isDark ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+            aria-label={isDark ? 'Tema Claro' : 'Tema Escuro'}
+          >
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+        </div>
+
         <div style={{ width: '100%', maxWidth: 420 }}>
           <div style={{ marginBottom: 32 }}>
             <span
@@ -507,7 +543,7 @@ export const LoginView: React.FC = () => {
                     alignItems: 'center',
                     gap: 8,
                     fontSize: 13,
-                    color: '#475569',
+                    color: 'var(--text-secondary, #475569)',
                     cursor: 'pointer',
                   }}
                 >
@@ -577,9 +613,9 @@ export const LoginView: React.FC = () => {
               gap: 12,
             }}
           >
-            <div style={{ flex: 1, height: 1, backgroundColor: '#e2e8f0' }} />
-            <span style={{ fontSize: 12, color: '#94a3b8' }}>ou</span>
-            <div style={{ flex: 1, height: 1, backgroundColor: '#e2e8f0' }} />
+            <div className="login-divider-line" style={{ flex: 1, height: 1 }} />
+            <span style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)' }}>ou</span>
+            <div className="login-divider-line" style={{ flex: 1, height: 1 }} />
           </div>
 
           {/* Toggle Register / Login */}
@@ -628,8 +664,8 @@ export const LoginView: React.FC = () => {
           onClick={() => setShowRecoveryModal(false)}
         >
           <div
+            className="login-modal-box"
             style={{
-              backgroundColor: '#ffffff',
               borderRadius: 20,
               width: '100%',
               maxWidth: 480,
@@ -651,7 +687,7 @@ export const LoginView: React.FC = () => {
                 padding: 6,
                 borderRadius: 8,
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-main, #0f172a)')}
               onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
             >
               <X size={20} />
@@ -807,9 +843,8 @@ export const LoginView: React.FC = () => {
                 </p>
 
                 <div
+                  className="login-info-box-light"
                   style={{
-                    backgroundColor: '#f8fafc',
-                    border: '1px solid #e2e8f0',
                     borderRadius: 12,
                     padding: '16px',
                     textAlign: 'left',
@@ -818,10 +853,10 @@ export const LoginView: React.FC = () => {
                     boxSizing: 'border-box',
                   }}
                 >
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#334155', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main, #334155)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
                     <CheckCircle2 size={15} color="#15803d" /> Como prosseguir:
                   </div>
-                  <ol style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: '#64748b', lineHeight: 1.6 }}>
+                  <ol style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-secondary, #64748b)', lineHeight: 1.6 }}>
                     <li>Acesse sua caixa de entrada no seu provedor de e-mail.</li>
                     <li>Abra a mensagem com o assunto <strong>"Recuperação de Senha - CashBank"</strong>.</li>
                     <li>Clique no botão seguro <strong>"Redefinir Minha Senha"</strong>.</li>
@@ -830,13 +865,11 @@ export const LoginView: React.FC = () => {
                 </div>
 
                 <div
+                  className="login-info-box-blue"
                   style={{
-                    backgroundColor: '#eff6ff',
-                    border: '1px solid #dbeafe',
                     borderRadius: 10,
                     padding: '10px 14px',
                     fontSize: 12,
-                    color: '#1e40af',
                     marginBottom: 20,
                     width: '100%',
                     boxSizing: 'border-box',
@@ -897,8 +930,8 @@ export const LoginView: React.FC = () => {
           }}
         >
           <div
+            className="login-modal-box"
             style={{
-              backgroundColor: '#ffffff',
               borderRadius: 20,
               width: '100%',
               maxWidth: 480,
@@ -1022,12 +1055,12 @@ export const LoginView: React.FC = () => {
 
                     <div
                       style={{
-                        backgroundColor: '#f0fdf4',
-                        border: '1px solid #dcfce7',
+                        backgroundColor: 'var(--primary-light, #f0fdf4)',
+                        border: '1px solid var(--border-color, #dcfce7)',
                         borderRadius: 10,
                         padding: '10px 14px',
                         fontSize: 13,
-                        color: '#15803d',
+                        color: 'var(--primary-badge-text, #15803d)',
                         marginBottom: 16,
                       }}
                     >

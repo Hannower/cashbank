@@ -127,4 +127,17 @@ export const api = {
     request<any>(`/savings/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteSavings: (id: string) =>
     request<any>(`/savings/${id}`, { method: 'DELETE' }),
+
+  // Piggy Banks (Cofrinhos Estilo Banco Inter)
+  getPiggyBanks: () => request<any>('/piggy-banks'),
+  createPiggyBank: (data: any) =>
+    request<any>('/piggy-banks', { method: 'POST', body: JSON.stringify(data) }),
+  updatePiggyBank: (id: string, data: any) =>
+    request<any>(`/piggy-banks/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deletePiggyBank: (id: string) =>
+    request<any>(`/piggy-banks/${id}`, { method: 'DELETE' }),
+  depositPiggyBank: (id: string, data: { amount: number; date?: string; description?: string }) =>
+    request<any>(`/piggy-banks/${id}/deposit`, { method: 'POST', body: JSON.stringify(data) }),
+  withdrawPiggyBank: (id: string, data: { amount: number; date?: string; description?: string }) =>
+    request<any>(`/piggy-banks/${id}/withdraw`, { method: 'POST', body: JSON.stringify(data) }),
 };

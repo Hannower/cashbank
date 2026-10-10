@@ -94,15 +94,28 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
 
     const totalRevenues = revenues.reduce((acc, curr) => acc + curr.amount, 0);
 
-    // 5. Savings
-    const savingsItems = await prisma.savings.findMany({
-      where: { userId },
-      orderBy: { date: 'desc' },
-    });
+    // 5. Savings & Cofrinhos
+    const [savingsItems, allPiggyBanks] = await Promise.all([
+      prisma.savings.findMany({
+        where: { userId },
+        include: { piggyBank: true },
+        orderBy: { date: 'desc' },
+      }),
+      prisma.piggyBank.findMany({
+        where: { userId },
+        select: { targetAmount: true },
+      }),
+    ]);
 
     const totalSavings = savingsItems.reduce((acc, curr) => acc + curr.amount, 0);
-    const savingsGoal = user.savingsGoal || 0;
+    const sumPiggyGoals = allPiggyBanks.reduce((acc, curr) => acc + (curr.targetAmount || 0), 0);
+    const savingsGoal = sumPiggyGoals > 0 ? sumPiggyGoals : (user.savingsGoal || 0);
     const savingsPct = savingsGoal > 0 ? Math.min(Math.round((totalSavings / savingsGoal) * 100), 100) : 0;
+
+    const monthSavings = savingsItems.filter((s) => {
+      const d = new Date(s.date);
+      return d >= startOfMonth && d <= endOfMonth;
+    });
 
     // 6. Current Month Net Balance
     const saldoDisponivel = totalRevenues - totalExpenses;
@@ -217,6 +230,35 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
             statusLabel: 'Pago',
           };
         }),
+      ...monthSavings.map((s) => {
+        const d = new Date(s.date);
+        const day = String(d.getUTCDate()).padStart(2, '0');
+        const mLabel = FULL_MONTH_NAMES[d.getUTCMonth()]?.slice(0, 3) || '';
+        const isDeposit = s.amount >= 0;
+        const piggyName = s.piggyBank?.name || s.objective || 'Cofrinho';
+        return {
+          id: `sav-${s.id}`,
+          originalId: s.id,
+          type: isDeposit ? ('savings_deposit' as const) : ('savings_withdraw' as const),
+          description: s.description || (isDeposit ? `Depósito: ${piggyName}` : `Retirada: ${piggyName}`),
+          category: piggyName,
+          amount: Math.abs(s.amount),
+          rawAmount: s.amount,
+          date: s.date,
+          dateFormatted: `${day} de ${mLabel}.`,
+          isPaid: true,
+          status: isDeposit ? ('saved' as const) : ('withdrawn' as const),
+          statusLabel: isDeposit ? 'Guardado' : 'Retirado',
+          piggyBank: s.piggyBank
+            ? {
+                id: s.piggyBank.id,
+                name: s.piggyBank.name,
+                color: s.piggyBank.color,
+                icon: s.piggyBank.icon,
+              }
+            : null,
+        };
+      }),
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     // 10. Recent Revenues (for backwards compatibility)

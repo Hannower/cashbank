@@ -264,14 +264,14 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
             </thead>
             <tbody>
               {loading ? (
-                <tr>
+                <tr className="empty-row">
                   <td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
                     <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px' }} />
                     Carregando receitas...
                   </td>
                 </tr>
               ) : revenues.length === 0 ? (
-                <tr>
+                <tr className="empty-row">
                   <td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
                     Nenhuma receita cadastrada para {selectedMonth.label}. Clique em "+ Registrar receita" acima para adicionar.
                   </td>
@@ -280,12 +280,7 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
                 revenues.map((rev) => (
                   <tr
                     key={rev.id}
-                    style={{
-                      borderBottom: '1px solid #f8fafc',
-                      transition: 'background-color 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fafbfc')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    className="data-table-row"
                   >
                     {/* Descrição with Download Icon */}
                     <td style={{ padding: '16px 24px' }}>

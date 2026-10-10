@@ -21,6 +21,7 @@ model User {
   variableExpenses VariableExpense[]
   revenues         Revenue[]
   savings          Savings[]
+  piggyBanks       PiggyBank[]
 }
 
 model FixedExpense {
@@ -81,14 +82,32 @@ model Revenue {
   updatedAt   DateTime @updatedAt
 }
 
+model PiggyBank {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  targetAmount Float     @default(0)
+  targetDate   DateTime?
+  category     String    @default("general")
+  color        String    @default("#15803d")
+  icon         String    @default("piggy")
+  description  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  savings      Savings[]
+}
+
 model Savings {
-  id          String   @id @default(uuid())
+  id          String     @id @default(uuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  piggyBankId String?
+  piggyBank   PiggyBank? @relation(fields: [piggyBankId], references: [id], onDelete: Cascade)
   description String
   amount      Float
   date        DateTime
-  objective   String   @default("Poupança")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  objective   String     @default("Poupança")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }

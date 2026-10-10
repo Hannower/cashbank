@@ -155,23 +155,12 @@ export const App: React.FC = () => {
       >
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10, marginTop: 8 }}>
           <button
+            type="button"
             onClick={() => {
               setQuickLaunchOpen(false);
               setCurrentTab('fixed-expenses');
             }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 14,
-              padding: '14px 16px',
-              borderRadius: 12,
-              border: '1px solid #f1f5f9',
-              backgroundColor: '#ffffff',
-              textAlign: 'left',
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+            className="quick-action-item"
           >
             <div
               style={{
@@ -189,31 +178,20 @@ export const App: React.FC = () => {
               <CalendarCheck2 size={20} />
             </div>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Despesa fixa</div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>
+              <div className="quick-action-title">Despesa fixa</div>
+              <div className="quick-action-desc">
                 Compromissos recorrentes como aluguel e internet
               </div>
             </div>
           </button>
 
           <button
+            type="button"
             onClick={() => {
               setQuickLaunchOpen(false);
               setCurrentTab('variable-expenses');
             }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 14,
-              padding: '14px 16px',
-              borderRadius: 12,
-              border: '1px solid #f1f5f9',
-              backgroundColor: '#ffffff',
-              textAlign: 'left',
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+            className="quick-action-item"
           >
             <div
               style={{
@@ -231,31 +209,20 @@ export const App: React.FC = () => {
               <CreditCard size={20} />
             </div>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Despesa variável</div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>
+              <div className="quick-action-title">Despesa variável</div>
+              <div className="quick-action-desc">
                 Gastos pontuais como lanches, mercado e transporte
               </div>
             </div>
           </button>
 
           <button
+            type="button"
             onClick={() => {
               setQuickLaunchOpen(false);
               setCurrentTab('revenues');
             }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 14,
-              padding: '14px 16px',
-              borderRadius: 12,
-              border: '1px solid #f1f5f9',
-              backgroundColor: '#ffffff',
-              textAlign: 'left',
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+            className="quick-action-item"
           >
             <div
               style={{
@@ -273,31 +240,20 @@ export const App: React.FC = () => {
               <ArrowDownLeft size={20} />
             </div>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Receita</div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>
+              <div className="quick-action-title">Receita</div>
+              <div className="quick-action-desc">
                 Entradas financeiras como salários e freelas
               </div>
             </div>
           </button>
 
           <button
+            type="button"
             onClick={() => {
               setQuickLaunchOpen(false);
               setCurrentTab('savings');
             }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 14,
-              padding: '14px 16px',
-              borderRadius: 12,
-              border: '1px solid #f1f5f9',
-              backgroundColor: '#ffffff',
-              textAlign: 'left',
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#ffffff')}
+            className="quick-action-item"
           >
             <div
               style={{
@@ -315,9 +271,9 @@ export const App: React.FC = () => {
               <PiggyBank size={20} />
             </div>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Poupança / Reserva</div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>
-                Guardar valor para objetivos e reserva de emergência
+              <div className="quick-action-title">Cofrinhos / Poupança</div>
+              <div className="quick-action-desc">
+                Guardar valor em cofrinhos por objetivos e metas
               </div>
             </div>
           </button>
