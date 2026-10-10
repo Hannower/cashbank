@@ -92,8 +92,16 @@ export const api = {
     request<any>(`/fixed-expenses/${id}`, { method: 'DELETE' }),
   toggleFixedExpensePayment: (id: string, data: { month: number; year: number; isPaid: boolean }) =>
     request<any>(`/fixed-expenses/${id}/toggle-payment`, { method: 'PATCH', body: JSON.stringify(data) }),
-  updateFixedExpenseMonthAmount: (id: string, data: { month: number; year: number; amount: number | null }) =>
-    request<any>(`/fixed-expenses/${id}/month-amount`, { method: 'PATCH', body: JSON.stringify(data) }),
+  updateFixedExpenseMonthAmount: (
+    id: string,
+    data: { month: number; year: number; amount: number | null; scope?: 'month' | 'onward' | 'all' }
+  ) => request<any>(`/fixed-expenses/${id}/month-amount`, { method: 'PATCH', body: JSON.stringify(data) }),
+  createFixedExpenseAdjustment: (
+    id: string,
+    data: { startMonth: number; startYear: number; amount: number }
+  ) => request<any>(`/fixed-expenses/${id}/adjustments`, { method: 'POST', body: JSON.stringify(data) }),
+  deleteFixedExpenseAdjustment: (id: string, adjustmentId: string) =>
+    request<any>(`/fixed-expenses/${id}/adjustments/${adjustmentId}`, { method: 'DELETE' }),
 
   // Variable Expenses
   getVariableExpenses: (month?: number, year?: number) => {
@@ -140,4 +148,31 @@ export const api = {
     request<any>(`/piggy-banks/${id}/deposit`, { method: 'POST', body: JSON.stringify(data) }),
   withdrawPiggyBank: (id: string, data: { amount: number; date?: string; description?: string }) =>
     request<any>(`/piggy-banks/${id}/withdraw`, { method: 'POST', body: JSON.stringify(data) }),
+
+  // Credit Cards
+  getCreditCards: (month?: number, year?: number) => {
+    const query = month && year ? `?month=${month}&year=${year}` : '';
+    return request<any>(`/credit-cards${query}`);
+  },
+  createCreditCard: (data: any) =>
+    request<any>('/credit-cards', { method: 'POST', body: JSON.stringify(data) }),
+  updateCreditCard: (id: string, data: any) =>
+    request<any>(`/credit-cards/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteCreditCard: (id: string) =>
+    request<any>(`/credit-cards/${id}`, { method: 'DELETE' }),
+  getCreditCardInvoices: (month?: number, year?: number) => {
+    const query = month && year ? `?month=${month}&year=${year}` : '';
+    return request<any>(`/credit-cards/invoices${query}`);
+  },
+  createCreditCardPurchase: (data: any) =>
+    request<any>('/credit-cards/purchases', { method: 'POST', body: JSON.stringify(data) }),
+  deleteCreditCardPurchase: (id: string) =>
+    request<any>(`/credit-cards/purchases/${id}`, { method: 'DELETE' }),
+  toggleCreditCardInvoicePayment: (id: string, data: { month: number; year: number; isPaid: boolean }) =>
+    request<any>(`/credit-cards/${id}/invoices/toggle-payment`, { method: 'PATCH', body: JSON.stringify(data) }),
+  updateCreditCardInvoiceAdjustment: (
+    id: string,
+    data: { month: number; year: number; manualAdjustment: number | null }
+  ) => request<any>(`/credit-cards/${id}/invoices/adjustment`, { method: 'PATCH', body: JSON.stringify(data) }),
 };
+

@@ -22,12 +22,15 @@ model User {
   revenues         Revenue[]
   savings          Savings[]
   piggyBanks       PiggyBank[]
+  creditCards      CreditCard[]
+  creditCardPurchases CreditCardPurchase[]
+  creditCardInvoices  CreditCardInvoice[]
 }
 
 model FixedExpense {
-  id           String                @id @default(uuid())
+  id           String                   @id @default(uuid())
   userId       String
-  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   description  String
   amount       Float
   dueDay       Int
@@ -35,9 +38,25 @@ model FixedExpense {
   endDate      DateTime?
   category     String
   pixKey       String?
-  createdAt    DateTime              @default(now())
-  updatedAt    DateTime              @updatedAt
+  isVariable   Boolean                  @default(false)
+  variableType String?
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
   payments     FixedExpensePayment[]
+  adjustments  FixedExpenseAdjustment[]
+}
+
+model FixedExpenseAdjustment {
+  id             String       @id @default(uuid())
+  fixedExpenseId String
+  fixedExpense   FixedExpense @relation(fields: [fixedExpenseId], references: [id], onDelete: Cascade)
+  startMonth     Int          // 1 - 12
+  startYear      Int          // e.g. 2026, 2027
+  amount         Float        // New recurring amount from this month/year forward
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([fixedExpenseId, startYear, startMonth])
 }
 
 model FixedExpensePayment {
@@ -111,3 +130,72 @@ model Savings {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 }
+
+model CreditCard {
+  id           String                  @id @default(uuid())
+  userId       String
+  user         User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String                  // Ex: "Nubank", "Inter Black", "Itaú"
+  limit        Float                   @default(0) // Limite total
+  dueDay       Int                     // Dia de vencimento da fatura (1 - 31)
+  closingDay   Int                     // Dia de melhor compra / fechamento da fatura (1 - 31)
+  color        String                  @default("#8b5cf6") // Cor do cartão
+  brand        String                  @default("Mastercard") // Mastercard, Visa, Elo, etc.
+  digits       String?                 // Últimos 4 dígitos (opcional)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  purchases    CreditCardPurchase[]
+  installments CreditCardInstallment[]
+  invoices     CreditCardInvoice[]
+}
+
+model CreditCardPurchase {
+  id                String                  @id @default(uuid())
+  creditCardId      String
+  creditCard        CreditCard              @relation(fields: [creditCardId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  description       String
+  totalAmount       Float
+  installmentsCount Int                     @default(1)
+  purchaseDate      DateTime
+  category          String                  @default("Outros")
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  installments      CreditCardInstallment[]
+}
+
+model CreditCardInstallment {
+  id                String             @id @default(uuid())
+  purchaseId        String
+  purchase          CreditCardPurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  creditCardId      String
+  creditCard        CreditCard         @relation(fields: [creditCardId], references: [id], onDelete: Cascade)
+  installmentNumber Int                // 1, 2, 3...
+  totalInstallments Int                // total de parcelas (ex: 10)
+  amount            Float              // valor desta parcela
+  month             Int                // mês da fatura (1 - 12)
+  year              Int                // ano da fatura (ex: 2026)
+  createdAt         DateTime           @default(now())
+
+  @@index([creditCardId, month, year])
+  @@index([month, year])
+}
+
+model CreditCardInvoice {
+  id               String       @id @default(uuid())
+  creditCardId     String
+  creditCard       CreditCard   @relation(fields: [creditCardId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  month            Int          // 1 - 12
+  year             Int          // 2026, 2027...
+  isPaid           Boolean      @default(false)
+  paidAt           DateTime?
+  manualAdjustment Float?       // Ajuste manual opcional no valor da fatura
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@unique([creditCardId, month, year])
+}
+

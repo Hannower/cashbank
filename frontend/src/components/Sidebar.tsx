@@ -2,6 +2,7 @@ import React from 'react';
 import {
   LayoutGrid,
   CalendarCheck2,
+  ShoppingBag,
   CreditCard,
   ArrowDownLeft,
   PiggyBank,
@@ -11,7 +12,13 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export type NavTab = 'dashboard' | 'fixed-expenses' | 'variable-expenses' | 'revenues' | 'savings';
+export type NavTab =
+  | 'dashboard'
+  | 'fixed-expenses'
+  | 'variable-expenses'
+  | 'credit-cards'
+  | 'revenues'
+  | 'savings';
 
 interface SidebarProps {
   currentTab: NavTab;
@@ -56,6 +63,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'variable-expenses' as NavTab,
       label: 'Despesas variáveis',
+      icon: <ShoppingBag size={18} />,
+    },
+    {
+      id: 'credit-cards' as NavTab,
+      label: 'Cartões de crédito',
       icon: <CreditCard size={18} />,
     },
     {

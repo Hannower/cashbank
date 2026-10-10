@@ -14,6 +14,7 @@ const TAB_TITLES: Record<NavTab, { title: string; breadcrumb: string }> = {
   dashboard: { title: 'Visão geral', breadcrumb: 'CashBank / Visão geral' },
   'fixed-expenses': { title: 'Despesas fixas', breadcrumb: 'CashBank / Despesas fixas' },
   'variable-expenses': { title: 'Despesas variáveis', breadcrumb: 'CashBank / Despesas variáveis' },
+  'credit-cards': { title: 'Cartões de crédito', breadcrumb: 'CashBank / Cartões de crédito' },
   revenues: { title: 'Receitas', breadcrumb: 'CashBank / Receitas' },
   savings: { title: 'Poupança', breadcrumb: 'CashBank / Poupança' },
 };

@@ -6,6 +6,7 @@ import { LoginView } from './views/LoginView';
 import { DashboardView } from './views/DashboardView';
 import { FixedExpensesView } from './views/FixedExpensesView';
 import { VariableExpensesView } from './views/VariableExpensesView';
+import { CreditCardsView } from './views/CreditCardsView';
 import { RevenuesView } from './views/RevenuesView';
 import { SavingsView } from './views/SavingsView';
 import { Modal } from './components/Modal';
@@ -13,6 +14,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { api } from './services/api';
 import {
   CalendarCheck2,
+  ShoppingBag,
   CreditCard,
   ArrowDownLeft,
   PiggyBank,
@@ -134,6 +136,10 @@ export const App: React.FC = () => {
             <VariableExpensesView onDataChanged={refreshSidebarBadges} />
           )}
 
+          {currentTab === 'credit-cards' && (
+            <CreditCardsView onDataChanged={refreshSidebarBadges} />
+          )}
+
           {currentTab === 'revenues' && (
             <RevenuesView onDataChanged={refreshSidebarBadges} />
           )}
@@ -206,12 +212,43 @@ export const App: React.FC = () => {
                 flexShrink: 0,
               }}
             >
-              <CreditCard size={20} />
+              <ShoppingBag size={20} />
             </div>
             <div>
               <div className="quick-action-title">Despesa variável</div>
               <div className="quick-action-desc">
                 Gastos pontuais como lanches, mercado e transporte
+              </div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setQuickLaunchOpen(false);
+              setCurrentTab('credit-cards');
+            }}
+            className="quick-action-item"
+          >
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                color: '#2563eb',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <CreditCard size={20} />
+            </div>
+            <div>
+              <div className="quick-action-title">Compra no cartão de crédito</div>
+              <div className="quick-action-desc">
+                Lançamento parcelado ou à vista faturado no cartão
               </div>
             </div>
           </button>

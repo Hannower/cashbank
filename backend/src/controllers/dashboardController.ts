@@ -1,7 +1,10 @@
 import { Response } from 'express';
 import { prisma } from '../prisma/client';
 import { AuthenticatedRequest } from '../middleware/auth';
-import { isFixedExpenseActiveInMonth } from '../utils/expenseUtils';
+import {
+  isFixedExpenseActiveInMonth,
+  calculateEffectiveFixedExpense,
+} from '../utils/expenseUtils';
 
 const MONTH_NAMES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 const FULL_MONTH_NAMES = [
@@ -31,8 +34,12 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
     const allFixedExpenses = await prisma.fixedExpense.findMany({
       where: { userId },
       include: {
-        payments: {
-          where: { month: currentMonth, year: currentYear },
+        payments: true,
+        adjustments: {
+          orderBy: [
+            { startYear: 'desc' },
+            { startMonth: 'desc' },
+          ],
         },
       },
       orderBy: { dueDay: 'asc' },
@@ -43,16 +50,25 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
     );
 
     const fixedFormatted = fixedExpenses.map((exp) => {
-      const payment = exp.payments[0];
+      const payment = exp.payments.find((p) => p.month === currentMonth && p.year === currentYear);
       const isPaid = payment ? payment.isPaid : false;
-      const hasCustomAmount = payment?.amount !== null && payment?.amount !== undefined;
-      const effectiveAmount = hasCustomAmount ? payment!.amount! : exp.amount;
+      const calc = calculateEffectiveFixedExpense(
+        exp.amount,
+        exp.isVariable,
+        exp.adjustments,
+        exp.payments,
+        currentMonth,
+        currentYear
+      );
       return {
         id: exp.id,
         description: exp.description,
-        amount: effectiveAmount,
+        amount: calc.effectiveAmount,
         baseAmount: exp.amount,
-        hasCustomAmount,
+        adjustedBaseAmount: calc.adjustedBaseAmount,
+        hasCustomAmount: calc.hasCustomAmount,
+        isEstimated: calc.isEstimated,
+        hasAdjustment: calc.hasAdjustment,
         dueDay: exp.dueDay,
         firstDueDate: exp.firstDueDate,
         endDate: exp.endDate,
@@ -63,9 +79,53 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
       };
     });
 
-    const fixedTotal = fixedFormatted.reduce((acc, curr) => acc + curr.amount, 0);
-    const fixedPaidCount = fixedFormatted.filter((e) => e.isPaid).length;
-    const fixedTotalCount = fixedFormatted.length;
+    // Credit Card invoices for currentMonth/currentYear
+    const creditCards = await prisma.creditCard.findMany({
+      where: { userId },
+      include: {
+        invoices: {
+          where: { month: currentMonth, year: currentYear },
+        },
+        installments: {
+          where: { month: currentMonth, year: currentYear },
+        },
+      },
+      orderBy: { dueDay: 'asc' },
+    });
+
+    const creditCardExpenses = creditCards
+      .filter((card) => card.installments.length > 0 || (card.invoices[0] && card.invoices[0].manualAdjustment !== null))
+      .map((card) => {
+        const invoice = card.invoices[0];
+        const installmentsSum = card.installments.reduce((acc, curr) => acc + curr.amount, 0);
+        const manualAdj = invoice?.manualAdjustment ?? 0;
+        const totalAmount = Math.max(0, Math.round((installmentsSum + manualAdj) * 100) / 100);
+        const isPaid = invoice ? invoice.isPaid : false;
+
+        return {
+          id: `card-invoice-${card.id}`,
+          description: `Fatura ${card.name}`,
+          amount: totalAmount,
+          baseAmount: totalAmount,
+          adjustedBaseAmount: totalAmount,
+          hasCustomAmount: invoice?.manualAdjustment !== null && invoice?.manualAdjustment !== undefined,
+          isEstimated: false,
+          hasAdjustment: false,
+          dueDay: card.dueDay,
+          firstDueDate: new Date(Date.UTC(currentYear, currentMonth - 1, card.dueDay)),
+          endDate: null,
+          category: 'Cartão de Crédito',
+          pixKey: null,
+          isPaid,
+          paidAt: invoice?.paidAt || null,
+        };
+      });
+
+    const allFixedFormatted = [...fixedFormatted, ...creditCardExpenses];
+
+    const fixedTotal = allFixedFormatted.reduce((acc, curr) => acc + curr.amount, 0);
+    const fixedPaidCount = allFixedFormatted.filter((e) => e.isPaid).length;
+    const fixedTotalCount = allFixedFormatted.length;
     const fixedOrganizedPct = fixedTotalCount > 0 ? Math.round((fixedPaidCount / fixedTotalCount) * 100) : 0;
 
     // 3. Variable Expenses for the specified month/year
@@ -150,7 +210,7 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
         : 0;
 
     // 8. Upcoming Bills (pending fixed expenses with effective amounts)
-    const upcomingBills = fixedFormatted
+    const upcomingBills = allFixedFormatted
       .filter((e) => !e.isPaid)
       .map((e) => {
         const monthLabel = FULL_MONTH_NAMES[currentMonth - 1]?.slice(0, 3) || 'mês';
