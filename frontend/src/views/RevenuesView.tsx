@@ -223,146 +223,281 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
       </div>
 
       {/* Table Card */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="card table-card" style={{ padding: 0, overflow: 'hidden' }}>
         <div
           style={{
             padding: '20px 24px',
-            borderBottom: '1px solid #f1f5f9',
+            borderBottom: '1px solid var(--border-color, #f1f5f9)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 8,
           }}
         >
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', margin: 0 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-main, #0f172a)', margin: 0 }}>
             Histórico de receitas de {selectedMonth.label}
           </h3>
-          <span style={{ fontSize: 12, color: '#94a3b8' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)' }}>
             {revenues.length} registro{revenues.length !== 1 ? 's' : ''}
           </span>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: 600 }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: '#fafbfc' }}>
-                <th style={{ padding: '12px 24px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
-                  DESCRIÇÃO
-                </th>
-                <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
-                  CATEGORIA
-                </th>
-                <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
-                  DATA
-                </th>
-                <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px' }}>
-                  VALOR
-                </th>
-                <th style={{ padding: '12px 24px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.5px', textAlign: 'right' }}>
-                  AÇÕES
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr className="empty-row">
-                  <td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
-                    <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px' }} />
-                    Carregando receitas...
-                  </td>
+        {/* Desktop Table */}
+        <div className="desktop-table-wrapper">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: 600 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-color, #f1f5f9)', backgroundColor: 'var(--bg-item, #fafbfc)' }}>
+                  <th style={{ padding: '12px 24px', fontSize: 11, fontWeight: 700, color: 'var(--text-muted, #94a3b8)', letterSpacing: '0.5px' }}>
+                    DESCRIÇÃO
+                  </th>
+                  <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: 'var(--text-muted, #94a3b8)', letterSpacing: '0.5px' }}>
+                    CATEGORIA
+                  </th>
+                  <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: 'var(--text-muted, #94a3b8)', letterSpacing: '0.5px' }}>
+                    DATA
+                  </th>
+                  <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: 'var(--text-muted, #94a3b8)', letterSpacing: '0.5px' }}>
+                    VALOR
+                  </th>
+                  <th style={{ padding: '12px 24px', fontSize: 11, fontWeight: 700, color: 'var(--text-muted, #94a3b8)', letterSpacing: '0.5px', textAlign: 'right' }}>
+                    AÇÕES
+                  </th>
                 </tr>
-              ) : revenues.length === 0 ? (
-                <tr className="empty-row">
-                  <td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
-                    Nenhuma receita cadastrada para {selectedMonth.label}. Clique em "+ Registrar receita" acima para adicionar.
-                  </td>
-                </tr>
-              ) : (
-                revenues.map((rev) => (
-                  <tr
-                    key={rev.id}
-                    className="data-table-row"
-                  >
-                    {/* Descrição with Download Icon */}
-                    <td style={{ padding: '16px 24px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div
-                          style={{
-                            width: 34,
-                            height: 34,
-                            borderRadius: 8,
-                            backgroundColor: '#ecfdf5',
-                            color: '#15803d',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                          }}
-                        >
-                          <ArrowDownLeft size={17} />
-                        </div>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
-                          {rev.description}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Categoria */}
-                    <td style={{ padding: '16px 20px', fontSize: 13, color: '#64748b' }}>
-                      {rev.category}
-                    </td>
-
-                    {/* Data */}
-                    <td style={{ padding: '16px 20px', fontSize: 13, color: '#64748b' }}>
-                      {formatDate(rev.date)}
-                    </td>
-
-                    {/* Valor (Green positive) */}
-                    <td style={{ padding: '16px 20px', fontSize: 14, fontWeight: 700, color: '#16a34a' }}>
-                      + {formatCurrency(rev.amount)}
-                    </td>
-
-                    {/* Ações */}
-                    <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
-                        <button
-                          onClick={() => openEditModal(rev)}
-                          title="Editar"
-                          style={{
-                            color: '#94a3b8',
-                            padding: 6,
-                            borderRadius: 6,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
-                        >
-                          <Pencil size={16} />
-                        </button>
-                        <button
-                          onClick={() => setDeletingRevenue(rev)}
-                          title="Excluir"
-                          style={{
-                            color: '#94a3b8',
-                            padding: 6,
-                            borderRadius: 6,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr className="empty-row">
+                    <td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
+                      <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px' }} />
+                      Carregando receitas...
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : revenues.length === 0 ? (
+                  <tr className="empty-row">
+                    <td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
+                      Nenhuma receita cadastrada para {selectedMonth.label}. Clique em "+ Registrar receita" acima para adicionar.
+                    </td>
+                  </tr>
+                ) : (
+                  revenues.map((rev) => (
+                    <tr
+                      key={rev.id}
+                      className="data-table-row"
+                    >
+                      {/* Descrição with Download Icon */}
+                      <td style={{ padding: '16px 24px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div
+                            style={{
+                              width: 34,
+                              height: 34,
+                              borderRadius: 8,
+                              backgroundColor: '#ecfdf5',
+                              color: '#15803d',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <ArrowDownLeft size={17} />
+                          </div>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>
+                            {rev.description}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Categoria */}
+                      <td style={{ padding: '16px 20px', fontSize: 13, color: 'var(--text-secondary, #64748b)' }}>
+                        {rev.category}
+                      </td>
+
+                      {/* Data */}
+                      <td style={{ padding: '16px 20px', fontSize: 13, color: 'var(--text-secondary, #64748b)' }}>
+                        {formatDate(rev.date)}
+                      </td>
+
+                      {/* Valor (Green positive) */}
+                      <td style={{ padding: '16px 20px', fontSize: 14, fontWeight: 700, color: '#16a34a' }}>
+                        + {formatCurrency(rev.amount)}
+                      </td>
+
+                      {/* Ações */}
+                      <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(rev)}
+                            title="Editar"
+                            style={{
+                              color: '#94a3b8',
+                              padding: 6,
+                              borderRadius: 6,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: 'transparent',
+                              border: 'none',
+                              cursor: 'pointer',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeletingRevenue(rev)}
+                            title="Excluir"
+                            style={{
+                              color: '#94a3b8',
+                              padding: 6,
+                              borderRadius: 6,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: 'transparent',
+                              border: 'none',
+                              cursor: 'pointer',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Mobile Cards (Responsive compact cards matching other views, no horizontal scroll) */}
+        <div className="mobile-cards-wrapper">
+          {loading ? (
+            <div style={{ padding: 30, textAlign: 'center', color: '#64748b' }}>
+              <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px' }} />
+              Carregando receitas...
+            </div>
+          ) : revenues.length === 0 ? (
+            <div style={{ padding: 24, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
+              Nenhuma receita cadastrada para {selectedMonth.label}. Clique em "+ Registrar receita" acima para adicionar.
+            </div>
+          ) : (
+            revenues.map((rev) => (
+              <div key={rev.id} className="expense-mobile-item">
+                <div className="expense-mobile-header">
+                  <div className="expense-mobile-main">
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 10,
+                        backgroundColor: '#ecfdf5',
+                        color: '#15803d',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <ArrowDownLeft size={18} />
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span className="expense-mobile-title">{rev.description}</span>
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            padding: '1px 6px',
+                            borderRadius: 4,
+                            backgroundColor: 'var(--bg-item, #f1f5f9)',
+                            color: 'var(--text-muted, #475569)',
+                          }}
+                        >
+                          {rev.category}
+                        </span>
+                      </div>
+                      <div className="expense-mobile-subtitle">
+                        <span>{formatDate(rev.date)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: 15,
+                      fontWeight: 800,
+                      color: '#16a34a',
+                      whiteSpace: 'nowrap',
+                      textAlign: 'right',
+                      flexShrink: 0,
+                    }}
+                  >
+                    + {formatCurrency(rev.amount)}
+                  </div>
+                </div>
+
+                {/* Footer: Date & Actions */}
+                <div className="expense-mobile-footer">
+                  <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)' }}>
+                    Data: <strong style={{ color: 'var(--text-main, #0f172a)' }}>{formatDate(rev.date)}</strong>
+                  </div>
+                  <div className="expense-mobile-actions">
+                    <button
+                      type="button"
+                      onClick={() => openEditModal(rev)}
+                      title="Editar"
+                      style={{
+                        color: '#94a3b8',
+                        padding: '6px 8px',
+                        borderRadius: 6,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        fontSize: 12,
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                    >
+                      <Pencil size={14} /> Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeletingRevenue(rev)}
+                      title="Excluir"
+                      style={{
+                        color: '#94a3b8',
+                        padding: '6px 8px',
+                        borderRadius: 6,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        fontSize: 12,
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                    >
+                      <Trash2 size={14} /> Excluir
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

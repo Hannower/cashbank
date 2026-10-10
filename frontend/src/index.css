@@ -497,8 +497,11 @@ body.dark-theme .currency-input-field:focus {
 }
 
 @media (max-width: 640px) {
-  .card {
+  .card:not(.table-card):not([style*="padding: 0"]):not([style*="padding:0"]) {
     padding: 16px !important;
+  }
+  .card.table-card {
+    padding: 0 !important;
   }
 }
 
