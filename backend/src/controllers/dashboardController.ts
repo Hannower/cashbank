@@ -94,7 +94,7 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
     });
 
     const creditCardExpenses = creditCards
-      .filter((card) => card.installments.length > 0 || (card.invoices[0] && card.invoices[0].manualAdjustment !== null))
+      .filter((card) => card.installments.length > 0 || (card.invoices[0] && (card.invoices[0].manualAdjustment !== null || card.invoices[0].isPaid)))
       .map((card) => {
         const invoice = card.invoices[0];
         const installmentsSum = card.installments.reduce((acc, curr) => acc + curr.amount, 0);
@@ -163,7 +163,7 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
       }),
       prisma.piggyBank.findMany({
         where: { userId },
-        select: { targetAmount: true },
+        select: { id: true, name: true, color: true, icon: true, targetAmount: true },
       }),
     ]);
 
@@ -241,6 +241,7 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
           category: r.category,
           amount: r.amount,
           date: r.date,
+          createdAt: r.createdAt,
           dateFormatted: `${day} de ${mLabel}.`,
           isPaid: true,
           status: 'received' as const,
@@ -260,23 +261,26 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
           amount: v.amount,
           pixKey: (v as any).pixKey || null,
           date: v.date,
+          createdAt: v.createdAt,
           dateFormatted: `${day} de ${mLabel}.`,
           isPaid: true,
           status: 'paid' as const,
           statusLabel: 'Pago',
         };
       }),
-      ...fixedFormatted
-        .filter((f) => f.isPaid)
+      ...allFixedFormatted
+        .filter((f) => f.isPaid && f.amount > 0)
         .map((f) => {
+          const isCard = f.id.startsWith('card-invoice-');
           const dueDate = new Date(Date.UTC(currentYear, currentMonth - 1, Math.min(f.dueDay, 28), 12, 0, 0));
           const mLabel = FULL_MONTH_NAMES[currentMonth - 1]?.slice(0, 3) || '';
           const txDate = f.paidAt ? new Date(f.paidAt) : dueDate;
           const day = String(txDate.getUTCDate()).padStart(2, '0');
           return {
-            id: `fix-${f.id}`,
+            id: isCard ? `card-inv-${f.id}` : `fix-${f.id}`,
             originalId: f.id,
-            type: 'fixed_expense' as const, // Saída fixa efetuada
+            type: isCard ? ('credit_card_payment' as const) : ('fixed_expense' as const),
+            isCreditCard: isCard,
             description: f.description,
             category: f.category,
             amount: f.amount,
@@ -284,6 +288,7 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
             dueDay: f.dueDay,
             pixKey: f.pixKey || null,
             date: txDate,
+            createdAt: f.paidAt || txDate,
             dateFormatted: `${day} de ${mLabel}.`,
             isPaid: true,
             status: 'paid' as const,
@@ -305,6 +310,7 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
           amount: Math.abs(s.amount),
           rawAmount: s.amount,
           date: s.date,
+          createdAt: s.createdAt,
           dateFormatted: `${day} de ${mLabel}.`,
           isPaid: true,
           status: isDeposit ? ('saved' as const) : ('withdrawn' as const),
@@ -319,7 +325,13 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
             : null,
         };
       }),
-    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    ].sort((a, b) => {
+      const timeDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (timeDiff !== 0) return timeDiff;
+      const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      return bCreated - aCreated;
+    });
 
     // 10. Recent Revenues (for backwards compatibility)
     const recentRevenues = revenues.slice(0, 5).map((r) => {
@@ -373,7 +385,7 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
 
     // 12. Monthly Expense Categories breakdown
     const categoryTotals: Record<string, number> = {};
-    for (const exp of fixedFormatted) {
+    for (const exp of allFixedFormatted) {
       categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + exp.amount;
     }
     for (const v of variableExpenses) {
@@ -419,6 +431,7 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
       upcomingBills,
       recentRevenues,
       transactions,
+      piggyBanks: allPiggyBanks,
     });
   } catch (error) {
     console.error('getDashboardOverview error:', error);

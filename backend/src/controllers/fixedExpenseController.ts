@@ -4,6 +4,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import {
   isFixedExpenseActiveInMonth,
   calculateEffectiveFixedExpense,
+  parseDateWithTime,
 } from '../utils/expenseUtils';
 
 export async function getFixedExpenses(req: AuthenticatedRequest, res: Response): Promise<void> {
@@ -101,7 +102,7 @@ export async function getFixedExpenses(req: AuthenticatedRequest, res: Response)
     });
 
     const creditCardExpenses = creditCards
-      .filter((card) => card.installments.length > 0 || (card.invoices[0] && card.invoices[0].manualAdjustment !== null))
+      .filter((card) => card.installments.length > 0 || (card.invoices[0] && (card.invoices[0].manualAdjustment !== null || card.invoices[0].isPaid)))
       .map((card) => {
         const invoice = card.invoices[0];
         const installmentsSum = card.installments.reduce((acc, curr) => acc + curr.amount, 0);
@@ -372,13 +373,17 @@ export async function updateFixedExpenseMonthAmount(req: AuthenticatedRequest, r
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const { month, year, amount, scope } = req.body;
+    const { month, year, amount, scope, paidAt, date, time } = req.body;
     // scope: 'month' (default: este mês) | 'onward' (a partir deste mês em diante) | 'all' (valor padrão geral)
 
     if (!month || !year) {
       res.status(400).json({ message: 'Parâmetros month e year são obrigatórios' });
       return;
     }
+
+    const finalPaidAt = paidAt
+      ? parseDateWithTime(paidAt, time)
+      : (date ? parseDateWithTime(date, time) : undefined);
 
     const parsedAmount =
       amount !== null && amount !== undefined && amount !== '' && !isNaN(parseFloat(String(amount).replace(',', '.')))
@@ -389,6 +394,16 @@ export async function updateFixedExpenseMonthAmount(req: AuthenticatedRequest, r
       const cardId = id.replace('card-invoice-', '');
       const parsedMonth = parseInt(month);
       const parsedYear = parseInt(year);
+
+      let finalManualAdjustment: number | null | undefined = undefined;
+      if (parsedAmount !== null && parsedAmount !== undefined) {
+        const installments = await prisma.creditCardInstallment.findMany({
+          where: { creditCardId: cardId, month: parsedMonth, year: parsedYear },
+        });
+        const installmentsSum = installments.reduce((acc, curr) => acc + curr.amount, 0);
+        finalManualAdjustment = Math.round((parsedAmount - installmentsSum) * 100) / 100;
+      }
+
       const invoice = await prisma.creditCardInvoice.upsert({
         where: {
           creditCardId_month_year: {
@@ -398,14 +413,16 @@ export async function updateFixedExpenseMonthAmount(req: AuthenticatedRequest, r
           },
         },
         update: {
-          manualAdjustment: parsedAmount,
+          ...(finalManualAdjustment !== undefined ? { manualAdjustment: finalManualAdjustment } : {}),
+          ...(finalPaidAt !== undefined ? { paidAt: finalPaidAt } : {}),
         },
         create: {
           creditCardId: cardId,
           userId,
           month: parsedMonth,
           year: parsedYear,
-          manualAdjustment: parsedAmount,
+          manualAdjustment: finalManualAdjustment !== undefined ? finalManualAdjustment : null,
+          paidAt: finalPaidAt !== undefined ? finalPaidAt : null,
         },
       });
       res.json({ message: 'Fatura ajustada com sucesso', invoice });
@@ -461,7 +478,10 @@ export async function updateFixedExpenseMonthAmount(req: AuthenticatedRequest, r
               year: targetYear,
             },
           },
-          update: { amount: null },
+          update: {
+            amount: null,
+            ...(finalPaidAt !== undefined ? { paidAt: finalPaidAt } : {}),
+          },
           create: {
             fixedExpenseId: id,
             userId,
@@ -469,6 +489,7 @@ export async function updateFixedExpenseMonthAmount(req: AuthenticatedRequest, r
             year: targetYear,
             isPaid: false,
             amount: null,
+            paidAt: finalPaidAt !== undefined ? finalPaidAt : null,
           },
         });
       } else {
@@ -493,6 +514,7 @@ export async function updateFixedExpenseMonthAmount(req: AuthenticatedRequest, r
         },
         update: {
           amount: parsedAmount,
+          ...(finalPaidAt !== undefined ? { paidAt: finalPaidAt } : {}),
         },
         create: {
           fixedExpenseId: id,
@@ -501,6 +523,7 @@ export async function updateFixedExpenseMonthAmount(req: AuthenticatedRequest, r
           year: targetYear,
           isPaid: false,
           amount: parsedAmount,
+          paidAt: finalPaidAt !== undefined ? finalPaidAt : null,
         },
       });
     }

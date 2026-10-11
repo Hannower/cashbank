@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { prisma } from '../prisma/client';
 import { AuthenticatedRequest } from '../middleware/auth';
+import { parseDateWithTime } from '../utils/expenseUtils';
 
 export async function getRevenues(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
@@ -42,7 +43,7 @@ export async function getRevenues(req: AuthenticatedRequest, res: Response): Pro
 export async function createRevenue(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const userId = req.userId!;
-    const { description, amount, date, category } = req.body;
+    const { description, amount, date, category, time } = req.body;
 
     if (!description || amount === undefined || !date || !category) {
       res.status(400).json({ message: 'Todos os campos obrigatórios devem ser preenchidos' });
@@ -54,7 +55,7 @@ export async function createRevenue(req: AuthenticatedRequest, res: Response): P
         userId,
         description,
         amount: parseFloat(amount),
-        date: new Date(date),
+        date: parseDateWithTime(date, time),
         category,
       },
     });
@@ -70,7 +71,7 @@ export async function updateRevenue(req: AuthenticatedRequest, res: Response): P
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const { description, amount, date, category } = req.body;
+    const { description, amount, date, category, time } = req.body;
 
     const existing = await prisma.revenue.findFirst({
       where: { id, userId },
@@ -81,12 +82,16 @@ export async function updateRevenue(req: AuthenticatedRequest, res: Response): P
       return;
     }
 
+    const updatedDate = date !== undefined
+      ? parseDateWithTime(date, time)
+      : (time ? parseDateWithTime(existing.date, time) : existing.date);
+
     const updated = await prisma.revenue.update({
       where: { id },
       data: {
         description: description ?? existing.description,
         amount: amount !== undefined ? parseFloat(amount) : existing.amount,
-        date: date ? new Date(date) : existing.date,
+        date: updatedDate,
         category: category ?? existing.category,
       },
     });

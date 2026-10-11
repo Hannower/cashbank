@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { prisma } from '../prisma/client';
 import { AuthenticatedRequest } from '../middleware/auth';
+import { parseDateWithTime } from '../utils/expenseUtils';
 
 export async function getSavings(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
@@ -75,7 +76,7 @@ export async function getSavings(req: AuthenticatedRequest, res: Response): Prom
 export async function createSavings(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const userId = req.userId!;
-    const { description, amount, date, objective, piggyBankId } = req.body;
+    const { description, amount, date, objective, piggyBankId, time } = req.body;
 
     if (!description || amount === undefined || !date) {
       res.status(400).json({ message: 'Descrição, valor e data são obrigatórios' });
@@ -115,7 +116,7 @@ export async function createSavings(req: AuthenticatedRequest, res: Response): P
         piggyBankId: validatedPiggyBankId,
         description,
         amount: parseFloat(amount),
-        date: new Date(date),
+        date: parseDateWithTime(date, time),
         objective: finalObjective,
       },
       include: {
@@ -134,7 +135,7 @@ export async function updateSavings(req: AuthenticatedRequest, res: Response): P
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const { description, amount, date, objective, piggyBankId } = req.body;
+    const { description, amount, date, objective, piggyBankId, time } = req.body;
 
     const existing = await prisma.savings.findFirst({
       where: { id, userId },
@@ -162,13 +163,17 @@ export async function updateSavings(req: AuthenticatedRequest, res: Response): P
       }
     }
 
+    const updatedDate = date !== undefined
+      ? parseDateWithTime(date, time)
+      : (time ? parseDateWithTime(existing.date, time) : existing.date);
+
     const updated = await prisma.savings.update({
       where: { id },
       data: {
         piggyBankId: validatedPiggyBankId,
         description: description ?? existing.description,
         amount: amount !== undefined ? parseFloat(amount) : existing.amount,
-        date: date ? new Date(date) : existing.date,
+        date: updatedDate,
         objective: finalObjective,
       },
       include: {

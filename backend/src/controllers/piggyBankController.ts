@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { prisma } from '../prisma/client';
 import { AuthenticatedRequest } from '../middleware/auth';
+import { parseDateWithTime } from '../utils/expenseUtils';
 
 export async function getPiggyBanks(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
@@ -207,7 +208,7 @@ export async function depositPiggyBank(req: AuthenticatedRequest, res: Response)
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const { amount, date, description } = req.body;
+    const { amount, date, description, time } = req.body;
 
     const piggyBank = await prisma.piggyBank.findFirst({
       where: { id, userId },
@@ -224,7 +225,7 @@ export async function depositPiggyBank(req: AuthenticatedRequest, res: Response)
       return;
     }
 
-    const txDate = date ? new Date(date) : new Date();
+    const txDate = parseDateWithTime(date, time);
     const txDesc = description?.trim() || `Depósito: ${piggyBank.name}`;
 
     const item = await prisma.savings.create({
@@ -252,7 +253,7 @@ export async function withdrawPiggyBank(req: AuthenticatedRequest, res: Response
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const { amount, date, description } = req.body;
+    const { amount, date, description, time } = req.body;
 
     const piggyBank = await prisma.piggyBank.findFirst({
       where: { id, userId },
@@ -280,7 +281,7 @@ export async function withdrawPiggyBank(req: AuthenticatedRequest, res: Response
       return;
     }
 
-    const txDate = date ? new Date(date) : new Date();
+    const txDate = parseDateWithTime(date, time);
     const txDesc = description?.trim() || `Retirada: ${piggyBank.name}`;
 
     const item = await prisma.savings.create({

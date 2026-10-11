@@ -131,8 +131,25 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
   const [selectedPiggyId, setSelectedPiggyId] = useState('');
   const [operationAmount, setOperationAmount] = useState('');
   const [operationDate, setOperationDate] = useState('');
+  const [operationTime, setOperationTime] = useState('12:00');
   const [operationDesc, setOperationDesc] = useState('');
   const [operationError, setOperationError] = useState<string | null>(null);
+
+  const getCurrentTimeStr = () => {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  };
+
+  const extractTimeFromDate = (dateStr?: string) => {
+    if (!dateStr) return getCurrentTimeStr();
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return getCurrentTimeStr();
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    } catch {
+      return getCurrentTimeStr();
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -250,6 +267,7 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
     setSelectedPiggyId(targetId);
     setOperationAmount('');
     setOperationDate(new Date().toISOString().split('T')[0]);
+    setOperationTime(getCurrentTimeStr());
     const targetPb = piggyBanks.find((p) => p.id === targetId);
     setOperationDesc(targetPb ? `Depósito no cofrinho ${targetPb.name}` : 'Depósito');
     setIsDepositModalOpen(true);
@@ -261,6 +279,7 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
     setSelectedPiggyId(targetId);
     setOperationAmount('');
     setOperationDate(new Date().toISOString().split('T')[0]);
+    setOperationTime(getCurrentTimeStr());
     const targetPb = piggyBanks.find((p) => p.id === targetId);
     setOperationDesc(targetPb ? `Resgate do cofrinho ${targetPb.name}` : 'Resgate');
     setIsWithdrawModalOpen(true);
@@ -278,16 +297,19 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
 
     try {
       setActionLoading(true);
+      const formattedDate = operationTime ? `${operationDate}T${operationTime}:00.000Z` : operationDate;
       if (selectedPiggyId) {
         await api.depositPiggyBank(selectedPiggyId, {
           amount: val,
-          date: operationDate,
+          date: formattedDate,
+          time: operationTime,
           description: operationDesc,
         });
       } else {
         await api.createSavings({
           amount: val,
-          date: operationDate,
+          date: formattedDate,
+          time: operationTime,
           description: operationDesc || 'Depósito na poupança',
           objective: 'Poupança',
         });
@@ -324,16 +346,19 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
 
     try {
       setActionLoading(true);
+      const formattedDate = operationTime ? `${operationDate}T${operationTime}:00.000Z` : operationDate;
       if (selectedPiggyId) {
         await api.withdrawPiggyBank(selectedPiggyId, {
           amount: val,
-          date: operationDate,
+          date: formattedDate,
+          time: operationTime,
           description: operationDesc,
         });
       } else {
         await api.createSavings({
           amount: -val,
-          date: operationDate,
+          date: formattedDate,
+          time: operationTime,
           description: operationDesc || 'Resgate da poupança',
           objective: 'Resgate',
         });
@@ -356,6 +381,7 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
     setSelectedPiggyId(item.piggyBankId || '');
     setOperationAmount(String(Math.abs(item.amount)));
     setOperationDate(item.date ? item.date.split('T')[0] : '');
+    setOperationTime(extractTimeFromDate(item.date));
     setOperationDesc(item.description);
     setOperationError(null);
   };
@@ -374,10 +400,12 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
       setActionLoading(true);
       const isWithdraw = editingSavingsItem.amount < 0;
       const finalAmount = isWithdraw ? -val : val;
+      const formattedDate = operationTime ? `${operationDate}T${operationTime}:00.000Z` : operationDate;
 
       await api.updateSavings(editingSavingsItem.id, {
         amount: finalAmount,
-        date: operationDate,
+        date: formattedDate,
+        time: operationTime,
         description: operationDesc,
         piggyBankId: selectedPiggyId || null,
       });
@@ -1458,17 +1486,30 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
             </div>
           </div>
 
-          <div>
-            <label className="form-label">
-              Data *
-            </label>
-            <input
-              type="date"
-              required
-              value={operationDate}
-              onChange={(e) => setOperationDate(e.target.value)}
-              className="input-field"
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label className="form-label">
+                Data *
+              </label>
+              <input
+                type="date"
+                required
+                value={operationDate}
+                onChange={(e) => setOperationDate(e.target.value)}
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="form-label">
+                Horário
+              </label>
+              <input
+                type="time"
+                value={operationTime}
+                onChange={(e) => setOperationTime(e.target.value)}
+                className="input-field"
+              />
+            </div>
           </div>
 
           <div>
@@ -1561,17 +1602,30 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
             </div>
           </div>
 
-          <div>
-            <label className="form-label">
-              Data *
-            </label>
-            <input
-              type="date"
-              required
-              value={operationDate}
-              onChange={(e) => setOperationDate(e.target.value)}
-              className="input-field"
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label className="form-label">
+                Data *
+              </label>
+              <input
+                type="date"
+                required
+                value={operationDate}
+                onChange={(e) => setOperationDate(e.target.value)}
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="form-label">
+                Horário
+              </label>
+              <input
+                type="time"
+                value={operationTime}
+                onChange={(e) => setOperationTime(e.target.value)}
+                className="input-field"
+              />
+            </div>
           </div>
 
           <div>
@@ -1656,24 +1710,24 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <label className="form-label">
-                Valor (R$) *
-              </label>
-              <div className="currency-input-wrapper">
-                <span className="currency-input-prefix">R$</span>
-                <input
-                  type="text"
-                  required
-                  placeholder="0,00"
-                  value={operationAmount}
-                  onChange={(e) => setOperationAmount(e.target.value)}
-                  className="currency-input-field"
-                />
-              </div>
+          <div>
+            <label className="form-label">
+              Valor (R$) *
+            </label>
+            <div className="currency-input-wrapper">
+              <span className="currency-input-prefix">R$</span>
+              <input
+                type="text"
+                required
+                placeholder="0,00"
+                value={operationAmount}
+                onChange={(e) => setOperationAmount(e.target.value)}
+                className="currency-input-field"
+              />
             </div>
+          </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label className="form-label">
                 Data *
@@ -1683,6 +1737,17 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
                 required
                 value={operationDate}
                 onChange={(e) => setOperationDate(e.target.value)}
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="form-label">
+                Horário
+              </label>
+              <input
+                type="time"
+                value={operationTime}
+                onChange={(e) => setOperationTime(e.target.value)}
                 className="input-field"
               />
             </div>
