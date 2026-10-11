@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { prisma } from '../prisma/client';
 import { AuthenticatedRequest } from '../middleware/auth';
+import { parseDateWithTime } from '../utils/expenseUtils';
 
 export async function getVariableExpenses(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
@@ -42,7 +43,7 @@ export async function getVariableExpenses(req: AuthenticatedRequest, res: Respon
 export async function createVariableExpense(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const userId = req.userId!;
-    const { description, amount, date, category, pixKey } = req.body;
+    const { description, amount, date, category, pixKey, time } = req.body;
 
     if (!description || amount === undefined || !date || !category) {
       res.status(400).json({ message: 'Todos os campos obrigatórios devem ser preenchidos' });
@@ -54,7 +55,7 @@ export async function createVariableExpense(req: AuthenticatedRequest, res: Resp
         userId,
         description,
         amount: parseFloat(amount),
-        date: new Date(date),
+        date: parseDateWithTime(date, time),
         category,
         pixKey: pixKey ? String(pixKey).trim() : null,
       },
@@ -71,7 +72,7 @@ export async function updateVariableExpense(req: AuthenticatedRequest, res: Resp
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const { description, amount, date, category, pixKey } = req.body;
+    const { description, amount, date, category, pixKey, time } = req.body;
 
     const existing = await prisma.variableExpense.findFirst({
       where: { id, userId },
@@ -82,12 +83,16 @@ export async function updateVariableExpense(req: AuthenticatedRequest, res: Resp
       return;
     }
 
+    const updatedDate = date !== undefined
+      ? parseDateWithTime(date, time)
+      : (time ? parseDateWithTime(existing.date, time) : existing.date);
+
     const updated = await prisma.variableExpense.update({
       where: { id },
       data: {
         description: description ?? existing.description,
         amount: amount !== undefined ? parseFloat(amount) : existing.amount,
-        date: date ? new Date(date) : existing.date,
+        date: updatedDate,
         category: category ?? existing.category,
         pixKey: pixKey !== undefined ? (pixKey ? String(pixKey).trim() : null) : existing.pixKey,
       },

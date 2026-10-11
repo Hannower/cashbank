@@ -40,6 +40,7 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
   const [formDesc, setFormDesc] = useState('');
   const [formAmount, setFormAmount] = useState('');
   const [formDate, setFormDate] = useState('');
+  const [formTime, setFormTime] = useState('12:00');
   const [formCategory, setFormCategory] = useState('Salário');
 
   const fetchRevenues = async () => {
@@ -64,6 +65,8 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
     setFormAmount('');
     const today = new Date().toISOString().split('T')[0];
     setFormDate(today);
+    const now = new Date();
+    setFormTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
     setFormCategory('Salário');
     setIsCreateModalOpen(true);
   };
@@ -73,6 +76,12 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
     setFormDesc(rev.description);
     setFormAmount(String(rev.amount));
     setFormDate(rev.date ? rev.date.split('T')[0] : '');
+    if (rev.date && rev.date.includes('T')) {
+      const d = new Date(rev.date);
+      setFormTime(`${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`);
+    } else {
+      setFormTime('12:00');
+    }
     setFormCategory(rev.category);
   };
 
@@ -82,10 +91,11 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
 
     try {
       setActionLoading(true);
+      const combinedDate = `${formDate}T${formTime || '12:00'}:00.000Z`;
       await api.createRevenue({
         description: formDesc,
         amount: parseFloat(formAmount.replace(',', '.')),
-        date: formDate,
+        date: combinedDate,
         category: formCategory,
       });
       setIsCreateModalOpen(false);
@@ -105,10 +115,11 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
 
     try {
       setActionLoading(true);
+      const combinedDate = `${formDate}T${formTime || '12:00'}:00.000Z`;
       await api.updateRevenue(editingRevenue.id, {
         description: formDesc,
         amount: parseFloat(formAmount.replace(',', '.')),
-        date: formDate,
+        date: combinedDate,
         category: formCategory,
       });
       setEditingRevenue(null);
@@ -530,32 +541,32 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
-                Valor
-              </label>
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontWeight: 600, fontSize: 13 }}>
-                  R$
-                </span>
-                <input
-                  type="text"
-                  required
-                  placeholder="0,00"
-                  value={formAmount}
-                  onChange={(e) => setFormAmount(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '11px 14px 11px 38px',
-                    borderRadius: 10,
-                    border: '1px solid #cbd5e1',
-                    outline: 'none',
-                  }}
-                />
-              </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+              Valor
+            </label>
+            <div style={{ position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontWeight: 600, fontSize: 13 }}>
+                R$
+              </span>
+              <input
+                type="text"
+                required
+                placeholder="0,00"
+                value={formAmount}
+                onChange={(e) => setFormAmount(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '11px 14px 11px 38px',
+                  borderRadius: 10,
+                  border: '1px solid #cbd5e1',
+                  outline: 'none',
+                }}
+              />
             </div>
+          </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
                 Data
@@ -565,6 +576,25 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
                 required
                 value={formDate}
                 onChange={(e) => setFormDate(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '11px 14px',
+                  borderRadius: 10,
+                  border: '1px solid #cbd5e1',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                Horário
+              </label>
+              <input
+                type="time"
+                required
+                value={formTime}
+                onChange={(e) => setFormTime(e.target.value)}
                 style={{
                   width: '100%',
                   padding: '11px 14px',
@@ -647,31 +677,31 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
-                Valor
-              </label>
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontWeight: 600, fontSize: 13 }}>
-                  R$
-                </span>
-                <input
-                  type="text"
-                  required
-                  value={formAmount}
-                  onChange={(e) => setFormAmount(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '11px 14px 11px 38px',
-                    borderRadius: 10,
-                    border: '1px solid #cbd5e1',
-                    outline: 'none',
-                  }}
-                />
-              </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+              Valor
+            </label>
+            <div style={{ position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontWeight: 600, fontSize: 13 }}>
+                R$
+              </span>
+              <input
+                type="text"
+                required
+                value={formAmount}
+                onChange={(e) => setFormAmount(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '11px 14px 11px 38px',
+                  borderRadius: 10,
+                  border: '1px solid #cbd5e1',
+                  outline: 'none',
+                }}
+              />
             </div>
+          </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
                 Data
@@ -681,6 +711,25 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
                 required
                 value={formDate}
                 onChange={(e) => setFormDate(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '11px 14px',
+                  borderRadius: 10,
+                  border: '1px solid #cbd5e1',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                Horário
+              </label>
+              <input
+                type="time"
+                required
+                value={formTime}
+                onChange={(e) => setFormTime(e.target.value)}
                 style={{
                   width: '100%',
                   padding: '11px 14px',

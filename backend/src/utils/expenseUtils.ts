@@ -173,3 +173,41 @@ export function calculateEffectiveFixedExpense(
       : null,
   };
 }
+
+/**
+ * Parses a date input with an optional or extracted time string (HH:mm).
+ * Ensures exact UTC timestamp is preserved so transactions on the same day can be ordered chronologically.
+ */
+export function parseDateWithTime(dateInput: string | Date, timeInput?: string): Date {
+  if (!dateInput) return new Date();
+
+  // If timeInput is explicitly provided as "HH:mm"
+  if (timeInput && typeof timeInput === 'string' && /^\d{1,2}:\d{2}$/.test(timeInput.trim())) {
+    const dateStr = typeof dateInput === 'string' ? dateInput.split('T')[0] : dateInput.toISOString().split('T')[0];
+    const [hh, mm] = timeInput.trim().split(':');
+    const hPad = hh.padStart(2, '0');
+    const mPad = mm.padStart(2, '0');
+    return new Date(`${dateStr}T${hPad}:${mPad}:00.000Z`);
+  }
+
+  if (typeof dateInput === 'string') {
+    const trimmed = dateInput.trim();
+    // If it's a date-only string like "YYYY-MM-DD"
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      const now = new Date();
+      const todayStr = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
+      if (trimmed === todayStr) {
+        // Today's date: use current UTC time so transactions registered sequentially stay in order
+        const hPad = String(now.getUTCHours()).padStart(2, '0');
+        const mPad = String(now.getUTCMinutes()).padStart(2, '0');
+        const sPad = String(now.getUTCSeconds()).padStart(2, '0');
+        return new Date(`${trimmed}T${hPad}:${mPad}:${sPad}.000Z`);
+      } else {
+        return new Date(`${trimmed}T12:00:00.000Z`);
+      }
+    }
+    return new Date(trimmed);
+  }
+
+  return new Date(dateInput);
+}

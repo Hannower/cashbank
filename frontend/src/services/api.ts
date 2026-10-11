@@ -94,7 +94,7 @@ export const api = {
     request<any>(`/fixed-expenses/${id}/toggle-payment`, { method: 'PATCH', body: JSON.stringify(data) }),
   updateFixedExpenseMonthAmount: (
     id: string,
-    data: { month: number; year: number; amount: number | null; scope?: 'month' | 'onward' | 'all' }
+    data: { month: number; year: number; amount: number | null; scope?: 'month' | 'onward' | 'all'; paidAt?: string; date?: string; time?: string }
   ) => request<any>(`/fixed-expenses/${id}/month-amount`, { method: 'PATCH', body: JSON.stringify(data) }),
   createFixedExpenseAdjustment: (
     id: string,
@@ -144,9 +144,9 @@ export const api = {
     request<any>(`/piggy-banks/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deletePiggyBank: (id: string) =>
     request<any>(`/piggy-banks/${id}`, { method: 'DELETE' }),
-  depositPiggyBank: (id: string, data: { amount: number; date?: string; description?: string }) =>
+  depositPiggyBank: (id: string, data: { amount: number; date?: string; description?: string; time?: string }) =>
     request<any>(`/piggy-banks/${id}/deposit`, { method: 'POST', body: JSON.stringify(data) }),
-  withdrawPiggyBank: (id: string, data: { amount: number; date?: string; description?: string }) =>
+  withdrawPiggyBank: (id: string, data: { amount: number; date?: string; description?: string; time?: string }) =>
     request<any>(`/piggy-banks/${id}/withdraw`, { method: 'POST', body: JSON.stringify(data) }),
 
   // Credit Cards

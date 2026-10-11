@@ -20,11 +20,14 @@ import {
   QrCode,
   Copy,
   Check,
+  Pencil,
+  Clock,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { NavTab } from '../components/Sidebar';
 import { MonthSelector } from '../components/MonthSelector';
+import { Modal } from '../components/Modal';
 import { MonthItem, getInitialMonthItem, FULL_MONTH_NAMES, MONTH_LABELS } from '../utils/dateUtils';
 
 interface DashboardViewProps {
@@ -55,6 +58,70 @@ const getCategoryColor = (category: string) => {
   }
 };
 
+const VARIABLE_CATEGORIES = [
+  'Alimentação',
+  'Transporte',
+  'Moradia',
+  'Saúde',
+  'Lazer',
+  'Educação',
+  'Streaming',
+  'Serviços',
+  'Outros',
+];
+
+const REVENUE_CATEGORIES = [
+  'Salário',
+  'Investimentos',
+  'Freelance',
+  'Vendas',
+  'Aluguel',
+  'Presente',
+  'Reembolso',
+  'Outros',
+];
+
+const extractDateFromTransaction = (tx: any): string => {
+  if (!tx || !tx.date) return new Date().toISOString().split('T')[0];
+  try {
+    const d = new Date(tx.date);
+    if (!isNaN(d.getTime())) {
+      const y = d.getUTCFullYear();
+      const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(d.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+    return String(tx.date).split('T')[0];
+  } catch {
+    return new Date().toISOString().split('T')[0];
+  }
+};
+
+const extractTimeFromTransaction = (tx: any): string => {
+  if (!tx) return '12:00';
+  if (tx.date) {
+    const d = new Date(tx.date);
+    if (!isNaN(d.getTime())) {
+      const h = d.getUTCHours();
+      const m = d.getUTCMinutes();
+      if (h !== 0 || m !== 0) {
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      }
+    }
+  }
+  if (tx.createdAt) {
+    const c = new Date(tx.createdAt);
+    if (!isNaN(c.getTime())) {
+      const h = c.getUTCHours();
+      const m = c.getUTCMinutes();
+      if (h !== 0 || m !== 0) {
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      }
+    }
+  }
+  return '12:00';
+};
+
 export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpenQuickLaunch }) => {
   const { user } = useAuth();
   const [selectedMonth, setSelectedMonth] = useState<MonthItem>(() => getInitialMonthItem(user?.createdAt));
@@ -69,6 +136,106 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
   const [annualData, setAnnualData] = useState<any>(null);
   const [annualLoading, setAnnualLoading] = useState(false);
   const [copiedPixId, setCopiedPixId] = useState<string | null>(null);
+
+  // Edit Transaction state
+  const [editingTx, setEditingTx] = useState<any>(null);
+  const [editDesc, setEditDesc] = useState('');
+  const [editAmount, setEditAmount] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editTime, setEditTime] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editPixKey, setEditPixKey] = useState('');
+  const [editPiggyBankId, setEditPiggyBankId] = useState('');
+  const [editSavingType, setEditSavingType] = useState<'deposit' | 'withdraw'>('deposit');
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const handleOpenEdit = (tx: any) => {
+    setEditingTx(tx);
+    setEditDesc(tx.description || '');
+    setEditAmount(String(tx.amount || ''));
+    setEditDate(extractDateFromTransaction(tx));
+    setEditTime(extractTimeFromTransaction(tx));
+    setEditCategory(tx.category || (tx.type === 'revenue' ? 'Outros' : 'Alimentação'));
+    setEditPixKey(tx.pixKey || '');
+    setEditPiggyBankId(tx.piggyBank?.id || '');
+    setEditSavingType(tx.type === 'savings_withdraw' ? 'withdraw' : 'deposit');
+    setEditError(null);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTx || !editDesc || !editAmount || !editDate) return;
+
+    try {
+      setEditLoading(true);
+      setEditError(null);
+      const parsedAmount = parseFloat(String(editAmount).replace(',', '.'));
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        setEditError('Informe um valor numérico válido maior que zero.');
+        setEditLoading(false);
+        return;
+      }
+
+      const combinedDate = `${editDate}T${editTime || '12:00'}:00.000Z`;
+
+      if (editingTx.type === 'variable_expense') {
+        await api.updateVariableExpense(editingTx.originalId, {
+          description: editDesc,
+          amount: parsedAmount,
+          date: combinedDate,
+          category: editCategory,
+          pixKey: editPixKey.trim() || null,
+        });
+      } else if (editingTx.type === 'revenue') {
+        await api.updateRevenue(editingTx.originalId, {
+          description: editDesc,
+          amount: parsedAmount,
+          date: combinedDate,
+          category: editCategory,
+        });
+      } else if (editingTx.type === 'savings_deposit' || editingTx.type === 'savings_withdraw') {
+        const finalAmount = editSavingType === 'withdraw' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
+        await api.updateSavings(editingTx.originalId, {
+          description: editDesc,
+          amount: finalAmount,
+          date: combinedDate,
+          piggyBankId: editPiggyBankId || null,
+        });
+      } else if (editingTx.type === 'fixed_expense' || editingTx.type === 'credit_card_payment') {
+        if (editingTx.originalId.startsWith('card-invoice-') || editingTx.type === 'credit_card_payment') {
+          await api.updateFixedExpenseMonthAmount(editingTx.originalId, {
+            month: selectedMonth.month,
+            year: selectedMonth.year,
+            amount: parsedAmount,
+            scope: 'month',
+            paidAt: combinedDate,
+          });
+        } else {
+          await api.updateFixedExpenseMonthAmount(editingTx.originalId, {
+            month: selectedMonth.month,
+            year: selectedMonth.year,
+            amount: parsedAmount,
+            scope: 'month',
+            paidAt: combinedDate,
+          });
+          await api.updateFixedExpense(editingTx.originalId, {
+            description: editDesc,
+            category: editCategory,
+            pixKey: editPixKey.trim() || null,
+          });
+        }
+      }
+
+      setEditingTx(null);
+      await fetchDashboardData(selectedMonth.month, selectedMonth.year);
+    } catch (err: any) {
+      console.error('Error saving transaction edit:', err);
+      setEditError(err.message || 'Erro ao salvar alterações na movimentação.');
+    } finally {
+      setEditLoading(false);
+    }
+  };
 
   const handleCopyPix = async (id: string, key: string) => {
     try {
@@ -164,24 +331,33 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
   const rawName = user?.name || data?.user?.name || 'usuário';
   const firstName = rawName.trim().split(' ')[0] || rawName;
 
-  // Extrato de transações efetuadas:
-  // Se for despesa fixa, deve constar SOMENTE se estiver paga (isPaid === true)
+  // Extrato de movimentações efetuadas:
+  // Se for despesa fixa ou fatura de cartão, deve constar SOMENTE se estiver paga (isPaid === true)
   const rawTransactions: any[] = (data?.transactions || []).filter((t: any) => {
-    if (t.type === 'fixed_expense') return t.isPaid === true;
+    if (t.type === 'fixed_expense' || t.type === 'credit_card_payment') return t.isPaid === true;
     return true;
   });
 
-  const filteredTransactions = rawTransactions.filter((t) => {
+  // Ordenação exata: mais recente primeiro (data/hora desc), com tie-break por createdAt desc
+  const sortedTransactions = [...rawTransactions].sort((a, b) => {
+    const timeDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+    if (timeDiff !== 0) return timeDiff;
+    const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    return bCreated - aCreated;
+  });
+
+  const filteredTransactions = sortedTransactions.filter((t) => {
     if (transactionFilter === 'revenues') return t.type === 'revenue' || t.type === 'savings_withdraw';
-    if (transactionFilter === 'expenses') return t.type === 'variable_expense' || t.type === 'fixed_expense' || t.type === 'savings_deposit';
+    if (transactionFilter === 'expenses') return t.type === 'variable_expense' || t.type === 'fixed_expense' || t.type === 'credit_card_payment' || t.type === 'savings_deposit';
     return true;
   });
 
-  const totalEntradas = rawTransactions
+  const totalEntradas = sortedTransactions
     .filter((t) => t.type === 'revenue')
     .reduce((acc, t) => acc + (t.amount || 0), 0);
 
-  const totalSaidas = rawTransactions
+  const totalSaidas = sortedTransactions
     .filter((t) => t.type !== 'revenue')
     .reduce((acc, t) => acc + (t.amount || 0), 0);
 
@@ -624,10 +800,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
             <div>
               <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <ListFilter size={18} color="#15803d" />
-                Histórico de transações
+                Movimentações financeiras
               </h3>
               <p style={{ fontSize: 12, color: '#94a3b8', margin: '2px 0 0' }}>
-                Extrato de transações efetuadas em {FULL_MONTH_NAMES[selectedMonth.month - 1]} de {selectedMonth.year}
+                Extrato de movimentações efetuadas em {FULL_MONTH_NAMES[selectedMonth.month - 1]} de {selectedMonth.year}
               </p>
             </div>
 
@@ -690,7 +866,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
             ) : (
               filteredTransactions.map((tx: any) => {
                 const isRevenue = tx.type === 'revenue';
-                const isFixed = tx.type === 'fixed_expense';
+                const isCreditCard = tx.type === 'credit_card_payment' || tx.isCreditCard || tx.originalId?.startsWith('card-invoice-') || tx.category === 'Cartão de Crédito';
+                const isFixed = tx.type === 'fixed_expense' && !isCreditCard;
                 const isSavingsDeposit = tx.type === 'savings_deposit';
                 const isSavingsWithdraw = tx.type === 'savings_withdraw';
                 const isSavings = isSavingsDeposit || isSavingsWithdraw;
@@ -712,6 +889,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                             ? (isSavingsDeposit ? '#ecfdf5' : '#f3e8ff')
                             : isRevenue
                             ? '#ecfdf5'
+                            : isCreditCard
+                            ? '#eff6ff'
                             : isFixed
                             ? '#ffedd5'
                             : '#f3e8ff',
@@ -719,6 +898,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                             ? (isSavingsDeposit ? '#15803d' : '#7c3aed')
                             : isRevenue
                             ? '#15803d'
+                            : isCreditCard
+                            ? '#2563eb'
                             : isFixed
                             ? '#ea580c'
                             : '#7c3aed',
@@ -732,8 +913,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                           <PiggyBank size={18} />
                         ) : isRevenue ? (
                           <ArrowDownLeft size={18} />
-                        ) : isFixed ? (
+                        ) : isCreditCard ? (
                           <CreditCard size={18} />
+                        ) : isFixed ? (
+                          <Calendar size={18} />
                         ) : (
                           <ShoppingBag size={18} />
                         )}
@@ -756,6 +939,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                                 ? '#ede9fe'
                                 : isRevenue
                                 ? '#dcfce7'
+                                : isCreditCard
+                                ? '#dbeafe'
                                 : isFixed
                                 ? '#ffedd5'
                                 : '#f3e8ff',
@@ -765,6 +950,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                                 ? '#7c3aed'
                                 : isRevenue
                                 ? '#15803d'
+                                : isCreditCard
+                                ? '#1d4ed8'
                                 : isFixed
                                 ? '#ea580c'
                                 : '#7c3aed',
@@ -776,6 +963,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                               ? 'Resgate'
                               : isRevenue
                               ? 'Receita'
+                              : isCreditCard
+                              ? 'Cartão'
                               : isFixed
                               ? 'Fixa'
                               : 'Variável'}
@@ -805,7 +994,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                     {/* Right: Status and Amount */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        {isFixed && (
+                        {(isFixed || isCreditCard) && (
                           <span
                             className="badge-paid"
                             style={{ fontSize: 11, padding: '2px 8px' }}
@@ -823,6 +1012,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                         >
                           {isPositive ? `+ ${formatCurrency(tx.amount)}` : `- ${formatCurrency(tx.amount)}`}
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEdit(tx)}
+                          title="Editar movimentação"
+                          className="btn-tx-edit"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 28,
+                            height: 28,
+                            borderRadius: 7,
+                            border: '1px solid var(--border-color, #e2e8f0)',
+                            backgroundColor: 'var(--bg-card, #ffffff)',
+                            color: 'var(--text-muted, #64748b)',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = '#15803d';
+                            e.currentTarget.style.borderColor = '#86efac';
+                            e.currentTarget.style.backgroundColor = '#ecfdf5';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color = 'var(--text-muted, #64748b)';
+                            e.currentTarget.style.borderColor = 'var(--border-color, #e2e8f0)';
+                            e.currentTarget.style.backgroundColor = 'var(--bg-card, #ffffff)';
+                          }}
+                        >
+                          <Pencil size={13} />
+                        </button>
                       </div>
                       {tx.pixKey && (
                         <button
@@ -1365,6 +1585,266 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
       </div>
     )
   )}
+
+      {/* Modal: Editar Movimentação Financeira */}
+      <Modal
+        isOpen={Boolean(editingTx)}
+        onClose={() => setEditingTx(null)}
+        title="Editar Movimentação"
+        subtitle="Altere a descrição, valor, data, horário e detalhes desta movimentação."
+        icon={<Pencil size={20} />}
+        maxWidth="480px"
+      >
+        {editingTx && (
+          <form onSubmit={handleSaveEdit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {editError && (
+              <div style={{ padding: '10px 14px', borderRadius: 8, backgroundColor: '#fee2e2', color: '#b91c1c', fontSize: 13 }}>
+                {editError}
+              </div>
+            )}
+
+            {/* Type indicator badge */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: 'var(--bg-item, #f8fafc)', borderRadius: 10, border: '1px solid var(--border-color, #f1f5f9)' }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted, #64748b)' }}>Tipo de registro:</span>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: 6,
+                  backgroundColor: editingTx.type === 'revenue' || editingTx.type === 'savings_deposit'
+                    ? '#dcfce7'
+                    : editingTx.type === 'credit_card_payment' || editingTx.originalId?.startsWith('card-invoice-')
+                    ? '#dbeafe'
+                    : '#fee2e2',
+                  color: editingTx.type === 'revenue' || editingTx.type === 'savings_deposit'
+                    ? '#15803d'
+                    : editingTx.type === 'credit_card_payment' || editingTx.originalId?.startsWith('card-invoice-')
+                    ? '#1d4ed8'
+                    : '#b91c1c',
+                }}
+              >
+                {editingTx.type === 'revenue'
+                  ? 'Receita (Entrada)'
+                  : editingTx.type === 'variable_expense'
+                  ? 'Despesa Variável'
+                  : editingTx.type === 'credit_card_payment' || editingTx.originalId?.startsWith('card-invoice-')
+                  ? 'Fatura de Cartão de Crédito'
+                  : editingTx.type === 'fixed_expense'
+                  ? 'Despesa Fixa'
+                  : editingTx.type === 'savings_deposit'
+                  ? 'Cofrinho (Depósito)'
+                  : 'Cofrinho (Resgate)'}
+              </span>
+            </div>
+
+            {/* Descrição */}
+            <div>
+              <label className="form-label" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                Descrição *
+              </label>
+              <input
+                type="text"
+                required
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
+                className="input-field"
+                style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #cbd5e1', outline: 'none' }}
+              />
+            </div>
+
+            {/* Valor */}
+            <div>
+              <label className="form-label" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                Valor (R$) *
+              </label>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: '#64748b', fontSize: 13 }}>
+                  R$
+                </span>
+                <input
+                  type="text"
+                  required
+                  value={editAmount}
+                  onChange={(e) => setEditAmount(e.target.value)}
+                  placeholder="0,00"
+                  style={{ width: '100%', padding: '10px 14px 10px 38px', borderRadius: 10, border: '1px solid #cbd5e1', outline: 'none' }}
+                />
+              </div>
+            </div>
+
+            {/* Data e Horário em duas colunas */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label className="form-label" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                  Data *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid #cbd5e1', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label className="form-label" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                  Horário *
+                </label>
+                <input
+                  type="time"
+                  required
+                  value={editTime}
+                  onChange={(e) => setEditTime(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid #cbd5e1', outline: 'none' }}
+                />
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: -8 }}>
+              <Clock size={13} color="#64748b" />
+              <span style={{ fontSize: 11, color: '#64748b' }}>
+                O horário define a ordem exata entre as movimentações do mesmo dia.
+              </span>
+            </div>
+
+            {/* Categoria / Detalhes específicos */}
+            {editingTx.type === 'variable_expense' && (
+              <>
+                <div>
+                  <label className="form-label" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                    Categoria
+                  </label>
+                  <select
+                    value={editCategory}
+                    onChange={(e) => setEditCategory(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #cbd5e1', outline: 'none', backgroundColor: '#fff' }}
+                  >
+                    {VARIABLE_CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                    Chave Pix (opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={editPixKey}
+                    onChange={(e) => setEditPixKey(e.target.value)}
+                    placeholder="E-mail, CPF, telefone ou aleatória"
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #cbd5e1', outline: 'none' }}
+                  />
+                </div>
+              </>
+            )}
+
+            {editingTx.type === 'revenue' && (
+              <div>
+                <label className="form-label" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                  Categoria
+                </label>
+                <select
+                  value={editCategory}
+                  onChange={(e) => setEditCategory(e.target.value)}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #cbd5e1', outline: 'none', backgroundColor: '#fff' }}
+                >
+                  {REVENUE_CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {(editingTx.type === 'savings_deposit' || editingTx.type === 'savings_withdraw') && (
+              <>
+                <div>
+                  <label className="form-label" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                    Tipo de Operação
+                  </label>
+                  <select
+                    value={editSavingType}
+                    onChange={(e) => setEditSavingType(e.target.value as 'deposit' | 'withdraw')}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #cbd5e1', outline: 'none', backgroundColor: '#fff' }}
+                  >
+                    <option value="deposit">Depósito (Guardar)</option>
+                    <option value="withdraw">Resgate (Retirar)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                    Cofrinho
+                  </label>
+                  <select
+                    value={editPiggyBankId}
+                    onChange={(e) => setEditPiggyBankId(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #cbd5e1', outline: 'none', backgroundColor: '#fff' }}
+                  >
+                    <option value="">Sem cofrinho específico (Poupança Geral)</option>
+                    {(data?.piggyBanks || []).map((pb: any) => (
+                      <option key={pb.id} value={pb.id}>
+                        {pb.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
+
+            {(editingTx.type === 'fixed_expense' || editingTx.type === 'credit_card_payment') && (
+              <div>
+                <span style={{ fontSize: 12, color: '#64748b' }}>
+                  {editingTx.type === 'credit_card_payment' || editingTx.originalId?.startsWith('card-invoice-')
+                    ? `A alteração deste valor ajusta o total da fatura e a data/horário do pagamento para ${selectedMonth.label} de ${selectedMonth.year}.`
+                    : `A alteração deste valor se aplica como ajuste efetivo para ${selectedMonth.label} de ${selectedMonth.year}.`}
+                </span>
+              </div>
+            )}
+
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
+              <button
+                type="button"
+                onClick={() => setEditingTx(null)}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: 10,
+                  border: '1px solid #cbd5e1',
+                  backgroundColor: '#fff',
+                  color: '#475569',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={editLoading}
+                className="btn-primary"
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: 10,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                {editLoading && <Loader2 size={16} className="animate-spin" />}
+                Salvar alterações
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
 
       <style>{`
         @media (max-width: 1024px) {
