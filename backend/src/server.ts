@@ -1,6 +1,12 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import path from 'path';
 import dotenv from 'dotenv';
+
+// Load both root .env and local backend .env to ensure all configurations are loaded
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+
 import authRoutes from './routes/authRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import fixedExpenseRoutes from './routes/fixedExpenseRoutes';
@@ -9,8 +15,6 @@ import revenueRoutes from './routes/revenueRoutes';
 import savingsRoutes from './routes/savingsRoutes';
 import piggyBankRoutes from './routes/piggyBankRoutes';
 import creditCardRoutes from './routes/creditCardRoutes';
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;

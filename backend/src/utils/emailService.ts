@@ -10,14 +10,20 @@ interface SendPasswordResetEmailParams {
  * Creates and returns the Nodemailer transporter based on .env or fallback
  */
 async function getTransporter(): Promise<{ transporter: Transporter; from: string }> {
-  const host = process.env.SMTP_HOST;
-  const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const from = process.env.SMTP_FROM || 'CashBank <nao-responder@cashbank.com>';
+  const host = (process.env.EMAIL_HOST || process.env.SMTP_HOST || '').trim();
+  const rawPort = (process.env.EMAIL_PORT || process.env.SMTP_PORT || '587').split('#')[0].trim();
+  const port = parseInt(rawPort, 10) || 587;
+  const user = (process.env.EMAIL_USER || process.env.SMTP_USER || '').split('#')[0].trim();
+  const rawPass = (process.env.EMAIL_PASS || process.env.SMTP_PASS || '').split('#')[0].trim();
+  // Strip spaces if Gmail app password (e.g. 'cria kvea heyq itaa' -> 'criakveaheyqitaa')
+  const pass = host.toLowerCase().includes('gmail') ? rawPass.replace(/\s+/g, '') : rawPass;
+  const from =
+    (process.env.EMAIL_FROM || process.env.SMTP_FROM || '').split('#')[0].trim() ||
+    `Suporte CashBank <${user || 'suporte@cashbank.com'}>`;
 
   // If real SMTP is configured in .env, use it
   if (host && user && pass) {
+    console.log(`[EMAIL] Usando servidor SMTP: ${host}:${port} com usuário: ${user}`);
     const transporter = nodemailer.createTransport({
       host,
       port,
@@ -25,6 +31,9 @@ async function getTransporter(): Promise<{ transporter: Transporter; from: strin
       auth: {
         user,
         pass,
+      },
+      tls: {
+        rejectUnauthorized: false,
       },
     });
     return { transporter, from };
