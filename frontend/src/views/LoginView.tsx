@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Mail,
   Lock,
@@ -81,6 +82,27 @@ export const LoginView: React.FC = () => {
       validateResetToken(token);
     }
   }, []);
+
+  // Lock body scroll when either recovery modal or token modal is active
+  useEffect(() => {
+    const isAnyModalOpen = showRecoveryModal || Boolean(activeResetToken);
+    if (!isAnyModalOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showRecoveryModal && !activeResetToken) {
+        setShowRecoveryModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [showRecoveryModal, activeResetToken]);
 
   const validateResetToken = async (token: string) => {
     setTokenValidationState('validating');
@@ -648,34 +670,45 @@ export const LoginView: React.FC = () => {
       </div>
 
       {/* Modal 1: Request Password Reset Link */}
-      {showRecoveryModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 100,
-            backgroundColor: 'rgba(15, 23, 42, 0.65)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 16,
-          }}
-          onClick={() => setShowRecoveryModal(false)}
-        >
+      {showRecoveryModal &&
+        createPortal(
           <div
-            className="login-modal-box"
             style={{
-              borderRadius: 20,
-              width: '100%',
-              maxWidth: 480,
-              padding: '32px 28px',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15)',
-              position: 'relative',
-              animation: 'modalPop 0.25s ease forwards',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100vw',
+              height: '100dvh',
+              zIndex: 9999,
+              backgroundColor: 'rgba(15, 23, 42, 0.65)',
+              backdropFilter: 'blur(4px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 16,
+              overflowY: 'auto',
+              boxSizing: 'border-box',
             }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={() => setShowRecoveryModal(false)}
           >
+            <div
+              className="login-modal-box"
+              style={{
+                borderRadius: 20,
+                width: '100%',
+                maxWidth: 480,
+                maxHeight: 'calc(100dvh - 32px)',
+                overflowY: 'auto',
+                padding: '32px 28px',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.15)',
+                position: 'relative',
+                animation: 'modalPop 0.25s ease forwards',
+                boxSizing: 'border-box',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
             {/* Close button */}
             <button
               onClick={() => setShowRecoveryModal(false)}
@@ -910,37 +943,49 @@ export const LoginView: React.FC = () => {
                 </button>
               </div>
             )}
-          </div>
-        </div>
-      )}
+            </div>
+          </div>,
+          document.body
+        )}
 
       {/* Modal 2: Reset Password via Secure Token (when visiting ?resetToken=...) */}
-      {activeResetToken && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 100,
-            backgroundColor: 'rgba(15, 23, 42, 0.75)',
-            backdropFilter: 'blur(5px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 16,
-          }}
-        >
+      {activeResetToken &&
+        createPortal(
           <div
-            className="login-modal-box"
             style={{
-              borderRadius: 20,
-              width: '100%',
-              maxWidth: 480,
-              padding: '32px 28px',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
-              position: 'relative',
-              animation: 'modalPop 0.25s ease forwards',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100vw',
+              height: '100dvh',
+              zIndex: 9999,
+              backgroundColor: 'rgba(15, 23, 42, 0.75)',
+              backdropFilter: 'blur(5px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 16,
+              overflowY: 'auto',
+              boxSizing: 'border-box',
             }}
           >
+            <div
+              className="login-modal-box"
+              style={{
+                borderRadius: 20,
+                width: '100%',
+                maxWidth: 480,
+                maxHeight: 'calc(100dvh - 32px)',
+                overflowY: 'auto',
+                padding: '32px 28px',
+                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+                position: 'relative',
+                animation: 'modalPop 0.25s ease forwards',
+                boxSizing: 'border-box',
+              }}
+            >
             {/* Loading token validation */}
             {tokenValidationState === 'validating' && (
               <div style={{ textAlign: 'center', padding: '30px 10px' }}>
@@ -1239,9 +1284,10 @@ export const LoginView: React.FC = () => {
                 )}
               </>
             )}
-          </div>
-        </div>
-      )}
+            </div>
+          </div>,
+          document.body
+        )}
 
       <style>{`
         @media (max-width: 900px) {

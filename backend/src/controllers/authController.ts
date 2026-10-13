@@ -208,8 +208,8 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
       { expiresIn: '1h' }
     );
 
-    const origin = req.headers.origin || 'http://localhost:3000';
-    const resetUrl = `${origin}/?resetToken=${encodeURIComponent(token)}`;
+    const frontendUrl = (process.env.FRONTEND_URL || req.headers.origin || 'http://localhost:3000').replace(/\/$/, '');
+    const resetUrl = `${frontendUrl}/?resetToken=${encodeURIComponent(token)}`;
 
     // Send email to user's registered inbox
     await sendPasswordResetEmail({
@@ -223,9 +223,9 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
       email: user.email,
       expiresIn: '1 hora',
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('forgotPassword error:', error);
-    res.status(500).json({ message: 'Erro ao enviar link de recuperação de senha' });
+    res.status(500).json({ message: error.message || 'Erro ao enviar link de recuperação de senha' });
   }
 }
 

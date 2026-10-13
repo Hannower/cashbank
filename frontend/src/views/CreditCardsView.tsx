@@ -1064,7 +1064,7 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
         </div>
 
         {/* Desktop Table */}
-        <div className="card table-desktop-wrapper" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="card desktop-table-wrapper" style={{ padding: 0, overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
