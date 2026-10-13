@@ -250,21 +250,43 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     frontendUrl = frontendUrl.replace(/\/$/, '');
     const resetUrl = `${frontendUrl}/?resetToken=${encodeURIComponent(token)}`;
 
-    // Send email to user's registered inbox
-    await sendPasswordResetEmail({
-      to: user.email,
-      name: user.name,
-      resetUrl,
-    });
+    // Send email to user's registered inbox (HTTP API or SMTP with fallback)
+    let emailSent = false;
+    let emailMethod = 'none';
+    let emailReason = '';
+
+    try {
+      const emailResult = await sendPasswordResetEmail({
+        to: user.email,
+        name: user.name,
+        resetUrl,
+      });
+      emailSent = emailResult.success;
+      emailMethod = emailResult.method;
+      emailReason = emailResult.reason || '';
+    } catch (err: any) {
+      console.warn('[PASSWORD RESET] Erro no envio de e-mail:', err.message);
+      emailSent = false;
+      emailReason = err.message;
+    }
 
     res.json({
-      message: 'Link de recuperação de senha enviado para o seu e-mail com sucesso!',
+      success: true,
+      emailSent,
+      emailMethod,
+      emailReason: emailSent ? undefined : emailReason,
+      message: emailSent
+        ? 'Link de recuperação de senha enviado para o seu e-mail com sucesso!'
+        : 'Link de recuperação gerado com sucesso!',
       email: user.email,
+      name: user.name,
+      resetUrl,
+      token,
       expiresIn: '1 hora',
     });
   } catch (error: any) {
     console.error('forgotPassword error:', error);
-    res.status(500).json({ message: error.message || 'Erro ao enviar link de recuperação de senha' });
+    res.status(500).json({ message: error.message || 'Erro ao processar recuperação de senha' });
   }
 }
 
