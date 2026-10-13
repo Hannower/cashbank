@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext';
 import { Sidebar, NavTab } from './components/Sidebar';
 import { Header } from './components/Header';
 import { LoginView } from './views/LoginView';
+import { ResetPasswordView } from './views/ResetPasswordView';
 import { DashboardView } from './views/DashboardView';
 import { FixedExpensesView } from './views/FixedExpensesView';
 import { VariableExpensesView } from './views/VariableExpensesView';
@@ -94,23 +95,43 @@ export const App: React.FC = () => {
     );
   }
 
-  // Check if URL contains a password reset token so user can reset even if previously logged in
-  const hasResetToken = (() => {
+  // Check if URL contains a password reset token so user can reset password
+  const initialResetToken = (() => {
     try {
       const searchParams = new URLSearchParams(window.location.search);
-      if (searchParams.get('resetToken') || searchParams.get('token')) return true;
+      const qToken = searchParams.get('resetToken') || searchParams.get('token');
+      if (qToken) return qToken;
+
       if (window.location.hash) {
         const hashPart = window.location.hash.includes('?')
           ? window.location.hash.split('?')[1]
           : window.location.hash.replace(/^#\/?/, '');
         const hashParams = new URLSearchParams(hashPart);
-        if (hashParams.get('resetToken') || hashParams.get('token')) return true;
+        const hToken = hashParams.get('resetToken') || hashParams.get('token');
+        if (hToken) return hToken;
       }
     } catch (_) {}
-    return false;
+    return null;
   })();
 
-  if (!token || hasResetToken) {
+  const [activeResetToken, setActiveResetToken] = useState<string | null>(initialResetToken);
+
+  // Dedicated Password Reset Page when user arrives from email link
+  if (activeResetToken) {
+    return (
+      <ResetPasswordView
+        token={activeResetToken}
+        onFinished={() => {
+          try {
+            window.history.replaceState({}, document.title, window.location.pathname.replace(/\/reset-password\/?$/, '/') || '/');
+          } catch (_) {}
+          setActiveResetToken(null);
+        }}
+      />
+    );
+  }
+
+  if (!token) {
     return <LoginView />;
   }
 
