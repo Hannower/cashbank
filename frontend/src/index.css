@@ -1387,3 +1387,201 @@ body.dark-theme .login-info-box-blue {
   color: #93c5fd !important;
 }
 
+/* ========================================================
+   Gastos por Categoria (Dark Theme & Mobile Adjustments)
+   ======================================================== */
+.category-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.category-card-item {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.category-card-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.category-card-name {
+  transition: color 0.2s ease;
+}
+
+.category-card-pct {
+  transition: color 0.2s ease;
+}
+
+.category-card-amount {
+  transition: color 0.2s ease;
+}
+
+/* Dark Theme overrides for Category Cards */
+body.dark-theme .category-card-item {
+  background-color: var(--cat-dark-bg, rgba(255, 255, 255, 0.04)) !important;
+  border-color: var(--cat-dark-border, rgba(255, 255, 255, 0.12)) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+body.dark-theme .category-card-item:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+body.dark-theme .category-card-name,
+body.dark-theme .category-card-pct {
+  color: var(--cat-dark-text, #e2e8f0) !important;
+}
+
+body.dark-theme .category-card-dot {
+  background-color: var(--cat-dark-dot, #94a3b8) !important;
+}
+
+body.dark-theme .category-card-track {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+body.dark-theme .category-card-amount {
+  color: #f8fafc !important;
+}
+
+/* Specific Category Classes in Dark Mode */
+body.dark-theme .category-card-moradia {
+  background-color: rgba(59, 130, 246, 0.12) !important;
+  border-color: rgba(59, 130, 246, 0.32) !important;
+}
+body.dark-theme .category-card-moradia .category-card-name,
+body.dark-theme .category-card-moradia .category-card-pct {
+  color: #60a5fa !important;
+}
+body.dark-theme .category-card-moradia .category-card-dot {
+  background-color: #60a5fa !important;
+}
+
+body.dark-theme .category-card-alimentacao {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+  border-color: rgba(245, 158, 11, 0.32) !important;
+}
+body.dark-theme .category-card-alimentacao .category-card-name,
+body.dark-theme .category-card-alimentacao .category-card-pct {
+  color: #fbbf24 !important;
+}
+body.dark-theme .category-card-alimentacao .category-card-dot {
+  background-color: #fbbf24 !important;
+}
+
+body.dark-theme .category-card-transporte {
+  background-color: rgba(14, 165, 233, 0.12) !important;
+  border-color: rgba(14, 165, 233, 0.32) !important;
+}
+body.dark-theme .category-card-transporte .category-card-name,
+body.dark-theme .category-card-transporte .category-card-pct {
+  color: #38bdf8 !important;
+}
+body.dark-theme .category-card-transporte .category-card-dot {
+  background-color: #38bdf8 !important;
+}
+
+body.dark-theme .category-card-streaming {
+  background-color: rgba(168, 85, 247, 0.12) !important;
+  border-color: rgba(168, 85, 247, 0.32) !important;
+}
+body.dark-theme .category-card-streaming .category-card-name,
+body.dark-theme .category-card-streaming .category-card-pct {
+  color: #c084fc !important;
+}
+body.dark-theme .category-card-streaming .category-card-dot {
+  background-color: #c084fc !important;
+}
+
+body.dark-theme .category-card-lazer {
+  background-color: rgba(236, 72, 153, 0.12) !important;
+  border-color: rgba(236, 72, 153, 0.32) !important;
+}
+body.dark-theme .category-card-lazer .category-card-name,
+body.dark-theme .category-card-lazer .category-card-pct {
+  color: #f472b6 !important;
+}
+body.dark-theme .category-card-lazer .category-card-dot {
+  background-color: #f472b6 !important;
+}
+
+body.dark-theme .category-card-saude {
+  background-color: rgba(239, 68, 68, 0.12) !important;
+  border-color: rgba(239, 68, 68, 0.32) !important;
+}
+body.dark-theme .category-card-saude .category-card-name,
+body.dark-theme .category-card-saude .category-card-pct {
+  color: #f87171 !important;
+}
+body.dark-theme .category-card-saude .category-card-dot {
+  background-color: #f87171 !important;
+}
+
+body.dark-theme .category-card-educacao {
+  background-color: rgba(20, 184, 166, 0.12) !important;
+  border-color: rgba(20, 184, 166, 0.32) !important;
+}
+body.dark-theme .category-card-educacao .category-card-name,
+body.dark-theme .category-card-educacao .category-card-pct {
+  color: #2dd4bf !important;
+}
+body.dark-theme .category-card-educacao .category-card-dot {
+  background-color: #2dd4bf !important;
+}
+
+body.dark-theme .category-card-servicos {
+  background-color: rgba(100, 116, 139, 0.14) !important;
+  border-color: rgba(100, 116, 139, 0.32) !important;
+}
+body.dark-theme .category-card-servicos .category-card-name,
+body.dark-theme .category-card-servicos .category-card-pct {
+  color: #94a3b8 !important;
+}
+body.dark-theme .category-card-servicos .category-card-dot {
+  background-color: #94a3b8 !important;
+}
+
+body.dark-theme .category-card-outros {
+  background-color: rgba(148, 163, 184, 0.10) !important;
+  border-color: rgba(148, 163, 184, 0.25) !important;
+}
+body.dark-theme .category-card-outros .category-card-name,
+body.dark-theme .category-card-outros .category-card-pct {
+  color: #cbd5e1 !important;
+}
+body.dark-theme .category-card-outros .category-card-dot {
+  background-color: #cbd5e1 !important;
+}
+
+/* Mobile responsive layout for category cards */
+@media (max-width: 640px) {
+  .category-overview-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+  .category-card-item {
+    padding: 12px 10px !important;
+    border-radius: 10px !important;
+  }
+  .category-card-item .category-card-name {
+    font-size: 12px !important;
+  }
+  .category-card-item .category-card-pct {
+    font-size: 11px !important;
+  }
+  .category-card-item .category-card-amount {
+    font-size: 13px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .category-overview-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+

@@ -94,7 +94,23 @@ export const App: React.FC = () => {
     );
   }
 
-  if (!token) {
+  // Check if URL contains a password reset token so user can reset even if previously logged in
+  const hasResetToken = (() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get('resetToken') || searchParams.get('token')) return true;
+      if (window.location.hash) {
+        const hashPart = window.location.hash.includes('?')
+          ? window.location.hash.split('?')[1]
+          : window.location.hash.replace(/^#\/?/, '');
+        const hashParams = new URLSearchParams(hashPart);
+        if (hashParams.get('resetToken') || hashParams.get('token')) return true;
+      }
+    } catch (_) {}
+    return false;
+  })();
+
+  if (!token || hasResetToken) {
     return <LoginView />;
   }
 

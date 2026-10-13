@@ -38,24 +38,122 @@ interface DashboardViewProps {
 const getCategoryColor = (category: string) => {
   switch (category) {
     case 'Moradia':
-      return { bg: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8', bar: '#3b82f6', dot: '#2563eb' };
+      return {
+        bg: '#eff6ff',
+        border: '#bfdbfe',
+        text: '#1d4ed8',
+        bar: '#3b82f6',
+        dot: '#2563eb',
+        darkBg: 'rgba(59, 130, 246, 0.12)',
+        darkBorder: 'rgba(59, 130, 246, 0.32)',
+        darkText: '#60a5fa',
+        darkDot: '#60a5fa',
+      };
     case 'Alimentação':
-      return { bg: '#fffbeb', border: '#fde68a', text: '#b45309', bar: '#f59e0b', dot: '#d97706' };
+      return {
+        bg: '#fffbeb',
+        border: '#fde68a',
+        text: '#b45309',
+        bar: '#f59e0b',
+        dot: '#d97706',
+        darkBg: 'rgba(245, 158, 11, 0.12)',
+        darkBorder: 'rgba(245, 158, 11, 0.32)',
+        darkText: '#fbbf24',
+        darkDot: '#fbbf24',
+      };
     case 'Transporte':
-      return { bg: '#f0f9ff', border: '#bae6fd', text: '#0369a1', bar: '#0ea5e9', dot: '#0284c7' };
+      return {
+        bg: '#f0f9ff',
+        border: '#bae6fd',
+        text: '#0369a1',
+        bar: '#0ea5e9',
+        dot: '#0284c7',
+        darkBg: 'rgba(14, 165, 233, 0.12)',
+        darkBorder: 'rgba(14, 165, 233, 0.32)',
+        darkText: '#38bdf8',
+        darkDot: '#38bdf8',
+      };
     case 'Streaming':
-      return { bg: '#faf5ff', border: '#e9d5ff', text: '#6b21a8', bar: '#a855f7', dot: '#9333ea' };
+      return {
+        bg: '#faf5ff',
+        border: '#e9d5ff',
+        text: '#6b21a8',
+        bar: '#a855f7',
+        dot: '#9333ea',
+        darkBg: 'rgba(168, 85, 247, 0.12)',
+        darkBorder: 'rgba(168, 85, 247, 0.32)',
+        darkText: '#c084fc',
+        darkDot: '#c084fc',
+      };
     case 'Lazer':
-      return { bg: '#fdf2f8', border: '#fbcfe8', text: '#be185d', bar: '#ec4899', dot: '#db2777' };
+      return {
+        bg: '#fdf2f8',
+        border: '#fbcfe8',
+        text: '#be185d',
+        bar: '#ec4899',
+        dot: '#db2777',
+        darkBg: 'rgba(236, 72, 153, 0.12)',
+        darkBorder: 'rgba(236, 72, 153, 0.32)',
+        darkText: '#f472b6',
+        darkDot: '#f472b6',
+      };
     case 'Saúde':
-      return { bg: '#fef2f2', border: '#fecaca', text: '#b91c1c', bar: '#ef4444', dot: '#dc2626' };
+      return {
+        bg: '#fef2f2',
+        border: '#fecaca',
+        text: '#b91c1c',
+        bar: '#ef4444',
+        dot: '#dc2626',
+        darkBg: 'rgba(239, 68, 68, 0.12)',
+        darkBorder: 'rgba(239, 68, 68, 0.32)',
+        darkText: '#f87171',
+        darkDot: '#f87171',
+      };
     case 'Educação':
-      return { bg: '#f0fdfa', border: '#99f6e4', text: '#0f766e', bar: '#14b8a6', dot: '#0d9488' };
+      return {
+        bg: '#f0fdfa',
+        border: '#99f6e4',
+        text: '#0f766e',
+        bar: '#14b8a6',
+        dot: '#0d9488',
+        darkBg: 'rgba(20, 184, 166, 0.12)',
+        darkBorder: 'rgba(20, 184, 166, 0.32)',
+        darkText: '#2dd4bf',
+        darkDot: '#2dd4bf',
+      };
     case 'Serviços':
-      return { bg: '#f8fafc', border: '#e2e8f0', text: '#334155', bar: '#64748b', dot: '#475569' };
+      return {
+        bg: '#f8fafc',
+        border: '#e2e8f0',
+        text: '#334155',
+        bar: '#64748b',
+        dot: '#475569',
+        darkBg: 'rgba(100, 116, 139, 0.14)',
+        darkBorder: 'rgba(100, 116, 139, 0.32)',
+        darkText: '#94a3b8',
+        darkDot: '#94a3b8',
+      };
     default:
-      return { bg: '#f8fafc', border: '#e2e8f0', text: '#475569', bar: '#94a3b8', dot: '#64748b' };
+      return {
+        bg: '#f8fafc',
+        border: '#e2e8f0',
+        text: '#475569',
+        bar: '#94a3b8',
+        dot: '#64748b',
+        darkBg: 'rgba(148, 163, 184, 0.10)',
+        darkBorder: 'rgba(148, 163, 184, 0.25)',
+        darkText: '#cbd5e1',
+        darkDot: '#cbd5e1',
+      };
   }
+};
+
+const getCategorySlug = (category: string) => {
+  return (category || 'outros')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '-');
 };
 
 const VARIABLE_CATEGORIES = [
@@ -728,32 +826,43 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
             Nenhuma despesa registrada em {selectedMonth.label} de {selectedMonth.year}.
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
+          <div className="category-overview-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
             {data.categories.map((cat: any) => {
               const theme = getCategoryColor(cat.name);
+              const slug = getCategorySlug(cat.name);
               return (
                 <div
                   key={cat.name}
+                  className={`category-card-item category-card-${slug}`}
                   style={{
                     padding: 14,
                     borderRadius: 12,
-                    backgroundColor: theme.bg,
-                    border: `1px solid ${theme.border}`,
+                    backgroundColor: 'var(--cat-bg, ' + theme.bg + ')',
+                    border: '1px solid var(--cat-border, ' + theme.border + ')',
                     transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-                  }}
+                    '--cat-bg': theme.bg,
+                    '--cat-border': theme.border,
+                    '--cat-text': theme.text,
+                    '--cat-bar': theme.bar,
+                    '--cat-dot': theme.dot,
+                    '--cat-dark-bg': theme.darkBg,
+                    '--cat-dark-border': theme.darkBorder,
+                    '--cat-dark-text': theme.darkText,
+                    '--cat-dark-dot': theme.darkDot,
+                  } as React.CSSProperties}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: theme.dot }} />
-                      <span style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>
+                      <div className="category-card-dot" style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: theme.dot }} />
+                      <span className="category-card-name" style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>
                         {cat.name}
                       </span>
                     </div>
-                    <span style={{ fontSize: 12, fontWeight: 800, color: theme.text }}>
+                    <span className="category-card-pct" style={{ fontSize: 12, fontWeight: 800, color: theme.text }}>
                       {cat.percentage}%
                     </span>
                   </div>
-                  <div style={{ width: '100%', height: 6, backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+                  <div className="category-card-track" style={{ width: '100%', height: 6, backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
                     <div
                       style={{
                         width: `${Math.min(cat.percentage, 100)}%`,
@@ -764,7 +873,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                       }}
                     />
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>
+                  <div className="category-card-amount" style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
                     {formatCurrency(cat.total)}
                   </div>
                 </div>
@@ -1537,32 +1646,43 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
               Nenhum gasto registrado em {selectedAnnualYear}.
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
+            <div className="category-overview-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
               {annualData.categories.map((cat: any) => {
                 const theme = getCategoryColor(cat.name);
+                const slug = getCategorySlug(cat.name);
                 return (
                   <div
                     key={cat.name}
+                    className={`category-card-item category-card-${slug}`}
                     style={{
                       padding: 14,
                       borderRadius: 12,
-                      backgroundColor: theme.bg,
-                      border: `1px solid ${theme.border}`,
+                      backgroundColor: 'var(--cat-bg, ' + theme.bg + ')',
+                      border: '1px solid var(--cat-border, ' + theme.border + ')',
                       transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-                    }}
+                      '--cat-bg': theme.bg,
+                      '--cat-border': theme.border,
+                      '--cat-text': theme.text,
+                      '--cat-bar': theme.bar,
+                      '--cat-dot': theme.dot,
+                      '--cat-dark-bg': theme.darkBg,
+                      '--cat-dark-border': theme.darkBorder,
+                      '--cat-dark-text': theme.darkText,
+                      '--cat-dark-dot': theme.darkDot,
+                    } as React.CSSProperties}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: theme.dot }} />
-                        <span style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>
+                        <div className="category-card-dot" style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: theme.dot }} />
+                        <span className="category-card-name" style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>
                           {cat.name}
                         </span>
                       </div>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: theme.text }}>
+                      <span className="category-card-pct" style={{ fontSize: 12, fontWeight: 800, color: theme.text }}>
                         {cat.percentage}%
                       </span>
                     </div>
-                    <div style={{ width: '100%', height: 6, backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+                    <div className="category-card-track" style={{ width: '100%', height: 6, backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
                       <div
                         style={{
                           width: `${Math.min(cat.percentage, 100)}%`,
@@ -1573,7 +1693,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                         }}
                       />
                     </div>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>
+                    <div className="category-card-amount" style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
                       {formatCurrency(cat.total)}
                     </div>
                   </div>

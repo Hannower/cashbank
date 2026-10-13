@@ -54,7 +54,7 @@ export const api = {
     request<any>('/auth/verify-reset-email', { method: 'POST', body: JSON.stringify(data) }),
   resetPassword: (data: { email: string; newPassword: string }) =>
     request<any>('/auth/reset-password', { method: 'POST', body: JSON.stringify(data) }),
-  forgotPassword: (data: { email: string }) =>
+  forgotPassword: (data: { email: string; frontendUrl?: string }) =>
     request<any>('/auth/forgot-password', { method: 'POST', body: JSON.stringify(data) }),
   verifyResetToken: (data: { token: string }) =>
     request<any>('/auth/verify-reset-token', { method: 'POST', body: JSON.stringify(data) }),
