@@ -30,6 +30,25 @@ export const App: React.FC = () => {
   const [quickLaunchOpen, setQuickLaunchOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // Check if URL contains a password reset token
+  const [activeResetToken, setActiveResetToken] = useState<string | null>(() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const qToken = searchParams.get('resetToken') || searchParams.get('token');
+      if (qToken) return qToken;
+
+      if (window.location.hash) {
+        const hashPart = window.location.hash.includes('?')
+          ? window.location.hash.split('?')[1]
+          : window.location.hash.replace(/^#\/?/, '');
+        const hashParams = new URLSearchParams(hashPart);
+        const hToken = hashParams.get('resetToken') || hashParams.get('token');
+        if (hToken) return hToken;
+      }
+    } catch (_) {}
+    return null;
+  });
+
   // Theme state
   const [isDark, setIsDark] = useState<boolean>(() => {
     return localStorage.getItem('cashbank_theme') === 'dark';
@@ -76,6 +95,21 @@ export const App: React.FC = () => {
     }
   }, [token, currentTab]);
 
+  // Dedicated Password Reset Page when user arrives from email link
+  if (activeResetToken) {
+    return (
+      <ResetPasswordView
+        token={activeResetToken}
+        onFinished={() => {
+          try {
+            window.history.replaceState({}, document.title, window.location.pathname.replace(/\/reset-password\/?$/, '/') || '/');
+          } catch (_) {}
+          setActiveResetToken(null);
+        }}
+      />
+    );
+  }
+
   if (loading) {
     return (
       <div
@@ -92,42 +126,6 @@ export const App: React.FC = () => {
         <Loader2 size={36} className="animate-spin" color="#15803d" />
         <span style={{ fontSize: 14, fontWeight: 600, color: '#64748b' }}>Carregando CashBank...</span>
       </div>
-    );
-  }
-
-  // Check if URL contains a password reset token so user can reset password
-  const initialResetToken = (() => {
-    try {
-      const searchParams = new URLSearchParams(window.location.search);
-      const qToken = searchParams.get('resetToken') || searchParams.get('token');
-      if (qToken) return qToken;
-
-      if (window.location.hash) {
-        const hashPart = window.location.hash.includes('?')
-          ? window.location.hash.split('?')[1]
-          : window.location.hash.replace(/^#\/?/, '');
-        const hashParams = new URLSearchParams(hashPart);
-        const hToken = hashParams.get('resetToken') || hashParams.get('token');
-        if (hToken) return hToken;
-      }
-    } catch (_) {}
-    return null;
-  })();
-
-  const [activeResetToken, setActiveResetToken] = useState<string | null>(initialResetToken);
-
-  // Dedicated Password Reset Page when user arrives from email link
-  if (activeResetToken) {
-    return (
-      <ResetPasswordView
-        token={activeResetToken}
-        onFinished={() => {
-          try {
-            window.history.replaceState({}, document.title, window.location.pathname.replace(/\/reset-password\/?$/, '/') || '/');
-          } catch (_) {}
-          setActiveResetToken(null);
-        }}
-      />
     );
   }
 
