@@ -208,7 +208,46 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
       { expiresIn: '1h' }
     );
 
-    const frontendUrl = (process.env.FRONTEND_URL || req.headers.origin || 'http://localhost:3000').replace(/\/$/, '');
+    // Determine base frontend URL: works both in deploy and locally
+    let frontendUrl = '';
+
+    // 1. From request body (explicitly passed by client window.location.origin)
+    if (req.body.frontendUrl && typeof req.body.frontendUrl === 'string') {
+      try {
+        const parsed = new URL(req.body.frontendUrl.trim());
+        if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+          frontendUrl = parsed.origin;
+        }
+      } catch (_) {}
+    }
+
+    // 2. From Origin header (standard browser header on fetch)
+    if (!frontendUrl && req.headers.origin) {
+      try {
+        const parsed = new URL(req.headers.origin as string);
+        frontendUrl = parsed.origin;
+      } catch (_) {}
+    }
+
+    // 3. From Referer header (fallback browser header)
+    if (!frontendUrl && req.headers.referer) {
+      try {
+        const parsed = new URL(req.headers.referer as string);
+        frontendUrl = parsed.origin;
+      } catch (_) {}
+    }
+
+    // 4. From FRONTEND_URL env var
+    if (!frontendUrl && process.env.FRONTEND_URL) {
+      frontendUrl = process.env.FRONTEND_URL.trim();
+    }
+
+    // 5. Default local development fallback
+    if (!frontendUrl) {
+      frontendUrl = 'http://localhost:3000';
+    }
+
+    frontendUrl = frontendUrl.replace(/\/$/, '');
     const resetUrl = `${frontendUrl}/?resetToken=${encodeURIComponent(token)}`;
 
     // Send email to user's registered inbox

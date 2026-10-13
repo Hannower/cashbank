@@ -73,10 +73,24 @@ export const LoginView: React.FC = () => {
     });
   };
 
-  // Check URL on load for ?resetToken=
+  // Check URL on load for ?resetToken= or ?token= (both search and hash)
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('resetToken');
+    let token: string | null = null;
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      token = searchParams.get('resetToken') || searchParams.get('token');
+
+      if (!token && window.location.hash) {
+        const hashPart = window.location.hash.includes('?')
+          ? window.location.hash.split('?')[1]
+          : window.location.hash.replace(/^#\/?/, '');
+        const hashParams = new URLSearchParams(hashPart);
+        token = hashParams.get('resetToken') || hashParams.get('token');
+      }
+    } catch (e) {
+      console.warn('Erro ao processar parâmetros da URL para token de reset:', e);
+    }
+
     if (token) {
       setActiveResetToken(token);
       validateResetToken(token);
@@ -135,7 +149,10 @@ export const LoginView: React.FC = () => {
     setRecoveryError(null);
     setRecoveryLoading(true);
     try {
-      await api.forgotPassword({ email: recoveryEmail.trim() });
+      await api.forgotPassword({
+        email: recoveryEmail.trim(),
+        frontendUrl: window.location.origin,
+      });
       setRecoveryStep(2);
     } catch (err: any) {
       setRecoveryError(err.message || 'Nenhuma conta cadastrada com este e-mail.');
@@ -170,8 +187,17 @@ export const LoginView: React.FC = () => {
         token: activeResetToken,
         newPassword,
       });
-      // Clear URL parameter cleanly without page reload
-      window.history.replaceState({}, document.title, window.location.pathname);
+      // Clear URL parameters cleanly without page reload
+      try {
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      } catch (_) {}
+
+      // Clear any previous token to guarantee clean auth with new password
+      try {
+        localStorage.removeItem('cashbank_token');
+      } catch (_) {}
+
       setTokenResetSuccess(true);
     } catch (err: any) {
       setTokenResetError(err.message || 'Erro ao redefinir senha.');

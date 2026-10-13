@@ -15,27 +15,45 @@ async function getTransporter(): Promise<{ transporter: Transporter; from: strin
   const port = parseInt(rawPort, 10) || 587;
   const user = (process.env.EMAIL_USER || process.env.SMTP_USER || '').split('#')[0].trim();
   const rawPass = (process.env.EMAIL_PASS || process.env.SMTP_PASS || '').split('#')[0].trim();
+  const isGmail = host.toLowerCase().includes('gmail') || user.toLowerCase().includes('@gmail.com');
   // Strip spaces if Gmail app password (e.g. 'cria kvea heyq itaa' -> 'criakveaheyqitaa')
-  const pass = host.toLowerCase().includes('gmail') ? rawPass.replace(/\s+/g, '') : rawPass;
+  const pass = isGmail ? rawPass.replace(/\s+/g, '') : rawPass;
   const from =
     (process.env.EMAIL_FROM || process.env.SMTP_FROM || '').split('#')[0].trim() ||
     `Suporte CashBank <${user || 'suporte@cashbank.com'}>`;
 
   // If real SMTP is configured in .env, use it
-  if (host && user && pass) {
-    console.log(`[EMAIL] Usando servidor SMTP: ${host}:${port} com usuário: ${user}`);
-    const transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465, // true for 465, false for 587 or other ports
-      auth: {
-        user,
-        pass,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-    });
+  if ((host || isGmail) && user && pass) {
+    console.log(`[EMAIL] Usando servidor SMTP: ${isGmail ? 'Gmail Service' : `${host}:${port}`} com usuário: ${user}`);
+    const transporter = isGmail
+      ? nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user,
+            pass,
+          },
+          tls: {
+            rejectUnauthorized: false,
+          },
+          connectionTimeout: 15000,
+          greetingTimeout: 15000,
+          socketTimeout: 20000,
+        })
+      : nodemailer.createTransport({
+          host,
+          port,
+          secure: port === 465, // true for 465, false for 587 or other ports
+          auth: {
+            user,
+            pass,
+          },
+          tls: {
+            rejectUnauthorized: false,
+          },
+          connectionTimeout: 15000,
+          greetingTimeout: 15000,
+          socketTimeout: 20000,
+        });
     return { transporter, from };
   }
 
