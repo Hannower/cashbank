@@ -40,22 +40,6 @@ export const LoginView: React.FC = () => {
   const [recoveryEmail, setRecoveryEmail] = useState('');
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
-  const [recoveryResponse, setRecoveryResponse] = useState<any>(null);
-  const [copiedResetLink, setCopiedResetLink] = useState(false);
-
-  // Active Reset via Token state (when URL has ?resetToken=... or user opens link from email)
-  const [activeResetToken, setActiveResetToken] = useState<string | null>(null);
-  const [tokenValidationState, setTokenValidationState] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
-  const [tokenUserInfo, setTokenUserInfo] = useState<{ email: string; name: string } | null>(null);
-  const [tokenErrorMessage, setTokenErrorMessage] = useState<string | null>(null);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [tokenResetLoading, setTokenResetLoading] = useState(false);
-  const [tokenResetError, setTokenResetError] = useState<string | null>(null);
-  const [tokenResetSuccess, setTokenResetSuccess] = useState(false);
-
   // Theme toggle state
   const [isDark, setIsDark] = useState<boolean>(() => {
     return localStorage.getItem('cashbank_theme') === 'dark' || document.body.classList.contains('dark-theme');
@@ -75,37 +59,12 @@ export const LoginView: React.FC = () => {
     });
   };
 
-  // Check URL on load for ?resetToken= or ?token= (both search and hash)
+  // Lock body scroll when recovery modal is active
   useEffect(() => {
-    let token: string | null = null;
-    try {
-      const searchParams = new URLSearchParams(window.location.search);
-      token = searchParams.get('resetToken') || searchParams.get('token');
-
-      if (!token && window.location.hash) {
-        const hashPart = window.location.hash.includes('?')
-          ? window.location.hash.split('?')[1]
-          : window.location.hash.replace(/^#\/?/, '');
-        const hashParams = new URLSearchParams(hashPart);
-        token = hashParams.get('resetToken') || hashParams.get('token');
-      }
-    } catch (e) {
-      console.warn('Erro ao processar parâmetros da URL para token de reset:', e);
-    }
-
-    if (token) {
-      setActiveResetToken(token);
-      validateResetToken(token);
-    }
-  }, []);
-
-  // Lock body scroll when either recovery modal or token modal is active
-  useEffect(() => {
-    const isAnyModalOpen = showRecoveryModal || Boolean(activeResetToken);
-    if (!isAnyModalOpen) return;
+    if (!showRecoveryModal) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && showRecoveryModal && !activeResetToken) {
+      if (e.key === 'Escape') {
         setShowRecoveryModal(false);
       }
     };
@@ -118,29 +77,12 @@ export const LoginView: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = prevOverflow;
     };
-  }, [showRecoveryModal, activeResetToken]);
-
-  const validateResetToken = async (token: string) => {
-    setTokenValidationState('validating');
-    setTokenErrorMessage(null);
-    setTokenResetError(null);
-    setTokenResetSuccess(false);
-    try {
-      const res = await api.verifyResetToken({ token });
-      setTokenUserInfo({ email: res.email, name: res.name });
-      setTokenValidationState('valid');
-    } catch (err: any) {
-      setTokenValidationState('invalid');
-      setTokenErrorMessage(err.message || 'O link de recuperação é inválido ou já expirou.');
-    }
-  };
+  }, [showRecoveryModal]);
 
   const handleOpenRecovery = () => {
     setRecoveryEmail(email || '');
     setRecoveryStep(1);
     setRecoveryError(null);
-    setRecoveryResponse(null);
-    setCopiedResetLink(false);
     setShowRecoveryModal(true);
   };
 
@@ -153,11 +95,10 @@ export const LoginView: React.FC = () => {
     setRecoveryError(null);
     setRecoveryLoading(true);
     try {
-      const res = await api.forgotPassword({
+      await api.forgotPassword({
         email: recoveryEmail.trim(),
         frontendUrl: window.location.origin,
       });
-      setRecoveryResponse(res);
       setRecoveryStep(2);
     } catch (err: any) {
       setRecoveryError(err.message || 'Nenhuma conta cadastrada com este e-mail.');
@@ -166,91 +107,6 @@ export const LoginView: React.FC = () => {
     }
   };
 
-  const handleOpenResetLinkDirectly = () => {
-    const token = recoveryResponse?.token;
-    if (token) {
-      setShowRecoveryModal(false);
-      setActiveResetToken(token);
-      validateResetToken(token);
-    } else if (recoveryResponse?.resetUrl) {
-      try {
-        const url = new URL(recoveryResponse.resetUrl);
-        const urlToken = url.searchParams.get('resetToken') || url.searchParams.get('token');
-        if (urlToken) {
-          setShowRecoveryModal(false);
-          setActiveResetToken(urlToken);
-          validateResetToken(urlToken);
-        } else {
-          window.location.href = recoveryResponse.resetUrl;
-        }
-      } catch {
-        window.location.href = recoveryResponse.resetUrl;
-      }
-    }
-  };
-
-  const handleCopyResetLink = () => {
-    if (recoveryResponse?.resetUrl) {
-      navigator.clipboard.writeText(recoveryResponse.resetUrl);
-      setCopiedResetLink(true);
-      setTimeout(() => setCopiedResetLink(false), 2500);
-    }
-  };
-
-  const handleSubmitTokenReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newPassword || !confirmPassword) {
-      setTokenResetError('Preencha os campos de nova senha.');
-      return;
-    }
-    if (newPassword.length < 6) {
-      setTokenResetError('A senha deve ter pelo menos 6 caracteres.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setTokenResetError('As senhas não coincidem.');
-      return;
-    }
-    if (!activeResetToken) {
-      setTokenResetError('Token de recuperação não encontrado.');
-      return;
-    }
-
-    setTokenResetError(null);
-    setTokenResetLoading(true);
-    try {
-      await api.resetPasswordWithToken({
-        token: activeResetToken,
-        newPassword,
-      });
-      // Clear URL parameters cleanly without page reload
-      try {
-        const cleanUrl = window.location.pathname;
-        window.history.replaceState({}, document.title, cleanUrl);
-      } catch (_) {}
-
-      // Clear any previous token to guarantee clean auth with new password
-      try {
-        localStorage.removeItem('cashbank_token');
-      } catch (_) {}
-
-      setTokenResetSuccess(true);
-    } catch (err: any) {
-      setTokenResetError(err.message || 'Erro ao redefinir senha.');
-    } finally {
-      setTokenResetLoading(false);
-    }
-  };
-
-  const handleFinishTokenReset = () => {
-    if (tokenUserInfo?.email) {
-      setEmail(tokenUserInfo.email);
-    }
-    setPassword('');
-    setActiveResetToken(null);
-    setTokenValidationState('idle');
-    setTokenResetSuccess(false);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -909,172 +765,86 @@ export const LoginView: React.FC = () => {
               </form>
             )}
 
-            {/* Step 2: Confirmation / Reset Action */}
+            {/* Step 2: Confirmation of email sent */}
             {recoveryStep === 2 && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '10px 0' }}>
-                {recoveryResponse?.emailSent ? (
-                  <>
-                    <div
-                      style={{
-                        width: 56,
-                        height: 56,
-                        borderRadius: 28,
-                        backgroundColor: '#dcfce7',
-                        color: '#15803d',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginBottom: 16,
-                      }}
-                    >
-                      <Mail size={28} />
-                    </div>
+                <div
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 28,
+                    backgroundColor: '#dcfce7',
+                    color: '#15803d',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: 16,
+                  }}
+                >
+                  <Mail size={28} />
+                </div>
 
-                    <h4 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-main, #0f172a)', margin: '0 0 8px' }}>
-                      Verifique seu e-mail!
-                    </h4>
+                <h4 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-main, #0f172a)', margin: '0 0 8px' }}>
+                  Verifique seu e-mail!
+                </h4>
 
-                    <p style={{ fontSize: 13, color: 'var(--text-secondary, #475569)', lineHeight: 1.6, margin: '0 0 16px' }}>
-                      Enviamos o link de recuperação de senha para:<br />
-                      <strong style={{ color: 'var(--text-main, #0f172a)', fontSize: 14 }}>{recoveryEmail}</strong>
-                    </p>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary, #475569)', lineHeight: 1.6, margin: '0 0 16px' }}>
+                  Enviamos o link de recuperação de senha para:<br />
+                  <strong style={{ color: 'var(--text-main, #0f172a)', fontSize: 14 }}>{recoveryEmail}</strong>
+                </p>
 
-                    <div
-                      className="login-info-box-light"
-                      style={{
-                        borderRadius: 12,
-                        padding: '16px',
-                        textAlign: 'left',
-                        width: '100%',
-                        marginBottom: 16,
-                        boxSizing: 'border-box',
-                      }}
-                    >
-                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main, #334155)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <CheckCircle2 size={15} color="#15803d" /> Como prosseguir:
-                      </div>
-                      <ol style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-secondary, #64748b)', lineHeight: 1.6 }}>
-                        <li>Acesse sua caixa de entrada no seu provedor de e-mail.</li>
-                        <li>Abra a mensagem com o assunto <strong>"Recuperação de Senha - CashBank"</strong>.</li>
-                        <li>Clique no botão seguro <strong>"Redefinir Minha Senha"</strong>.</li>
-                        <li>Você será direcionado diretamente para cadastrar sua nova senha.</li>
-                      </ol>
-                    </div>
+                <div
+                  className="login-info-box-light"
+                  style={{
+                    borderRadius: 12,
+                    padding: '16px',
+                    textAlign: 'left',
+                    width: '100%',
+                    marginBottom: 16,
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main, #334155)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <CheckCircle2 size={15} color="#15803d" /> Como prosseguir:
+                  </div>
+                  <ol style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-secondary, #64748b)', lineHeight: 1.6 }}>
+                    <li>Acesse a caixa de entrada do seu e-mail cadastrado.</li>
+                    <li>Abra a mensagem com o assunto <strong>"Recuperação de Senha - CashBank"</strong>.</li>
+                    <li>Clique no botão seguro <strong>"Redefinir Minha Senha"</strong>.</li>
+                    <li>Você será direcionado para a página de redefinição de senha.</li>
+                  </ol>
+                </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setShowRecoveryModal(false)}
-                      className="btn-primary"
-                      style={{ width: '100%', padding: '12px', fontSize: 14, marginBottom: 8 }}
-                    >
-                      Entendi, vou checar meu e-mail
-                    </button>
+                <div
+                  className="login-info-box-blue"
+                  style={{
+                    borderRadius: 10,
+                    padding: '10px 14px',
+                    fontSize: 12,
+                    marginBottom: 20,
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    textAlign: 'left',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  🔒 <strong>Segurança da sua conta:</strong> O link enviado por e-mail é de uso único e possui validade de 1 hora.
+                </div>
 
-                    <button
-                      type="button"
-                      onClick={handleOpenResetLinkDirectly}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--primary-color, #15803d)',
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        padding: 6,
-                        textDecoration: 'underline',
-                      }}
-                    >
-                      Demorando para receber? Redefinir diretamente por aqui
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div
-                      style={{
-                        width: 56,
-                        height: 56,
-                        borderRadius: 28,
-                        backgroundColor: '#dcfce7',
-                        color: '#15803d',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginBottom: 16,
-                      }}
-                    >
-                      <CheckCircle2 size={30} />
-                    </div>
-
-                    <h4 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-main, #0f172a)', margin: '0 0 8px' }}>
-                      Link Seguro Pronto!
-                    </h4>
-
-                    <p style={{ fontSize: 13, color: 'var(--text-secondary, #475569)', lineHeight: 1.6, margin: '0 0 16px' }}>
-                      Conta validada com sucesso:<br />
-                      <strong style={{ color: 'var(--text-main, #0f172a)', fontSize: 14 }}>{recoveryEmail}</strong>
-                    </p>
-
-                    <div
-                      className="login-info-box-blue"
-                      style={{
-                        borderRadius: 10,
-                        padding: '12px 14px',
-                        fontSize: 12,
-                        marginBottom: 18,
-                        width: '100%',
-                        boxSizing: 'border-box',
-                        textAlign: 'left',
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      🔒 <strong>Pronto para redefinir:</strong> Seu token seguro de uso único foi validado. Clique no botão abaixo para criar sua nova senha agora mesmo:
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleOpenResetLinkDirectly}
-                      className="btn-primary"
-                      style={{
-                        width: '100%',
-                        padding: '13px',
-                        fontSize: 14,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 8,
-                        marginBottom: 10,
-                      }}
-                    >
-                      <Lock size={16} /> Redefinir Minha Senha Agora <ArrowRight size={16} />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleCopyResetLink}
-                      className="btn-secondary"
-                      style={{
-                        width: '100%',
-                        padding: '10px',
-                        fontSize: 13,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 6,
-                        marginBottom: 12,
-                      }}
-                    >
-                      {copiedResetLink ? <Check size={15} color="#15803d" /> : <Copy size={15} />}
-                      {copiedResetLink ? 'Link Copiado com Sucesso!' : 'Copiar Link Seguro'}
-                    </button>
-                  </>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setShowRecoveryModal(false)}
+                  className="btn-primary"
+                  style={{ width: '100%', padding: '12px', fontSize: 14 }}
+                >
+                  Entendi, vou checar meu e-mail
+                </button>
 
                 <button
                   type="button"
                   onClick={() => {
                     setRecoveryStep(1);
                     setRecoveryError(null);
-                    setRecoveryResponse(null);
                   }}
                   style={{
                     background: 'none',
@@ -1082,354 +852,13 @@ export const LoginView: React.FC = () => {
                     color: '#64748b',
                     fontSize: 12,
                     cursor: 'pointer',
-                    marginTop: 6,
+                    marginTop: 12,
                     padding: 4,
                   }}
                 >
-                  Tentar outro e-mail
+                  Não encontrou? Tentar outro e-mail
                 </button>
               </div>
-            )}
-            </div>
-          </div>,
-          document.body
-        )}
-
-      {/* Modal 2: Reset Password via Secure Token (when visiting ?resetToken=...) */}
-      {activeResetToken &&
-        createPortal(
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              width: '100vw',
-              height: '100dvh',
-              zIndex: 9999,
-              backgroundColor: 'rgba(15, 23, 42, 0.75)',
-              backdropFilter: 'blur(5px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 16,
-              overflowY: 'auto',
-              boxSizing: 'border-box',
-            }}
-          >
-            <div
-              className="login-modal-box"
-              style={{
-                borderRadius: 20,
-                width: '100%',
-                maxWidth: 480,
-                maxHeight: 'calc(100dvh - 32px)',
-                overflowY: 'auto',
-                padding: '32px 28px',
-                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
-                position: 'relative',
-                animation: 'modalPop 0.25s ease forwards',
-                boxSizing: 'border-box',
-              }}
-            >
-            {/* Loading token validation */}
-            {tokenValidationState === 'validating' && (
-              <div style={{ textAlign: 'center', padding: '30px 10px' }}>
-                <Loader2 size={36} className="animate-spin" color="#15803d" style={{ margin: '0 auto 16px' }} />
-                <h4 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>
-                  Validando link de recuperação...
-                </h4>
-                <p style={{ fontSize: 13, color: '#64748b' }}>
-                  Aguarde enquanto conferimos a autenticidade do seu link.
-                </p>
-              </div>
-            )}
-
-            {/* Invalid or Expired Token */}
-            {tokenValidationState === 'invalid' && (
-              <div style={{ textAlign: 'center', padding: '10px 0' }}>
-                <div
-                  style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: 26,
-                    backgroundColor: '#fee2e2',
-                    color: '#ef4444',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 16px',
-                  }}
-                >
-                  <AlertCircle size={28} />
-                </div>
-                <h4 style={{ fontSize: 17, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>
-                  Link Inválido ou Expirado
-                </h4>
-                <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5, marginBottom: 22 }}>
-                  {tokenErrorMessage || 'Por motivos de segurança, links de redefinição são de uso único e expiram após 1 hora.'}
-                </p>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.history.replaceState({}, document.title, window.location.pathname);
-                      setActiveResetToken(null);
-                    }}
-                    className="btn-secondary"
-                    style={{ flex: 1, padding: '11px' }}
-                  >
-                    Voltar ao Login
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.history.replaceState({}, document.title, window.location.pathname);
-                      setActiveResetToken(null);
-                      handleOpenRecovery();
-                    }}
-                    className="btn-primary"
-                    style={{ flex: 1.2, padding: '11px' }}
-                  >
-                    Solicitar Novo Link
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Valid Token Form & Success */}
-            {tokenValidationState === 'valid' && (
-              <>
-                {!tokenResetSuccess ? (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-                      <div
-                        style={{
-                          width: 44,
-                          height: 44,
-                          borderRadius: 12,
-                          backgroundColor: '#ecfdf5',
-                          color: '#15803d',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <Lock size={22} />
-                      </div>
-                      <div>
-                        <h3 style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', margin: 0 }}>
-                          Criar Nova Senha
-                        </h3>
-                        <p style={{ fontSize: 13, color: '#64748b', margin: '2px 0 0' }}>
-                          Defina sua nova senha para acessar a conta
-                        </p>
-                      </div>
-                    </div>
-
-                    {tokenResetError && (
-                      <div
-                        style={{
-                          backgroundColor: '#fef2f2',
-                          border: '1px solid #fecaca',
-                          borderRadius: 10,
-                          padding: '10px 14px',
-                          marginBottom: 16,
-                          color: '#b91c1c',
-                          fontSize: 13,
-                        }}
-                      >
-                        {tokenResetError}
-                      </div>
-                    )}
-
-                    <div
-                      style={{
-                        backgroundColor: 'var(--primary-light, #f0fdf4)',
-                        border: '1px solid var(--border-color, #dcfce7)',
-                        borderRadius: 10,
-                        padding: '10px 14px',
-                        fontSize: 13,
-                        color: 'var(--primary-badge-text, #15803d)',
-                        marginBottom: 16,
-                      }}
-                    >
-                      Conta autenticada: <strong>{tokenUserInfo?.email}</strong>
-                    </div>
-
-                    <form onSubmit={handleSubmitTokenReset} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                      <div>
-                        <label
-                          style={{
-                            display: 'block',
-                            fontSize: 13,
-                            fontWeight: 600,
-                            color: '#334155',
-                            marginBottom: 6,
-                          }}
-                        >
-                          Nova Senha
-                        </label>
-                        <div style={{ position: 'relative' }}>
-                          <Lock
-                            size={18}
-                            color="#94a3b8"
-                            style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }}
-                          />
-                          <input
-                            type={showNewPassword ? 'text' : 'password'}
-                            required
-                            placeholder="Mínimo de 6 caracteres"
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            style={{
-                              width: '100%',
-                              padding: '11px 42px 11px 42px',
-                              border: '1px solid #cbd5e1',
-                              borderRadius: 10,
-                              fontSize: 14,
-                              boxSizing: 'border-box',
-                              outline: 'none',
-                            }}
-                            onFocus={(e) => (e.target.style.borderColor = '#15803d')}
-                            onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowNewPassword(!showNewPassword)}
-                            style={{
-                              position: 'absolute',
-                              right: 12,
-                              top: '50%',
-                              transform: 'translateY(-50%)',
-                              background: 'none',
-                              border: 'none',
-                              padding: 4,
-                              cursor: 'pointer',
-                              color: '#94a3b8',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                            title={showNewPassword ? 'Ocultar senha' : 'Exibir senha'}
-                          >
-                            {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label
-                          style={{
-                            display: 'block',
-                            fontSize: 13,
-                            fontWeight: 600,
-                            color: '#334155',
-                            marginBottom: 6,
-                          }}
-                        >
-                          Confirmar Nova Senha
-                        </label>
-                        <div style={{ position: 'relative' }}>
-                          <Lock
-                            size={18}
-                            color="#94a3b8"
-                            style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }}
-                          />
-                          <input
-                            type={showConfirmPassword ? 'text' : 'password'}
-                            required
-                            placeholder="Repita sua nova senha"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            style={{
-                              width: '100%',
-                              padding: '11px 42px 11px 42px',
-                              border: '1px solid #cbd5e1',
-                              borderRadius: 10,
-                              fontSize: 14,
-                              boxSizing: 'border-box',
-                              outline: 'none',
-                            }}
-                            onFocus={(e) => (e.target.style.borderColor = '#15803d')}
-                            onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            style={{
-                              position: 'absolute',
-                              right: 12,
-                              top: '50%',
-                              transform: 'translateY(-50%)',
-                              background: 'none',
-                              border: 'none',
-                              padding: 4,
-                              cursor: 'pointer',
-                              color: '#94a3b8',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                            title={showConfirmPassword ? 'Ocultar senha' : 'Exibir senha'}
-                          >
-                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
-                      </div>
-
-                      <button
-                        type="submit"
-                        disabled={tokenResetLoading}
-                        className="btn-primary"
-                        style={{ width: '100%', padding: '12px', fontSize: 14, marginTop: 8 }}
-                      >
-                        {tokenResetLoading ? (
-                          <>
-                            <Loader2 size={16} className="animate-spin" /> Salvando nova senha...
-                          </>
-                        ) : (
-                          'Salvar Nova Senha'
-                        )}
-                      </button>
-                    </form>
-                  </>
-                ) : (
-                  <div style={{ textAlign: 'center', padding: '12px 0' }}>
-                    <div
-                      style={{
-                        width: 56,
-                        height: 56,
-                        borderRadius: 28,
-                        backgroundColor: '#ecfdf5',
-                        color: '#15803d',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        margin: '0 auto 16px',
-                      }}
-                    >
-                      <CheckCircle2 size={32} />
-                    </div>
-                    <h4 style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>
-                      Senha alterada com sucesso!
-                    </h4>
-                    <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5, marginBottom: 22 }}>
-                      Sua senha foi redefinida através do link seguro. Agora você pode entrar normalmente na sua conta.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={handleFinishTokenReset}
-                      className="btn-primary"
-                      style={{ width: '100%', padding: '12px', fontSize: 14 }}
-                    >
-                      Entrar na Conta
-                    </button>
-                  </div>
-                )}
-              </>
             )}
             </div>
           </div>,

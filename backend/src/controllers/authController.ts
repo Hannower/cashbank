@@ -270,18 +270,18 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
       emailReason = err.message;
     }
 
+    if (!emailSent) {
+      console.error(`[PASSWORD RESET ERROR] Falha no envio para ${user.email}: ${emailReason}`);
+      res.status(502).json({
+        message: `Não foi possível enviar o e-mail de recuperação (${emailReason || 'serviço indisponível'}). Configure RESEND_API_KEY ou BREVO_API_KEY nas variáveis de ambiente do Render para envio de e-mails em produção.`,
+      });
+      return;
+    }
+
     res.json({
       success: true,
-      emailSent,
-      emailMethod,
-      emailReason: emailSent ? undefined : emailReason,
-      message: emailSent
-        ? 'Link de recuperação de senha enviado para o seu e-mail com sucesso!'
-        : 'Link de recuperação gerado com sucesso!',
+      message: 'Link de recuperação de senha enviado para o seu e-mail com sucesso!',
       email: user.email,
-      name: user.name,
-      resetUrl,
-      token,
       expiresIn: '1 hora',
     });
   } catch (error: any) {
