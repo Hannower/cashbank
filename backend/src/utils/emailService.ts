@@ -6,77 +6,179 @@ interface SendPasswordResetEmailParams {
   resetUrl: string;
 }
 
+export interface SendEmailResult {
+  success: boolean;
+  method: 'resend' | 'brevo' | 'sendgrid' | 'smtp' | 'none';
+  messageId?: string;
+  reason?: string;
+}
+
 /**
- * Creates and returns the Nodemailer transporter based on .env or fallback
+ * Sends email via Resend API (HTTPS port 443 - works everywhere in cloud/deploy)
  */
-async function getTransporter(): Promise<{ transporter: Transporter; from: string }> {
+async function sendViaResend(
+  apiKey: string,
+  from: string,
+  to: string,
+  subject: string,
+  html: string,
+  text: string
+): Promise<SendEmailResult> {
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey.trim()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: from.includes('<') ? from : `CashBank <${from}>`,
+        to: [to],
+        subject,
+        html,
+        text,
+      }),
+    });
+
+    const data: any = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      console.warn('[EMAIL RESEND ERROR]', data);
+      return { success: false, method: 'resend', reason: data.message || `HTTP ${res.status}` };
+    }
+
+    console.log(`[PASSWORD RESET] Email enviado com sucesso via Resend para ${to}. ID: ${data.id}`);
+    return { success: true, method: 'resend', messageId: data.id };
+  } catch (err: any) {
+    console.warn('[EMAIL RESEND FAILED]', err.message);
+    return { success: false, method: 'resend', reason: err.message };
+  }
+}
+
+/**
+ * Sends email via Brevo / Sendinblue REST API (HTTPS port 443)
+ */
+async function sendViaBrevo(
+  apiKey: string,
+  fromEmail: string,
+  to: string,
+  toName: string,
+  subject: string,
+  html: string,
+  text: string
+): Promise<SendEmailResult> {
+  try {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': apiKey.trim(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: { name: 'CashBank', email: fromEmail },
+        to: [{ email: to, name: toName }],
+        subject,
+        htmlContent: html,
+        textContent: text,
+      }),
+    });
+
+    const data: any = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      console.warn('[EMAIL BREVO ERROR]', data);
+      return { success: false, method: 'brevo', reason: data.message || `HTTP ${res.status}` };
+    }
+
+    console.log(`[PASSWORD RESET] Email enviado com sucesso via Brevo para ${to}. ID: ${data.messageId}`);
+    return { success: true, method: 'brevo', messageId: data.messageId };
+  } catch (err: any) {
+    console.warn('[EMAIL BREVO FAILED]', err.message);
+    return { success: false, method: 'brevo', reason: err.message };
+  }
+}
+
+/**
+ * Sends email via SendGrid API (HTTPS port 443)
+ */
+async function sendViaSendGrid(
+  apiKey: string,
+  from: string,
+  to: string,
+  subject: string,
+  html: string,
+  text: string
+): Promise<SendEmailResult> {
+  try {
+    const cleanFrom = from.includes('<') ? from.split('<')[1].replace('>', '').trim() : from;
+    const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey.trim()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: to }] }],
+        from: { email: cleanFrom, name: 'CashBank' },
+        subject,
+        content: [
+          { type: 'text/plain', value: text },
+          { type: 'text/html', value: html },
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn('[EMAIL SENDGRID ERROR]', errText);
+      return { success: false, method: 'sendgrid', reason: `HTTP ${res.status}: ${errText}` };
+    }
+
+    console.log(`[PASSWORD RESET] Email enviado com sucesso via SendGrid para ${to}`);
+    return { success: true, method: 'sendgrid' };
+  } catch (err: any) {
+    console.warn('[EMAIL SENDGRID FAILED]', err.message);
+    return { success: false, method: 'sendgrid', reason: err.message };
+  }
+}
+
+/**
+ * Creates and returns the Nodemailer transporter based on .env
+ */
+function getSmtpTransporter(): { transporter: Transporter; from: string } | null {
   const host = (process.env.EMAIL_HOST || process.env.SMTP_HOST || '').trim();
   const rawPort = (process.env.EMAIL_PORT || process.env.SMTP_PORT || '587').split('#')[0].trim();
   const port = parseInt(rawPort, 10) || 587;
   const user = (process.env.EMAIL_USER || process.env.SMTP_USER || '').split('#')[0].trim();
   const rawPass = (process.env.EMAIL_PASS || process.env.SMTP_PASS || '').split('#')[0].trim();
   const isGmail = host.toLowerCase().includes('gmail') || user.toLowerCase().includes('@gmail.com');
-  // Strip spaces if Gmail app password (e.g. 'cria kvea heyq itaa' -> 'criakveaheyqitaa')
   const pass = isGmail ? rawPass.replace(/\s+/g, '') : rawPass;
   const from =
     (process.env.EMAIL_FROM || process.env.SMTP_FROM || '').split('#')[0].trim() ||
     `Suporte CashBank <${user || 'suporte@cashbank.com'}>`;
 
-  // If real SMTP is configured in .env, use it
   if ((host || isGmail) && user && pass) {
-    console.log(`[EMAIL] Usando servidor SMTP: ${isGmail ? 'Gmail Service' : `${host}:${port}`} com usuário: ${user}`);
     const transporter = isGmail
       ? nodemailer.createTransport({
           service: 'gmail',
-          auth: {
-            user,
-            pass,
-          },
-          tls: {
-            rejectUnauthorized: false,
-          },
-          connectionTimeout: 15000,
-          greetingTimeout: 15000,
-          socketTimeout: 20000,
+          auth: { user, pass },
+          tls: { rejectUnauthorized: false },
+          connectionTimeout: 4000,
+          greetingTimeout: 4000,
+          socketTimeout: 5000,
         })
       : nodemailer.createTransport({
           host,
           port,
-          secure: port === 465, // true for 465, false for 587 or other ports
-          auth: {
-            user,
-            pass,
-          },
-          tls: {
-            rejectUnauthorized: false,
-          },
-          connectionTimeout: 15000,
-          greetingTimeout: 15000,
-          socketTimeout: 20000,
+          secure: port === 465,
+          auth: { user, pass },
+          tls: { rejectUnauthorized: false },
+          connectionTimeout: 4000,
+          greetingTimeout: 4000,
+          socketTimeout: 5000,
         });
     return { transporter, from };
   }
 
-  // Fallback: Create test Ethereal account if no SMTP provided in dev
-  try {
-    const testAccount = await nodemailer.createTestAccount();
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false,
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
-      },
-    });
-    return { transporter, from: `CashBank <${testAccount.user}>` };
-  } catch (err) {
-    console.warn('[EMAIL] Falha ao criar conta Ethereal de teste, usando transporte json');
-    const transporter = nodemailer.createTransport({
-      jsonTransport: true,
-    });
-    return { transporter, from };
-  }
+  return null;
 }
 
 /**
@@ -86,13 +188,10 @@ export async function sendPasswordResetEmail({
   to,
   name,
   resetUrl,
-}: SendPasswordResetEmailParams): Promise<boolean> {
-  try {
-    const { transporter, from } = await getTransporter();
+}: SendPasswordResetEmailParams): Promise<SendEmailResult> {
+  const firstName = name ? name.trim().split(' ')[0] : 'usuário';
 
-    const firstName = name ? name.trim().split(' ')[0] : 'usuário';
-
-    const html = `
+  const html = `
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -175,29 +274,63 @@ export async function sendPasswordResetEmail({
   </table>
 </body>
 </html>
-    `;
+  `;
 
-    const text = `Olá, ${firstName}!\n\nRecebemos uma solicitação para redefinir a senha da sua conta no CashBank.\n\nAcesse o link a seguir para criar sua nova senha:\n${resetUrl}\n\nEste link é válido por 1 hora. Se você não solicitou a redefinição de senha, ignore este e-mail.\n\nEquipe CashBank`;
+  const text = `Olá, ${firstName}!\n\nRecebemos uma solicitação para redefinir a senha da sua conta no CashBank.\n\nAcesse o link a seguir para criar sua nova senha:\n${resetUrl}\n\nEste link é válido por 1 hora. Se você não solicitou a redefinição de senha, ignore este e-mail.\n\nEquipe CashBank`;
+  const subject = 'Recuperação de Senha - CashBank';
 
-    const info = await transporter.sendMail({
-      from,
-      to,
-      subject: 'Recuperação de Senha - CashBank',
-      text,
-      html,
-    });
-
-    console.log(`[PASSWORD RESET] Email enviado com sucesso para ${to}. MessageId: ${info.messageId}`);
-
-    // If Ethereal test account was used, log the preview URL for immediate developer inspection
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-    if (previewUrl) {
-      console.log(`[PASSWORD RESET PREVIEW (Ethereal)]: ${previewUrl}`);
-    }
-
-    return true;
-  } catch (err) {
-    console.error(`[PASSWORD RESET ERROR] Falha ao enviar e-mail para ${to}:`, err);
-    throw err;
+  // 1. Try Resend if configured (HTTP port 443 - recommended for deploy on Render)
+  const resendKey = process.env.RESEND_API_KEY || process.env.RESEND_KEY;
+  if (resendKey) {
+    const from = process.env.EMAIL_FROM || process.env.RESEND_FROM || 'CashBank <onboarding@resend.dev>';
+    const resendResult = await sendViaResend(resendKey, from, to, subject, html, text);
+    if (resendResult.success) return resendResult;
   }
+
+  // 2. Try Brevo if configured (HTTP port 443)
+  const brevoKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY;
+  if (brevoKey) {
+    const fromEmail = (process.env.EMAIL_USER || process.env.BREVO_FROM || 'suporte@cashbank.com').trim();
+    const brevoResult = await sendViaBrevo(brevoKey, fromEmail, to, firstName, subject, html, text);
+    if (brevoResult.success) return brevoResult;
+  }
+
+  // 3. Try SendGrid if configured (HTTP port 443)
+  const sendgridKey = process.env.SENDGRID_API_KEY;
+  if (sendgridKey) {
+    const from = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'suporte@cashbank.com';
+    const sgResult = await sendViaSendGrid(sendgridKey, from, to, subject, html, text);
+    if (sgResult.success) return sgResult;
+  }
+
+  // 4. Try SMTP (e.g. Gmail in local development or VPS)
+  const smtpConfig = getSmtpTransporter();
+  if (smtpConfig) {
+    try {
+      const info = await smtpConfig.transporter.sendMail({
+        from: smtpConfig.from,
+        to,
+        subject,
+        text,
+        html,
+      });
+      console.log(`[PASSWORD RESET] Email enviado com sucesso via SMTP para ${to}. ID: ${info.messageId}`);
+      return { success: true, method: 'smtp', messageId: info.messageId };
+    } catch (err: any) {
+      console.warn(`[PASSWORD RESET SMTP] Conexão SMTP indisponível ou bloqueada (${err.code || err.message}).`);
+      return {
+        success: false,
+        method: 'smtp',
+        reason: err.code === 'ETIMEDOUT' ? 'Porta SMTP bloqueada no servidor' : err.message,
+      };
+    }
+  }
+
+  // 5. No email transport available in this environment
+  console.log('[PASSWORD RESET] Nenhum serviço de envio de e-mail ativo para este ambiente.');
+  return {
+    success: false,
+    method: 'none',
+    reason: 'Nenhum provedor de e-mail configurado',
+  };
 }

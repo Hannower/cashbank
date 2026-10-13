@@ -40,6 +40,8 @@ export const LoginView: React.FC = () => {
   const [recoveryEmail, setRecoveryEmail] = useState('');
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
+  const [recoveryResponse, setRecoveryResponse] = useState<any>(null);
+  const [copiedResetLink, setCopiedResetLink] = useState(false);
 
   // Active Reset via Token state (when URL has ?resetToken=... or user opens link from email)
   const [activeResetToken, setActiveResetToken] = useState<string | null>(null);
@@ -137,6 +139,8 @@ export const LoginView: React.FC = () => {
     setRecoveryEmail(email || '');
     setRecoveryStep(1);
     setRecoveryError(null);
+    setRecoveryResponse(null);
+    setCopiedResetLink(false);
     setShowRecoveryModal(true);
   };
 
@@ -149,15 +153,47 @@ export const LoginView: React.FC = () => {
     setRecoveryError(null);
     setRecoveryLoading(true);
     try {
-      await api.forgotPassword({
+      const res = await api.forgotPassword({
         email: recoveryEmail.trim(),
         frontendUrl: window.location.origin,
       });
+      setRecoveryResponse(res);
       setRecoveryStep(2);
     } catch (err: any) {
       setRecoveryError(err.message || 'Nenhuma conta cadastrada com este e-mail.');
     } finally {
       setRecoveryLoading(false);
+    }
+  };
+
+  const handleOpenResetLinkDirectly = () => {
+    const token = recoveryResponse?.token;
+    if (token) {
+      setShowRecoveryModal(false);
+      setActiveResetToken(token);
+      validateResetToken(token);
+    } else if (recoveryResponse?.resetUrl) {
+      try {
+        const url = new URL(recoveryResponse.resetUrl);
+        const urlToken = url.searchParams.get('resetToken') || url.searchParams.get('token');
+        if (urlToken) {
+          setShowRecoveryModal(false);
+          setActiveResetToken(urlToken);
+          validateResetToken(urlToken);
+        } else {
+          window.location.href = recoveryResponse.resetUrl;
+        }
+      } catch {
+        window.location.href = recoveryResponse.resetUrl;
+      }
+    }
+  };
+
+  const handleCopyResetLink = () => {
+    if (recoveryResponse?.resetUrl) {
+      navigator.clipboard.writeText(recoveryResponse.resetUrl);
+      setCopiedResetLink(true);
+      setTimeout(() => setCopiedResetLink(false), 2500);
     }
   };
 
@@ -873,99 +909,184 @@ export const LoginView: React.FC = () => {
               </form>
             )}
 
-            {/* Step 2: Link Sent Confirmation */}
+            {/* Step 2: Confirmation / Reset Action */}
             {recoveryStep === 2 && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '10px 0' }}>
-                <div
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 28,
-                    backgroundColor: '#dcfce7',
-                    color: '#15803d',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: 16,
-                  }}
-                >
-                  <Mail size={28} />
-                </div>
+                {recoveryResponse?.emailSent ? (
+                  <>
+                    <div
+                      style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: 28,
+                        backgroundColor: '#dcfce7',
+                        color: '#15803d',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: 16,
+                      }}
+                    >
+                      <Mail size={28} />
+                    </div>
 
-                <h4 style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', margin: '0 0 8px' }}>
-                  Verifique seu e-mail!
-                </h4>
+                    <h4 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-main, #0f172a)', margin: '0 0 8px' }}>
+                      Verifique seu e-mail!
+                    </h4>
 
-                <p style={{ fontSize: 13, color: '#475569', lineHeight: 1.6, margin: '0 0 16px' }}>
-                  Enviamos o link de recuperação de senha para:<br />
-                  <strong style={{ color: '#0f172a', fontSize: 14 }}>{recoveryEmail}</strong>
-                </p>
+                    <p style={{ fontSize: 13, color: 'var(--text-secondary, #475569)', lineHeight: 1.6, margin: '0 0 16px' }}>
+                      Enviamos o link de recuperação de senha para:<br />
+                      <strong style={{ color: 'var(--text-main, #0f172a)', fontSize: 14 }}>{recoveryEmail}</strong>
+                    </p>
 
-                <div
-                  className="login-info-box-light"
-                  style={{
-                    borderRadius: 12,
-                    padding: '16px',
-                    textAlign: 'left',
-                    width: '100%',
-                    marginBottom: 18,
-                    boxSizing: 'border-box',
-                  }}
-                >
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main, #334155)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <CheckCircle2 size={15} color="#15803d" /> Como prosseguir:
-                  </div>
-                  <ol style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-secondary, #64748b)', lineHeight: 1.6 }}>
-                    <li>Acesse sua caixa de entrada no seu provedor de e-mail.</li>
-                    <li>Abra a mensagem com o assunto <strong>"Recuperação de Senha - CashBank"</strong>.</li>
-                    <li>Clique no botão seguro <strong>"Redefinir Minha Senha"</strong>.</li>
-                    <li>Você será direcionado diretamente para cadastrar sua nova senha.</li>
-                  </ol>
-                </div>
+                    <div
+                      className="login-info-box-light"
+                      style={{
+                        borderRadius: 12,
+                        padding: '16px',
+                        textAlign: 'left',
+                        width: '100%',
+                        marginBottom: 16,
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main, #334155)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <CheckCircle2 size={15} color="#15803d" /> Como prosseguir:
+                      </div>
+                      <ol style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--text-secondary, #64748b)', lineHeight: 1.6 }}>
+                        <li>Acesse sua caixa de entrada no seu provedor de e-mail.</li>
+                        <li>Abra a mensagem com o assunto <strong>"Recuperação de Senha - CashBank"</strong>.</li>
+                        <li>Clique no botão seguro <strong>"Redefinir Minha Senha"</strong>.</li>
+                        <li>Você será direcionado diretamente para cadastrar sua nova senha.</li>
+                      </ol>
+                    </div>
 
-                <div
-                  className="login-info-box-blue"
-                  style={{
-                    borderRadius: 10,
-                    padding: '10px 14px',
-                    fontSize: 12,
-                    marginBottom: 20,
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    textAlign: 'left',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  🔒 <strong>Segurança da sua conta:</strong> Por proteção dos seus dados, a troca de senha só é autorizada através do link enviado exclusivamente para a sua caixa de entrada.
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowRecoveryModal(false)}
+                      className="btn-primary"
+                      style={{ width: '100%', padding: '12px', fontSize: 14, marginBottom: 8 }}
+                    >
+                      Entendi, vou checar meu e-mail
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => setShowRecoveryModal(false)}
-                  className="btn-primary"
-                  style={{ width: '100%', padding: '12px', fontSize: 14 }}
-                >
-                  Entendi, vou checar meu e-mail
-                </button>
+                    <button
+                      type="button"
+                      onClick={handleOpenResetLinkDirectly}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--primary-color, #15803d)',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        padding: 6,
+                        textDecoration: 'underline',
+                      }}
+                    >
+                      Demorando para receber? Redefinir diretamente por aqui
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div
+                      style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: 28,
+                        backgroundColor: '#dcfce7',
+                        color: '#15803d',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: 16,
+                      }}
+                    >
+                      <CheckCircle2 size={30} />
+                    </div>
+
+                    <h4 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-main, #0f172a)', margin: '0 0 8px' }}>
+                      Link Seguro Pronto!
+                    </h4>
+
+                    <p style={{ fontSize: 13, color: 'var(--text-secondary, #475569)', lineHeight: 1.6, margin: '0 0 16px' }}>
+                      Conta validada com sucesso:<br />
+                      <strong style={{ color: 'var(--text-main, #0f172a)', fontSize: 14 }}>{recoveryEmail}</strong>
+                    </p>
+
+                    <div
+                      className="login-info-box-blue"
+                      style={{
+                        borderRadius: 10,
+                        padding: '12px 14px',
+                        fontSize: 12,
+                        marginBottom: 18,
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        textAlign: 'left',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      🔒 <strong>Pronto para redefinir:</strong> Seu token seguro de uso único foi validado. Clique no botão abaixo para criar sua nova senha agora mesmo:
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleOpenResetLinkDirectly}
+                      className="btn-primary"
+                      style={{
+                        width: '100%',
+                        padding: '13px',
+                        fontSize: 14,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        marginBottom: 10,
+                      }}
+                    >
+                      <Lock size={16} /> Redefinir Minha Senha Agora <ArrowRight size={16} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleCopyResetLink}
+                      className="btn-secondary"
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        fontSize: 13,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        marginBottom: 12,
+                      }}
+                    >
+                      {copiedResetLink ? <Check size={15} color="#15803d" /> : <Copy size={15} />}
+                      {copiedResetLink ? 'Link Copiado com Sucesso!' : 'Copiar Link Seguro'}
+                    </button>
+                  </>
+                )}
 
                 <button
                   type="button"
                   onClick={() => {
                     setRecoveryStep(1);
                     setRecoveryError(null);
+                    setRecoveryResponse(null);
                   }}
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: '#15803d',
+                    color: '#64748b',
                     fontSize: 12,
-                    fontWeight: 600,
                     cursor: 'pointer',
-                    marginTop: 12,
+                    marginTop: 6,
                     padding: 4,
                   }}
                 >
-                  Não encontrou? Tentar outro e-mail
+                  Tentar outro e-mail
                 </button>
               </div>
             )}
