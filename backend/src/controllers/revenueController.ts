@@ -22,17 +22,37 @@ export async function getRevenues(req: AuthenticatedRequest, res: Response): Pro
 
     const revenues = await prisma.revenue.findMany({
       where: whereClause,
+      include: {
+        receivables: {
+          select: { id: true, isSale: true, payer: true },
+        },
+        receivableReceipts: {
+          select: { id: true, receivable: { select: { isSale: true, payer: true } } },
+        },
+      },
       orderBy: { date: 'desc' },
     });
 
-    const totalAmount = revenues.reduce((acc, curr) => acc + curr.amount, 0);
+    const formattedRevenues = revenues.map((rev) => {
+      let cleanDesc = rev.description;
+      if (/^Recebimento/i.test(cleanDesc)) {
+        cleanDesc = cleanDesc.replace(/^Recebimento(\s*\([^)]*\))?(\s*[:-]\s*|\s+)/i, '').trim() || cleanDesc;
+      }
+      return {
+        ...rev,
+        description: cleanDesc,
+        isFromReceivables: rev.receivables.length > 0 || rev.receivableReceipts.length > 0,
+      };
+    });
+
+    const totalAmount = formattedRevenues.reduce((acc, curr) => acc + curr.amount, 0);
 
     res.json({
       month,
       year,
       totalAmount,
-      count: revenues.length,
-      revenues,
+      count: formattedRevenues.length,
+      revenues: formattedRevenues,
     });
   } catch (error) {
     console.error('getRevenues error:', error);

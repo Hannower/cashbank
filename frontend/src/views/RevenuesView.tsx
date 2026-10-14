@@ -19,9 +19,16 @@ interface Revenue {
   amount: number;
   date: string;
   category: string;
+  isFromReceivables?: boolean;
 }
 
 const CATEGORIES = ['Salário', 'Freelance', 'Investimentos', 'Vendas', 'Benefícios', 'Outros'];
+
+const formatRevenueDescription = (desc: string) => {
+  if (!desc) return '';
+  const cleaned = desc.replace(/^Recebimento(\s*\([^)]*\))?(\s*[:-]\s*|\s+)/i, '').trim();
+  return cleaned || desc;
+};
 
 export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataChanged }) => {
   const { user } = useAuth();
@@ -73,7 +80,7 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
 
   const openEditModal = (rev: Revenue) => {
     setEditingRevenue(rev);
-    setFormDesc(rev.description);
+    setFormDesc(formatRevenueDescription(rev.description));
     setFormAmount(String(rev.amount));
     setFormDate(rev.date ? rev.date.split('T')[0] : '');
     if (rev.date && rev.date.includes('T')) {
@@ -317,9 +324,9 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>
-                              {rev.description}
+                              {formatRevenueDescription(rev.description)}
                             </span>
-                            {(rev.description.startsWith('Recebimento') || rev.category === 'Cartão de Terceiros' || rev.category === 'Recebimentos') && (
+                            {(rev.isFromReceivables || rev.category === 'Cartão de Terceiros' || rev.category === 'Recebimentos' || /^Recebimento/i.test(rev.description)) && (
                               <span
                                 style={{
                                   fontSize: 10,
@@ -438,8 +445,8 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
                     </div>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span className="expense-mobile-title">{rev.description}</span>
-                        {(rev.description.startsWith('Recebimento') || rev.category === 'Cartão de Terceiros' || rev.category === 'Recebimentos') && (
+                        <span className="expense-mobile-title">{formatRevenueDescription(rev.description)}</span>
+                        {(rev.isFromReceivables || rev.category === 'Cartão de Terceiros' || rev.category === 'Recebimentos' || /^Recebimento/i.test(rev.description)) && (
                           <span
                             style={{
                               fontSize: 10,
@@ -820,7 +827,7 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
         onClose={() => setDeletingRevenue(null)}
         onConfirm={handleDeleteConfirm}
         title="Excluir renda"
-        itemDescription={deletingRevenue?.description}
+        itemDescription={deletingRevenue ? formatRevenueDescription(deletingRevenue.description) : undefined}
         loading={actionLoading}
       />
     </div>

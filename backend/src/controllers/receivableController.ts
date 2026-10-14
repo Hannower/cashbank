@@ -375,9 +375,9 @@ export async function updateReceivable(req: AuthenticatedRequest, res: Response)
         await tx.revenue.update({
           where: { id: rec.revenueId },
           data: {
-            description: rec.payer ? `Recebimento (${rec.payer}): ${rec.description}` : `Recebimento: ${rec.description}`,
+            description: rec.description,
             amount: rec.amount,
-            category: rec.category || 'Recebimentos',
+            category: rec.category || 'Vendas',
           },
         }).catch(() => {});
       } else if (rec.revenueId && !rec.isSale) {
@@ -389,6 +389,29 @@ export async function updateReceivable(req: AuthenticatedRequest, res: Response)
           where: { id },
           data: { revenueId: null },
         });
+      }
+
+      // Also update any recurring receipts with linked revenues
+      const receiptsWithRevenue = await tx.receivableReceipt.findMany({
+        where: { receivableId: id, revenueId: { not: null } },
+      });
+      for (const r of receiptsWithRevenue) {
+        if (!r.revenueId) continue;
+        if (!rec.isSale) {
+          await tx.revenue.delete({ where: { id: r.revenueId } }).catch(() => {});
+          await tx.receivableReceipt.update({
+            where: { id: r.id },
+            data: { revenueId: null },
+          });
+        } else {
+          await tx.revenue.update({
+            where: { id: r.revenueId },
+            data: {
+              description: rec.description,
+              category: rec.category || 'Vendas',
+            },
+          }).catch(() => {});
+        }
       }
 
       return rec;
@@ -623,10 +646,7 @@ export async function toggleReceivableReceived(req: AuthenticatedRequest, res: R
 
           // Only create Revenue if it is flagged as a sale (isSale === true)
           if (existing.isSale) {
-            const revDesc = existing.payer
-              ? `Recebimento (${existing.payer}): ${existing.description}`
-              : `Recebimento: ${existing.description}`;
-
+            const revDesc = existing.description;
             const revAmount = existingReceipt?.amount ?? existing.amount;
 
             if (revId) {
@@ -636,7 +656,7 @@ export async function toggleReceivableReceived(req: AuthenticatedRequest, res: R
                   description: revDesc,
                   amount: revAmount,
                   date: effectiveDate,
-                  category: existing.category || 'Recebimentos',
+                  category: existing.category || 'Vendas',
                 },
               }).catch(async () => {
                 const newRev = await tx.revenue.create({
@@ -645,7 +665,7 @@ export async function toggleReceivableReceived(req: AuthenticatedRequest, res: R
                     description: revDesc,
                     amount: revAmount,
                     date: effectiveDate,
-                    category: existing.category || 'Recebimentos',
+                    category: existing.category || 'Vendas',
                   },
                 });
                 revId = newRev.id;
@@ -657,7 +677,7 @@ export async function toggleReceivableReceived(req: AuthenticatedRequest, res: R
                   description: revDesc,
                   amount: revAmount,
                   date: effectiveDate,
-                  category: existing.category || 'Recebimentos',
+                  category: existing.category || 'Vendas',
                 },
               });
               revId = newRev.id;
@@ -742,9 +762,7 @@ export async function toggleReceivableReceived(req: AuthenticatedRequest, res: R
         // Only create Revenue if it is a sale (isSale === true)!
         // Third-party credit card purchases have isSale = false and will NEVER create a Revenue!
         if (existing.isSale) {
-          const revDesc = existing.payer
-            ? `Recebimento (${existing.payer}): ${existing.description}`
-            : `Recebimento: ${existing.description}`;
+          const revDesc = existing.description;
 
           if (revId) {
             await tx.revenue.update({
@@ -753,7 +771,7 @@ export async function toggleReceivableReceived(req: AuthenticatedRequest, res: R
                 description: revDesc,
                 amount: existing.amount,
                 date: effectiveDate,
-                category: existing.category || 'Recebimentos',
+                category: existing.category || 'Vendas',
               },
             }).catch(async () => {
               const newRev = await tx.revenue.create({
@@ -762,7 +780,7 @@ export async function toggleReceivableReceived(req: AuthenticatedRequest, res: R
                   description: revDesc,
                   amount: existing.amount,
                   date: effectiveDate,
-                  category: existing.category || 'Recebimentos',
+                  category: existing.category || 'Vendas',
                 },
               });
               revId = newRev.id;
@@ -774,7 +792,7 @@ export async function toggleReceivableReceived(req: AuthenticatedRequest, res: R
                 description: revDesc,
                 amount: existing.amount,
                 date: effectiveDate,
-                category: existing.category || 'Recebimentos',
+                category: existing.category || 'Vendas',
               },
             });
             revId = newRev.id;
