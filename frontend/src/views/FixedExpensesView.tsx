@@ -262,7 +262,7 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
       onDataChanged?.();
     } catch (err) {
       console.error('Error creating fixed expense:', err);
-      alert('Erro ao cadastrar despesa fixa.');
+      alert('Erro ao cadastrar conta a pagar.');
     } finally {
       setActionLoading(false);
     }
@@ -289,7 +289,7 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
       onDataChanged?.();
     } catch (err) {
       console.error('Error updating fixed expense:', err);
-      alert('Erro ao atualizar despesa fixa.');
+      alert('Erro ao atualizar conta a pagar.');
     } finally {
       setActionLoading(false);
     }
@@ -305,7 +305,7 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
       onDataChanged?.();
     } catch (err) {
       console.error('Error deleting fixed expense:', err);
-      alert('Erro ao excluir despesa fixa.');
+      alert('Erro ao excluir conta a pagar.');
     } finally {
       setActionLoading(false);
     }
@@ -363,15 +363,15 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
             CONTROLE MENSAL
           </div>
           <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-main, #0f172a)', letterSpacing: '-0.5px', margin: 0 }}>
-            Despesas fixas
+            Contas a pagar
           </h1>
           <p style={{ fontSize: 14, color: 'var(--text-muted, #64748b)', marginTop: 4, margin: 0 }}>
-            Cadastre compromissos recorrentes, gerencie reajustes e faturas variáveis mês a mês.
+            Cadastre compromissos recorrentes, gerencie reajustes e contas mês a mês.
           </p>
         </div>
 
         <button className="btn-primary" onClick={openCreateModal}>
-          <Plus size={18} /> Cadastrar despesa
+          <Plus size={18} /> Nova conta a pagar
         </button>
       </div>
 
@@ -448,7 +448,7 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
                 alignItems: 'center',
                 gap: 6,
               }}
-              title="Soma de todos os lançamentos em Despesas Variáveis neste mês"
+              title="Soma de todos os lançamentos em Gastos Variáveis neste mês"
             >
               <Zap size={13} />
               <span>Gastos variáveis deste mês: {formatCurrency(monthVariableExpensesSum)}</span>
@@ -487,13 +487,13 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
                   <tr className="empty-row">
                     <td colSpan={6} style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
                       <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px' }} />
-                      Carregando despesas fixas...
+                      Carregando contas a pagar...
                     </td>
                   </tr>
                 ) : expenses.length === 0 ? (
                   <tr className="empty-row">
                     <td colSpan={6} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
-                      Nenhuma despesa fixa cadastrada para este mês. Clique em "+ Cadastrar despesa" acima para adicionar.
+                      Nenhuma conta a pagar cadastrada para este mês. Clique em "+ Nova conta a pagar" acima para adicionar.
                     </td>
                   </tr>
                 ) : (
@@ -717,11 +717,11 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
           {loading ? (
             <div style={{ padding: 30, textAlign: 'center', color: '#64748b' }}>
               <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px' }} />
-              Carregando despesas fixas...
+              Carregando contas a pagar...
             </div>
           ) : expenses.length === 0 ? (
             <div style={{ padding: 24, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
-              Nenhuma despesa fixa cadastrada para este mês.
+              Nenhuma conta a pagar cadastrada para este mês.
             </div>
           ) : (
             expenses.map((exp) => (
@@ -943,12 +943,12 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
       </div>
 
       {/* =========================================================
-         MODAL 1: CADASTRAR DESPESA FIXA
+         MODAL 1: CADASTRAR CONTA A PAGAR
          ========================================================= */}
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Cadastrar despesa fixa"
+        title="Cadastrar conta a pagar"
         subtitle="Defina o compromisso e seu período de recorrência."
         icon={<CalendarCheck2 size={22} />}
       >
@@ -1087,12 +1087,12 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
       </Modal>
 
       {/* =========================================================
-         MODAL 2: EDITAR DESPESA FIXA
+         MODAL 2: EDITAR CONTA A PAGAR
          ========================================================= */}
       <Modal
         isOpen={!!editingExpense}
         onClose={() => setEditingExpense(null)}
-        title="Editar despesa fixa"
+        title="Editar conta a pagar"
         subtitle="Defina o compromisso e seu período de recorrência."
         icon={<CalendarCheck2 size={22} />}
       >
@@ -1240,7 +1240,7 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
         maxWidth="500px"
       >
         <form onSubmit={handleSaveMonthAmount} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Quick Action: Puxar soma de Despesas Variáveis */}
+          {/* Quick Action: Puxar soma de Gastos Variáveis */}
           {monthVariableExpensesSum > 0 && (
             <div
               style={{
@@ -1260,7 +1260,7 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
                   Fatura do Cartão / Gastos do Mês
                 </div>
                 <div style={{ fontSize: 11, color: '#3b82f6', marginTop: 2 }}>
-                  Você teve <strong>{formatCurrency(monthVariableExpensesSum)}</strong> em despesas variáveis em {selectedMonth.label}.
+                  Você teve <strong>{formatCurrency(monthVariableExpensesSum)}</strong> em gastos variáveis em {selectedMonth.label}.
                 </div>
               </div>
               <button
@@ -1465,7 +1465,7 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
         isOpen={!!deletingExpense}
         onClose={() => setDeletingExpense(null)}
         onConfirm={handleDeleteConfirm}
-        title="Excluir despesa fixa"
+        title="Excluir conta a pagar"
         itemDescription={deletingExpense?.description}
         loading={actionLoading}
       />

@@ -154,6 +154,23 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
 
     const totalRevenues = revenues.reduce((acc, curr) => acc + curr.amount, 0);
 
+    // 4.1 Receivables (Contas a receber) for the specified month/year
+    const monthReceivables = await prisma.receivable.findMany({
+      where: {
+        userId,
+        dueDate: { gte: startOfMonth, lte: endOfMonth },
+      },
+      orderBy: { dueDate: 'asc' },
+    });
+
+    const receivablesPendingTotal = monthReceivables
+      .filter((r) => !r.isReceived)
+      .reduce((acc, curr) => acc + curr.amount, 0);
+    const receivablesReceivedTotal = monthReceivables
+      .filter((r) => r.isReceived)
+      .reduce((acc, curr) => acc + curr.amount, 0);
+    const receivablesPendingCount = monthReceivables.filter((r) => !r.isReceived).length;
+
     // 5. Savings & Cofrinhos
     const [savingsItems, allPiggyBanks] = await Promise.all([
       prisma.savings.findMany({
@@ -414,17 +431,23 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
         receitasTotais: totalRevenues,
         receitasGrowthPct,
         despesasTotais: totalExpenses,
-        despesasSubtitle: 'Fixas e variáveis',
+        despesasSubtitle: 'Contas a pagar e gastos variáveis',
         naPoupanca: totalSavings,
         totalPoupancaAcumulada: totalSavings,
         poupancaGoalPct: savingsPct,
+      },
+      receivablesSummary: {
+        pendingTotal: Math.round(receivablesPendingTotal * 100) / 100,
+        receivedTotal: Math.round(receivablesReceivedTotal * 100) / 100,
+        pendingCount: receivablesPendingCount,
+        totalCount: monthReceivables.length,
       },
       sidebarStatus: {
         organizedPercentage: fixedOrganizedPct,
         text:
           fixedTotalCount > 0
-            ? `Você já organizou ${fixedOrganizedPct}% das despesas fixas.`
-            : 'Cadastre suas despesas fixas para acompanhar a organização do mês.',
+            ? `Você já organizou ${fixedOrganizedPct}% das contas a pagar.`
+            : 'Cadastre suas contas a pagar para acompanhar a organização do mês.',
       },
       chartData,
       categories: categoriesList,

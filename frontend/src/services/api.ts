@@ -174,5 +174,33 @@ export const api = {
     id: string,
     data: { month: number; year: number; manualAdjustment: number | null }
   ) => request<any>(`/credit-cards/${id}/invoices/adjustment`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  // Receivables (Contas a receber)
+  getReceivables: (
+    monthOrFilter?: number | { month?: number; year?: number; status?: string },
+    year?: number,
+    status?: string
+  ) => {
+    const params = new URLSearchParams();
+    if (typeof monthOrFilter === 'object' && monthOrFilter !== null) {
+      if (monthOrFilter.month !== undefined) params.append('month', String(monthOrFilter.month));
+      if (monthOrFilter.year !== undefined) params.append('year', String(monthOrFilter.year));
+      if (monthOrFilter.status) params.append('status', monthOrFilter.status);
+    } else {
+      if (monthOrFilter !== undefined) params.append('month', String(monthOrFilter));
+      if (year !== undefined) params.append('year', String(year));
+      if (status) params.append('status', status);
+    }
+    const qs = params.toString();
+    return request<any>(`/receivables${qs ? `?${qs}` : ''}`);
+  },
+  createReceivable: (data: any) =>
+    request<any>('/receivables', { method: 'POST', body: JSON.stringify(data) }),
+  updateReceivable: (id: string, data: any) =>
+    request<any>(`/receivables/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteReceivable: (id: string) =>
+    request<any>(`/receivables/${id}`, { method: 'DELETE' }),
+  toggleReceivableReceived: (id: string, data: { isReceived?: boolean; receivedAt?: string }) =>
+    request<any>(`/receivables/${id}/toggle-received`, { method: 'PATCH', body: JSON.stringify(data) }),
 };
 

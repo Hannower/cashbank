@@ -154,7 +154,7 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
       onDataChanged?.();
     } catch (err) {
       console.error('Error creating variable expense:', err);
-      alert('Erro ao cadastrar despesa variável.');
+      alert('Erro ao cadastrar gasto variável.');
     } finally {
       setActionLoading(false);
     }
@@ -179,7 +179,7 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
       onDataChanged?.();
     } catch (err) {
       console.error('Error updating variable expense:', err);
-      alert('Erro ao atualizar despesa variável.');
+      alert('Erro ao atualizar gasto variável.');
     } finally {
       setActionLoading(false);
     }
@@ -195,7 +195,7 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
       onDataChanged?.();
     } catch (err) {
       console.error('Error deleting variable expense:', err);
-      alert('Erro ao excluir despesa variável.');
+      alert('Erro ao excluir gasto variável.');
     } finally {
       setActionLoading(false);
     }
@@ -229,7 +229,7 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
             GASTOS DO DIA A DIA
           </div>
           <h1 style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.5px', margin: 0 }}>
-            Despesas variáveis
+            Gastos variáveis
           </h1>
           <p style={{ fontSize: 14, color: '#64748b', marginTop: 4, margin: 0 }}>
             Acompanhe compras e gastos que mudam a cada mês.
@@ -237,7 +237,7 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
         </div>
 
         <button className="btn-primary" onClick={openCreateModal}>
-          <Plus size={18} /> Cadastrar despesa
+          <Plus size={18} /> Novo gasto variável
         </button>
       </div>
 
@@ -332,13 +332,13 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
                   <tr className="empty-row">
                     <td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
                       <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px' }} />
-                      Carregando despesas variáveis...
+                      Carregando gastos variáveis...
                     </td>
                   </tr>
                 ) : expenses.length === 0 ? (
                   <tr className="empty-row">
                     <td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
-                      Nenhuma despesa variável cadastrada para {selectedMonth.label}. Clique em "+ Cadastrar despesa" acima para adicionar.
+                      Nenhum gasto variável cadastrado para {selectedMonth.label}. Clique em "+ Novo gasto variável" acima para adicionar.
                     </td>
                   </tr>
                 ) : (
@@ -457,11 +457,11 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
           {loading ? (
             <div style={{ padding: 30, textAlign: 'center', color: '#64748b' }}>
               <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px' }} />
-              Carregando despesas variáveis...
+              Carregando gastos variáveis...
             </div>
           ) : expenses.length === 0 ? (
             <div style={{ padding: 24, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
-              Nenhuma despesa variável cadastrada para {selectedMonth.label}.
+              Nenhum gasto variável cadastrado para {selectedMonth.label}.
             </div>
           ) : (
             expenses.map((exp) => (
@@ -589,7 +589,7 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Cadastrar despesa variável"
+        title="Cadastrar gasto variável"
         subtitle="Registre um gasto pontual do dia a dia."
         icon={<CreditCard size={22} />}
       >
@@ -773,7 +773,7 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
       <Modal
         isOpen={!!editingExpense}
         onClose={() => setEditingExpense(null)}
-        title="Editar despesa variável"
+        title="Editar gasto variável"
         subtitle="Registre um gasto pontual do dia a dia."
         icon={<CreditCard size={22} />}
       >
@@ -956,7 +956,7 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
         isOpen={!!deletingExpense}
         onClose={() => setDeletingExpense(null)}
         onConfirm={handleDeleteConfirm}
-        title="Excluir despesa variável"
+        title="Excluir gasto variável"
         itemDescription={deletingExpense?.description}
         loading={actionLoading}
       />

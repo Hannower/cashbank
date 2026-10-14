@@ -16,6 +16,9 @@ import {
   TrendingDown,
   Info,
   DollarSign,
+  Users,
+  UserCheck,
+  HandCoins,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -45,6 +48,10 @@ interface InstallmentItem {
   installmentNumber: number;
   totalInstallments: number;
   amount: number;
+  isThirdParty?: boolean;
+  thirdPartyName?: string | null;
+  thirdPartyAmount?: number | null;
+  isReceived?: boolean;
 }
 
 interface CardOverviewItem {
@@ -53,6 +60,8 @@ interface CardOverviewItem {
   installmentsSum: number;
   manualAdjustment: number | null;
   totalAmount: number;
+  holderSum: number;
+  thirdPartySum: number;
   isPaid: boolean;
   paidAt: string | null;
 }
@@ -62,6 +71,8 @@ interface InvoicesOverviewResponse {
   year: number;
   summary: {
     totalAllCards: number;
+    holderTotalAllCards?: number;
+    thirdPartyTotalAllCards?: number;
     paidAllCards: number;
     pendingAllCards: number;
     purchasesCount: number;
@@ -124,6 +135,10 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
   const [purchaseInstallments, setPurchaseInstallments] = useState('1');
   const [purchaseDate, setPurchaseDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [purchaseCategory, setPurchaseCategory] = useState('Alimentação');
+  const [purchaseFilter, setPurchaseFilter] = useState<'all' | 'holder' | 'thirdParty'>('all');
+  const [purchaseIsThirdParty, setPurchaseIsThirdParty] = useState(false);
+  const [purchaseThirdPartyName, setPurchaseThirdPartyName] = useState('');
+  const [purchaseThirdPartyAmount, setPurchaseThirdPartyAmount] = useState('');
 
   // Card Form State
   const [cardName, setCardName] = useState('');
@@ -249,6 +264,9 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
     setPurchaseInstallments('1');
     setPurchaseDate(new Date().toISOString().split('T')[0]);
     setPurchaseCategory('Alimentação');
+    setPurchaseIsThirdParty(false);
+    setPurchaseThirdPartyName('');
+    setPurchaseThirdPartyAmount('');
     setIsPurchaseModalOpen(true);
   };
 
@@ -258,14 +276,22 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
 
     try {
       setActionLoading(true);
-      const payload = {
+      const payload: any = {
         creditCardId: purchaseCardId,
         description: purchaseDesc.trim(),
         totalAmount: parseFloat(purchaseAmount.replace(',', '.')),
         installmentsCount: parseInt(purchaseInstallments, 10) || 1,
         purchaseDate,
         category: purchaseCategory,
+        isThirdParty: purchaseIsThirdParty,
       };
+
+      if (purchaseIsThirdParty) {
+        payload.thirdPartyName = purchaseThirdPartyName.trim() || 'Terceiro';
+        if (purchaseThirdPartyAmount) {
+          payload.thirdPartyAmount = parseFloat(purchaseThirdPartyAmount.replace(',', '.'));
+        }
+      }
 
       await api.createCreditCardPurchase(payload);
       setIsPurchaseModalOpen(false);
@@ -397,13 +423,19 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
     });
   });
 
+  const holderInstallmentsCount = allFilteredInstallments.filter((i) => !i.installment.isThirdParty).length;
+  const thirdPartyInstallmentsCount = allFilteredInstallments.filter((i) => i.installment.isThirdParty).length;
+
   const searchedInstallments = allFilteredInstallments.filter((item) => {
+    if (purchaseFilter === 'holder' && item.installment.isThirdParty) return false;
+    if (purchaseFilter === 'thirdParty' && !item.installment.isThirdParty) return false;
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
       item.installment.description.toLowerCase().includes(q) ||
       item.installment.category.toLowerCase().includes(q) ||
-      item.card.name.toLowerCase().includes(q)
+      item.card.name.toLowerCase().includes(q) ||
+      (item.installment.thirdPartyName && item.installment.thirdPartyName.toLowerCase().includes(q))
     );
   });
 
@@ -441,7 +473,7 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
             Cartões de crédito
           </h1>
           <p style={{ fontSize: 14, color: 'var(--text-muted, #64748b)', marginTop: 4, margin: 0 }}>
-            Gerencie limites, faturas mensais e compras parceladas com distribuição automática nas despesas fixas.
+            Gerencie limites, faturas mensais e compras parceladas com distribuição automática nas contas a pagar.
           </p>
         </div>
 
@@ -470,7 +502,7 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
           gap: 16,
           marginTop: 20,
         }}
@@ -479,7 +511,7 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
         <div className="card" style={{ padding: 20, position: 'relative', overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted, #64748b)' }}>
-              Total das faturas ({selectedMonth.label}/{selectedMonth.year})
+              Fatura Total ({selectedMonth.label}/{selectedMonth.year})
             </span>
             <div
               style={{
@@ -496,7 +528,7 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
               <CreditCard size={20} />
             </div>
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-main, #0f172a)', marginTop: 12 }}>
+          <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-main, #0f172a)', marginTop: 12 }}>
             {formatCurrency(overview?.summary?.totalAllCards || 0)}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', marginTop: 4 }}>
@@ -504,36 +536,65 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
           </div>
         </div>
 
-        {/* KPI 2: Faturas Pagas */}
+        {/* KPI 2: Valor do Titular (Minha Parte) */}
         <div className="card" style={{ padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted, #64748b)' }}>
-              Faturas já pagas
+              Valor do titular
             </span>
             <div
               style={{
                 width: 38,
                 height: 38,
                 borderRadius: 10,
-                backgroundColor: 'rgba(22, 163, 74, 0.1)',
-                color: '#16a34a',
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                color: '#2563eb',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <Check size={20} />
+              <UserCheck size={20} />
             </div>
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: '#16a34a', marginTop: 12 }}>
-            {formatCurrency(overview?.summary?.paidAllCards || 0)}
+          <div style={{ fontSize: 24, fontWeight: 800, color: '#2563eb', marginTop: 12 }}>
+            {formatCurrency(overview?.summary?.holderTotalAllCards ?? Math.max(0, (overview?.summary?.totalAllCards || 0) - (overview?.summary?.thirdPartyTotalAllCards || 0)))}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', marginTop: 4 }}>
-            Baixadas e integradas ao fluxo
+            Suas compras pessoais
           </div>
         </div>
 
-        {/* KPI 3: Faturas Pendentes */}
+        {/* KPI 3: Valor de Terceiros (A Receber) */}
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted, #64748b)' }}>
+              Valor de terceiros
+            </span>
+            <div
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                backgroundColor: 'rgba(217, 119, 6, 0.1)',
+                color: '#d97706',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Users size={20} />
+            </div>
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: '#d97706', marginTop: 12 }}>
+            {formatCurrency(overview?.summary?.thirdPartyTotalAllCards || 0)}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', marginTop: 4 }}>
+            Listado em Contas a receber
+          </div>
+        </div>
+
+        {/* KPI 4: Faturas Pendentes */}
         <div className="card" style={{ padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted, #64748b)' }}>
@@ -554,40 +615,40 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
               <Clock size={20} />
             </div>
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: '#ea580c', marginTop: 12 }}>
+          <div style={{ fontSize: 24, fontWeight: 800, color: '#ea580c', marginTop: 12 }}>
             {formatCurrency(overview?.summary?.pendingAllCards || 0)}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', marginTop: 4 }}>
-            Aparecem como despesas fixas a pagar
+            Aparecem como contas a pagar
           </div>
         </div>
 
-        {/* KPI 4: Parcelas Cobradas */}
+        {/* KPI 5: Faturas Pagas */}
         <div className="card" style={{ padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted, #64748b)' }}>
-              Parcelas no mês
+              Faturas já pagas
             </span>
             <div
               style={{
                 width: 38,
                 height: 38,
                 borderRadius: 10,
-                backgroundColor: 'rgba(124, 58, 237, 0.1)',
-                color: '#7c3aed',
+                backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                color: '#16a34a',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <Layers size={20} />
+              <Check size={20} />
             </div>
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-main, #0f172a)', marginTop: 12 }}>
-            {overview?.summary?.purchasesCount || 0}
+          <div style={{ fontSize: 24, fontWeight: 800, color: '#16a34a', marginTop: 12 }}>
+            {formatCurrency(overview?.summary?.paidAllCards || 0)}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', marginTop: 4 }}>
-            Itens faturados em {selectedMonth.label}
+            Baixadas e integradas ao fluxo
           </div>
         </div>
       </div>
@@ -811,6 +872,16 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
                         <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-main, #0f172a)', marginTop: 2 }}>
                           {formatCurrency(item.totalAmount)}
                         </div>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 4, fontSize: 11, flexWrap: 'wrap' }}>
+                          <span style={{ color: '#2563eb', fontWeight: 600 }}>
+                            Titular: {formatCurrency(item.holderSum ?? Math.max(0, item.totalAmount - (item.thirdPartySum ?? 0)))}
+                          </span>
+                          {(item.thirdPartySum || 0) > 0 && (
+                            <span style={{ color: '#d97706', fontWeight: 600 }}>
+                              • Terceiros: {formatCurrency(item.thirdPartySum)}
+                            </span>
+                          )}
+                        </div>
                         {item.manualAdjustment !== null && item.manualAdjustment !== 0 && (
                           <div style={{ fontSize: 11, color: '#2563eb', marginTop: 2 }}>
                             Parcelas: {formatCurrency(item.installmentsSum)} {item.manualAdjustment > 0 ? '+' : '-'} {formatCurrency(Math.abs(item.manualAdjustment))}
@@ -983,6 +1054,67 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
 
           {/* Filter Bar & Search */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            {/* Filter by Holder vs Third Party */}
+            <div
+              style={{
+                display: 'inline-flex',
+                backgroundColor: 'var(--bg-card, #ffffff)',
+                border: '1px solid var(--border-color, #e2e8f0)',
+                borderRadius: 8,
+                padding: 3,
+                gap: 4,
+              }}
+            >
+              <button
+                onClick={() => setPurchaseFilter('all')}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: 6,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: purchaseFilter === 'all' ? '#1e293b' : 'transparent',
+                  color: purchaseFilter === 'all' ? '#ffffff' : 'var(--text-secondary, #64748b)',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                Todas ({allFilteredInstallments.length})
+              </button>
+              <button
+                onClick={() => setPurchaseFilter('holder')}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: 6,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: purchaseFilter === 'holder' ? '#2563eb' : 'transparent',
+                  color: purchaseFilter === 'holder' ? '#ffffff' : 'var(--text-secondary, #64748b)',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                Titular ({holderInstallmentsCount})
+              </button>
+              <button
+                onClick={() => setPurchaseFilter('thirdParty')}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: 6,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: purchaseFilter === 'thirdParty' ? '#d97706' : 'transparent',
+                  color: purchaseFilter === 'thirdParty' ? '#ffffff' : 'var(--text-secondary, #64748b)',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                Terceiros ({thirdPartyInstallmentsCount})
+              </button>
+            </div>
+
             {/* Filter by Card Tabs */}
             <div
               style={{
@@ -1008,7 +1140,7 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
                   transition: 'all 0.15s ease',
                 }}
               >
-                Todos ({allCards.length})
+                Cartão: Todos ({allCards.length})
               </button>
               {allCards.map((c) => (
                 <button
@@ -1120,7 +1252,37 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
                     return (
                       <tr key={ins.id} className="data-table-row">
                         <td style={{ padding: '14px 20px', fontWeight: 600, color: 'var(--text-main, #0f172a)' }}>
-                          {ins.description}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <span>{ins.description}</span>
+                            {ins.isThirdParty && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    padding: '2px 8px',
+                                    borderRadius: 6,
+                                    backgroundColor: 'rgba(217, 119, 6, 0.1)',
+                                    color: '#d97706',
+                                  }}
+                                >
+                                  <Users size={12} /> Terceiro: {ins.thirdPartyName || 'Amigo'}
+                                </span>
+                                {ins.isReceived ? (
+                                  <span style={{ fontSize: 11, fontWeight: 700, color: '#15803d', display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <Check size={12} /> Recebido
+                                  </span>
+                                ) : (
+                                  <span style={{ fontSize: 11, fontWeight: 600, color: '#d97706', display: 'flex', alignItems: 'center', gap: 2 }} title="Acompanhe em Contas a receber">
+                                    <Clock size={11} /> A receber
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td style={{ padding: '14px 20px' }}>
                           <span
@@ -1278,6 +1440,23 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
                           >
                             {card.name}
                           </span>
+                          {ins.isThirdParty && (
+                            <span
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 700,
+                                padding: '1px 6px',
+                                borderRadius: 4,
+                                backgroundColor: 'rgba(217, 119, 6, 0.1)',
+                                color: '#d97706',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 3,
+                              }}
+                            >
+                              <Users size={10} /> {ins.thirdPartyName}
+                            </span>
+                          )}
                         </div>
                         <div className="expense-mobile-subtitle">
                           <span>
@@ -1455,6 +1634,69 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* Third-Party Purchase Section */}
+          <div
+            style={{
+              border: '1px solid var(--border-color, #e2e8f0)',
+              borderRadius: 10,
+              padding: '14px',
+              backgroundColor: purchaseIsThirdParty ? 'rgba(217, 119, 6, 0.05)' : 'var(--bg-card, #ffffff)',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', margin: 0 }}>
+              <input
+                type="checkbox"
+                checked={purchaseIsThirdParty}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setPurchaseIsThirdParty(checked);
+                  if (checked && !purchaseThirdPartyAmount) {
+                    setPurchaseThirdPartyAmount(purchaseAmount);
+                  }
+                }}
+                style={{ width: 17, height: 17, accentColor: '#d97706', cursor: 'pointer', marginTop: 2 }}
+              />
+              <div>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>
+                  Compra feita por terceiros (amigo, parente, etc.)
+                </span>
+                <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted, #64748b)', marginTop: 2, lineHeight: 1.4 }}>
+                  Será adicionada automaticamente em <strong>Contas a receber</strong> na data de vencimento de cada fatura.
+                </span>
+              </div>
+            </label>
+
+            {purchaseIsThirdParty && (
+              <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 12 }}>
+                <div>
+                  <label className="form-label">Nome do terceiro *</label>
+                  <input
+                    type="text"
+                    required={purchaseIsThirdParty}
+                    placeholder="Ex: Lucas, Mãe, Carlos"
+                    value={purchaseThirdPartyName}
+                    onChange={(e) => setPurchaseThirdPartyName(e.target.value)}
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Valor de terceiros</label>
+                  <div className="currency-input-wrapper">
+                    <span className="currency-input-prefix">R$</span>
+                    <input
+                      type="text"
+                      placeholder={purchaseAmount || '0,00'}
+                      value={purchaseThirdPartyAmount}
+                      onChange={(e) => setPurchaseThirdPartyAmount(e.target.value)}
+                      className="currency-input-field"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Action buttons */}
@@ -1676,7 +1918,7 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
             </div>
             <span style={{ fontSize: 11, color: 'var(--text-muted, #64748b)', marginTop: 4, display: 'block' }}>
               💡 Você pode informar o valor fechado exato da fatura para este mês. Este valor será refletido
-              automaticamente na tela de Despesas Fixas.
+              automaticamente na tela de Contas a Pagar.
             </span>
           </div>
 
