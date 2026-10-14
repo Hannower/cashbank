@@ -315,9 +315,25 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
                           >
                             <ArrowDownLeft size={17} />
                           </div>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>
-                            {rev.description}
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>
+                              {rev.description}
+                            </span>
+                            {(rev.description.startsWith('Recebimento') || rev.category === 'Cartão de Terceiros' || rev.category === 'Recebimentos') && (
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  padding: '2px 6px',
+                                  borderRadius: 4,
+                                  backgroundColor: 'rgba(21, 128, 61, 0.1)',
+                                  color: '#15803d',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                Contas a receber
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
 
@@ -423,6 +439,20 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <span className="expense-mobile-title">{rev.description}</span>
+                        {(rev.description.startsWith('Recebimento') || rev.category === 'Cartão de Terceiros' || rev.category === 'Recebimentos') && (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              padding: '1px 6px',
+                              borderRadius: 4,
+                              backgroundColor: 'rgba(21, 128, 61, 0.1)',
+                              color: '#15803d',
+                            }}
+                          >
+                            Contas a receber
+                          </span>
+                        )}
                         <span
                           style={{
                             fontSize: 10,

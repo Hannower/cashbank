@@ -199,6 +199,7 @@ export async function getInvoicesOverview(req: AuthenticatedRequest, res: Respon
       include: {
         purchase: true,
         creditCard: true,
+        receivables: true,
       },
       orderBy: {
         purchase: { purchaseDate: 'desc' },
@@ -222,6 +223,20 @@ export async function getInvoicesOverview(req: AuthenticatedRequest, res: Respon
       const totalAmount = Math.max(0, Math.round((installmentsSum + manualAdjustment) * 100) / 100);
       const isPaid = invoice ? invoice.isPaid : false;
 
+      // Breakdown: titular vs terceiros
+      const thirdPartySum = cardInstallments.reduce((acc, curr) => {
+        const isThird = curr.isThirdParty || curr.purchase.isThirdParty;
+        if (isThird) {
+          const val = curr.thirdPartyAmount !== null && curr.thirdPartyAmount !== undefined
+            ? curr.thirdPartyAmount
+            : curr.amount;
+          return acc + val;
+        }
+        return acc;
+      }, 0);
+      const roundedThirdParty = Math.round(thirdPartySum * 100) / 100;
+      const holderSum = Math.max(0, Math.round((totalAmount - roundedThirdParty) * 100) / 100);
+
       return {
         card: {
           id: card.id,
@@ -233,20 +248,35 @@ export async function getInvoicesOverview(req: AuthenticatedRequest, res: Respon
           brand: card.brand,
           digits: card.digits,
         },
-        installments: cardInstallments.map((ins) => ({
-          id: ins.id,
-          purchaseId: ins.purchaseId,
-          description: ins.purchase.description,
-          category: ins.purchase.category,
-          purchaseDate: ins.purchase.purchaseDate,
-          totalPurchaseAmount: ins.purchase.totalAmount,
-          installmentNumber: ins.installmentNumber,
-          totalInstallments: ins.totalInstallments,
-          amount: ins.amount,
-        })),
+        installments: cardInstallments.map((ins) => {
+          const isThird = ins.isThirdParty || ins.purchase.isThirdParty;
+          const tpName = ins.thirdPartyName || ins.purchase.thirdPartyName || null;
+          const tpAmount = ins.thirdPartyAmount !== null && ins.thirdPartyAmount !== undefined
+            ? ins.thirdPartyAmount
+            : (isThird ? ins.amount : null);
+          const isReceived = ins.receivables.some((r) => r.isReceived);
+
+          return {
+            id: ins.id,
+            purchaseId: ins.purchaseId,
+            description: ins.purchase.description,
+            category: ins.purchase.category,
+            purchaseDate: ins.purchase.purchaseDate,
+            totalPurchaseAmount: ins.purchase.totalAmount,
+            installmentNumber: ins.installmentNumber,
+            totalInstallments: ins.totalInstallments,
+            amount: ins.amount,
+            isThirdParty: isThird,
+            thirdPartyName: tpName,
+            thirdPartyAmount: tpAmount,
+            isReceived,
+          };
+        }),
         installmentsSum,
         manualAdjustment: invoice?.manualAdjustment ?? null,
         totalAmount,
+        holderSum,
+        thirdPartySum: roundedThirdParty,
         isPaid,
         paidAt: invoice?.paidAt || null,
       };
@@ -254,6 +284,8 @@ export async function getInvoicesOverview(req: AuthenticatedRequest, res: Respon
 
     // Totals for all cards in this month
     const totalAllCards = cardDetails.reduce((acc, curr) => acc + curr.totalAmount, 0);
+    const holderTotalAllCards = cardDetails.reduce((acc, curr) => acc + curr.holderSum, 0);
+    const thirdPartyTotalAllCards = cardDetails.reduce((acc, curr) => acc + curr.thirdPartySum, 0);
     const paidAllCards = cardDetails.filter((c) => c.isPaid).reduce((acc, curr) => acc + curr.totalAmount, 0);
     const pendingAllCards = cardDetails.filter((c) => !c.isPaid).reduce((acc, curr) => acc + curr.totalAmount, 0);
     const purchasesCount = installments.length;
@@ -262,9 +294,11 @@ export async function getInvoicesOverview(req: AuthenticatedRequest, res: Respon
       month,
       year,
       summary: {
-        totalAllCards,
-        paidAllCards,
-        pendingAllCards,
+        totalAllCards: Math.round(totalAllCards * 100) / 100,
+        holderTotalAllCards: Math.round(holderTotalAllCards * 100) / 100,
+        thirdPartyTotalAllCards: Math.round(thirdPartyTotalAllCards * 100) / 100,
+        paidAllCards: Math.round(paidAllCards * 100) / 100,
+        pendingAllCards: Math.round(pendingAllCards * 100) / 100,
         purchasesCount,
         cardsCount: cards.length,
       },
@@ -277,7 +311,7 @@ export async function getInvoicesOverview(req: AuthenticatedRequest, res: Respon
 }
 
 /**
- * 6. Create a new purchase with installment distribution
+ * 6. Create a new purchase with installment distribution (with optional third-party tagging)
  */
 export async function createCreditCardPurchase(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
@@ -291,6 +325,9 @@ export async function createCreditCardPurchase(req: AuthenticatedRequest, res: R
       category,
       firstInvoiceMonth,
       firstInvoiceYear,
+      isThirdParty,
+      thirdPartyName,
+      thirdPartyAmount,
     } = req.body;
 
     if (!creditCardId || !description || totalAmount === undefined) {
@@ -313,6 +350,14 @@ export async function createCreditCardPurchase(req: AuthenticatedRequest, res: R
       return;
     }
 
+    const safeIsThirdParty = Boolean(isThirdParty);
+    const safeThirdPartyName = safeIsThirdParty ? ((thirdPartyName && String(thirdPartyName).trim()) || 'Terceiro') : null;
+    const parsedThirdPartyTotal = safeIsThirdParty
+      ? (thirdPartyAmount !== undefined && thirdPartyAmount !== null && thirdPartyAmount !== ''
+          ? parseFloat(String(thirdPartyAmount).replace(',', '.'))
+          : parsedTotal)
+      : null;
+
     const count = parseInt(String(installmentsCount || 1));
     const safeInstallments = isNaN(count) || count < 1 ? 1 : count;
 
@@ -326,13 +371,11 @@ export async function createCreditCardPurchase(req: AuthenticatedRequest, res: R
       startMonth = parseInt(String(firstInvoiceMonth));
       startYear = parseInt(String(firstInvoiceYear));
     } else {
-      // Calculate automatically based on purchase date and card closing day
       const pDay = pDate.getUTCDate() || pDate.getDate();
       let pMonth = pDate.getUTCMonth() + 1;
       let pYear = pDate.getUTCFullYear();
 
       if (pDay > card.closingDay) {
-        // Purchase happened after closing day, falls into the next month's invoice!
         pMonth += 1;
         if (pMonth > 12) {
           pMonth = 1;
@@ -347,7 +390,12 @@ export async function createCreditCardPurchase(req: AuthenticatedRequest, res: R
     const baseInstallmentAmount = Math.floor((parsedTotal / safeInstallments) * 100) / 100;
     const remainder = Math.round((parsedTotal - baseInstallmentAmount * safeInstallments) * 100) / 100;
 
-    // Create purchase and all installments in a transaction
+    // Third party installment distribution
+    const tpTotal = parsedThirdPartyTotal ?? 0;
+    const baseTpAmount = safeIsThirdParty ? Math.floor((tpTotal / safeInstallments) * 100) / 100 : 0;
+    const tpRemainder = safeIsThirdParty ? Math.round((tpTotal - baseTpAmount * safeInstallments) * 100) / 100 : 0;
+
+    // Create purchase, installments, and linked receivables in transaction
     const result = await prisma.$transaction(async (tx) => {
       const purchase = await tx.creditCardPurchase.create({
         data: {
@@ -358,29 +406,55 @@ export async function createCreditCardPurchase(req: AuthenticatedRequest, res: R
           installmentsCount: safeInstallments,
           purchaseDate: pDate,
           category: category ? category.trim() : 'Outros',
+          isThirdParty: safeIsThirdParty,
+          thirdPartyName: safeThirdPartyName,
+          thirdPartyAmount: parsedThirdPartyTotal,
         },
       });
 
-      const installmentsData = [];
       for (let i = 0; i < safeInstallments; i++) {
         const { month: insMonth, year: insYear } = calculateInstallmentDate(startMonth, startYear, i);
-        // Add rounding remainder to the first installment
         const insAmount = i === 0 ? baseInstallmentAmount + remainder : baseInstallmentAmount;
+        const insTpAmount = safeIsThirdParty
+          ? (i === 0 ? baseTpAmount + tpRemainder : baseTpAmount)
+          : null;
 
-        installmentsData.push({
-          purchaseId: purchase.id,
-          creditCardId: card.id,
-          installmentNumber: i + 1,
-          totalInstallments: safeInstallments,
-          amount: Math.round(insAmount * 100) / 100,
-          month: insMonth,
-          year: insYear,
+        const installment = await tx.creditCardInstallment.create({
+          data: {
+            purchaseId: purchase.id,
+            creditCardId: card.id,
+            installmentNumber: i + 1,
+            totalInstallments: safeInstallments,
+            amount: Math.round(insAmount * 100) / 100,
+            month: insMonth,
+            year: insYear,
+            isThirdParty: safeIsThirdParty,
+            thirdPartyName: safeThirdPartyName,
+            thirdPartyAmount: insTpAmount !== null ? Math.round(insTpAmount * 100) / 100 : null,
+          },
         });
-      }
 
-      await tx.creditCardInstallment.createMany({
-        data: installmentsData,
-      });
+        // If this purchase was made for a third party, create a corresponding Receivable in Contas a receber!
+        if (safeIsThirdParty && insTpAmount && insTpAmount > 0) {
+          const dueDayToUse = Math.min(card.dueDay || 10, 28);
+          const dueDate = new Date(Date.UTC(insYear, insMonth - 1, dueDayToUse, 12, 0, 0));
+
+          await tx.receivable.create({
+            data: {
+              userId,
+              creditCardPurchaseId: purchase.id,
+              creditCardInstallmentId: installment.id,
+              description: `${safeThirdPartyName} - ${purchase.description} (${i + 1}/${safeInstallments})`,
+              amount: Math.round(insTpAmount * 100) / 100,
+              dueDate,
+              category: 'Cartão de Terceiros',
+              payer: safeThirdPartyName,
+              notes: `Fatura ${card.name} (${String(insMonth).padStart(2, '0')}/${insYear})`,
+              isReceived: false,
+            },
+          });
+        }
+      }
 
       return purchase;
     });
@@ -393,7 +467,7 @@ export async function createCreditCardPurchase(req: AuthenticatedRequest, res: R
 }
 
 /**
- * 7. Delete a credit card purchase (cascades to all its installments)
+ * 7. Delete a credit card purchase (cascades to all its installments and cleans linked receivables and revenues)
  */
 export async function deleteCreditCardPurchase(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
@@ -402,6 +476,9 @@ export async function deleteCreditCardPurchase(req: AuthenticatedRequest, res: R
 
     const purchase = await prisma.creditCardPurchase.findFirst({
       where: { id, userId },
+      include: {
+        receivables: true,
+      },
     });
 
     if (!purchase) {
@@ -409,8 +486,19 @@ export async function deleteCreditCardPurchase(req: AuthenticatedRequest, res: R
       return;
     }
 
-    await prisma.creditCardPurchase.delete({
-      where: { id },
+    await prisma.$transaction(async (tx) => {
+      // Clean up any revenue created from these receivables
+      for (const rec of purchase.receivables) {
+        if (rec.revenueId) {
+          await tx.revenue.delete({
+            where: { id: rec.revenueId },
+          }).catch(() => {});
+        }
+      }
+
+      await tx.creditCardPurchase.delete({
+        where: { id },
+      });
     });
 
     res.json({ message: 'Compra e parcelas removidas com sucesso' });

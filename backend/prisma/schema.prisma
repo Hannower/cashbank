@@ -25,6 +25,7 @@ model User {
   creditCards      CreditCard[]
   creditCardPurchases CreditCardPurchase[]
   creditCardInvoices  CreditCardInvoice[]
+  receivables         Receivable[]
 }
 
 model FixedExpense {
@@ -97,8 +98,9 @@ model Revenue {
   amount      Float
   date        DateTime
   category    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  receivables Receivable[]
 }
 
 model PiggyBank {
@@ -160,9 +162,13 @@ model CreditCardPurchase {
   installmentsCount Int                     @default(1)
   purchaseDate      DateTime
   category          String                  @default("Outros")
+  isThirdParty      Boolean                 @default(false)
+  thirdPartyName    String?
+  thirdPartyAmount  Float?
   createdAt         DateTime                @default(now())
   updatedAt         DateTime                @updatedAt
   installments      CreditCardInstallment[]
+  receivables       Receivable[]
 }
 
 model CreditCardInstallment {
@@ -176,7 +182,11 @@ model CreditCardInstallment {
   amount            Float              // valor desta parcela
   month             Int                // mês da fatura (1 - 12)
   year              Int                // ano da fatura (ex: 2026)
+  isThirdParty      Boolean            @default(false)
+  thirdPartyName    String?
+  thirdPartyAmount  Float?
   createdAt         DateTime           @default(now())
+  receivables       Receivable[]
 
   @@index([creditCardId, month, year])
   @@index([month, year])
@@ -197,5 +207,30 @@ model CreditCardInvoice {
   updatedAt        DateTime     @updatedAt
 
   @@unique([creditCardId, month, year])
+}
+
+model Receivable {
+  id                      String                 @id @default(uuid())
+  userId                  String
+  user                    User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  description             String
+  amount                  Float
+  dueDate                 DateTime               // Data prevista para recebimento
+  category                String                 @default("Outros")
+  payer                   String?                // De quem vai receber (ex: devedor ou terceiro)
+  isReceived              Boolean                @default(false)
+  receivedAt              DateTime?              // Data da efetivação do recebimento
+  notes                   String?
+  creditCardPurchaseId    String?
+  creditCardPurchase      CreditCardPurchase?    @relation(fields: [creditCardPurchaseId], references: [id], onDelete: Cascade)
+  creditCardInstallmentId String?
+  creditCardInstallment   CreditCardInstallment? @relation(fields: [creditCardInstallmentId], references: [id], onDelete: Cascade)
+  revenueId               String?
+  revenue                 Revenue?               @relation(fields: [revenueId], references: [id], onDelete: SetNull)
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+
+  @@index([userId, dueDate])
+  @@index([userId, isReceived])
 }
 

@@ -7,6 +7,7 @@ import {
   ArrowDownLeft,
   PiggyBank,
   Wallet,
+  HandCoins,
   LogOut,
   X,
 } from 'lucide-react';
@@ -17,6 +18,7 @@ export type NavTab =
   | 'fixed-expenses'
   | 'variable-expenses'
   | 'credit-cards'
+  | 'receivables'
   | 'revenues'
   | 'savings';
 
@@ -27,6 +29,7 @@ interface SidebarProps {
   onClose: () => void;
   fixedPendingCount?: number;
   fixedOrganizedPct?: number;
+  receivablesPendingCount?: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -36,6 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onClose,
   fixedPendingCount = 0,
   fixedOrganizedPct = 0,
+  receivablesPendingCount = 0,
 }) => {
   const { user, logout } = useAuth();
 
@@ -56,19 +60,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'fixed-expenses' as NavTab,
-      label: 'Despesas fixas',
+      label: 'Contas a pagar',
       icon: <CalendarCheck2 size={18} />,
       badge: fixedPendingCount > 0 ? fixedPendingCount : undefined,
     },
     {
       id: 'variable-expenses' as NavTab,
-      label: 'Despesas variáveis',
+      label: 'Gastos variáveis',
       icon: <ShoppingBag size={18} />,
     },
     {
       id: 'credit-cards' as NavTab,
       label: 'Cartões de crédito',
       icon: <CreditCard size={18} />,
+    },
+    {
+      id: 'receivables' as NavTab,
+      label: 'Contas a receber',
+      icon: <HandCoins size={18} />,
+      badge: receivablesPendingCount > 0 ? receivablesPendingCount : undefined,
     },
     {
       id: 'revenues' as NavTab,
@@ -239,8 +249,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
             <div style={{ fontSize: 12, color: '#15803d', lineHeight: 1.4 }}>
               {fixedOrganizedPct > 0
-                ? `Você já organizou ${fixedOrganizedPct}% das despesas fixas.`
-                : 'Cadastre despesas fixas para organizar seu mês.'}
+                ? `Você já organizou ${fixedOrganizedPct}% das contas a pagar.`
+                : 'Cadastre contas a pagar para organizar seu mês.'}
             </div>
           </div>
         </div>

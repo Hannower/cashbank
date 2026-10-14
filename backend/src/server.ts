@@ -15,6 +15,7 @@ import revenueRoutes from './routes/revenueRoutes';
 import savingsRoutes from './routes/savingsRoutes';
 import piggyBankRoutes from './routes/piggyBankRoutes';
 import creditCardRoutes from './routes/creditCardRoutes';
+import receivableRoutes from './routes/receivableRoutes';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -51,6 +52,7 @@ app.use('/api/revenues', revenueRoutes);
 app.use('/api/savings', savingsRoutes);
 app.use('/api/piggy-banks', piggyBankRoutes);
 app.use('/api/credit-cards', creditCardRoutes);
+app.use('/api/receivables', receivableRoutes);
 
 // Error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

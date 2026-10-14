@@ -803,7 +803,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
               Gastos por categoria em {FULL_MONTH_NAMES[selectedMonth.month - 1]} de {selectedMonth.year}
             </h3>
             <p style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)', margin: '2px 0 0' }}>
-              Distribuição proporcional das despesas fixas e variáveis deste mês
+              Distribuição proporcional de contas a pagar e gastos variáveis deste mês
             </p>
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-secondary, #64748b)' }}>
@@ -1623,7 +1623,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                 Gastos por categoria em {selectedAnnualYear}
               </h3>
               <p style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)', margin: '2px 0 0' }}>
-                Consolidação anual de despesas fixas e variáveis por categoria
+                Consolidação anual de contas a pagar e gastos variáveis por categoria
               </p>
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-secondary, #64748b)' }}>
@@ -1747,11 +1747,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                 {editingTx.type === 'revenue'
                   ? 'Receita (Entrada)'
                   : editingTx.type === 'variable_expense'
-                  ? 'Despesa Variável'
+                  ? 'Gasto Variável'
                   : editingTx.type === 'credit_card_payment' || editingTx.originalId?.startsWith('card-invoice-')
                   ? 'Fatura de Cartão de Crédito'
                   : editingTx.type === 'fixed_expense'
-                  ? 'Despesa Fixa'
+                  ? 'Conta a Pagar'
                   : editingTx.type === 'savings_deposit'
                   ? 'Cofrinho (Depósito)'
                   : 'Cofrinho (Resgate)'}

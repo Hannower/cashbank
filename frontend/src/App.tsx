@@ -8,6 +8,7 @@ import { DashboardView } from './views/DashboardView';
 import { FixedExpensesView } from './views/FixedExpensesView';
 import { VariableExpensesView } from './views/VariableExpensesView';
 import { CreditCardsView } from './views/CreditCardsView';
+import { ReceivablesView } from './views/ReceivablesView';
 import { RevenuesView } from './views/RevenuesView';
 import { SavingsView } from './views/SavingsView';
 import { Modal } from './components/Modal';
@@ -19,6 +20,7 @@ import {
   CreditCard,
   ArrowDownLeft,
   PiggyBank,
+  HandCoins,
   PlusCircle,
   Loader2,
 } from 'lucide-react';
@@ -71,19 +73,30 @@ export const App: React.FC = () => {
   // Global badges / indicators
   const [pendingFixedCount, setPendingFixedCount] = useState(0);
   const [organizedPct, setOrganizedPct] = useState(0);
+  const [pendingReceivablesCount, setPendingReceivablesCount] = useState(0);
 
   const refreshSidebarBadges = async () => {
     if (!token) return;
     try {
       const now = new Date();
-      const res = await api.getFixedExpenses(now.getMonth() + 1, now.getFullYear());
-      const pending = res.summary?.pendingAmount > 0
-        ? res.expenses.filter((e: any) => !e.isPaid).length
-        : 0;
-      setPendingFixedCount(pending);
-      const total = res.summary?.totalCount || 0;
-      const paid = res.summary?.paidCount || 0;
-      setOrganizedPct(total > 0 ? Math.round((paid / total) * 100) : 0);
+      const [res, recRes] = await Promise.all([
+        api.getFixedExpenses(now.getMonth() + 1, now.getFullYear()).catch(() => null),
+        api.getReceivables({ status: 'pending' }).catch(() => null),
+      ]);
+
+      if (res) {
+        const pending = res.summary?.pendingAmount > 0
+          ? res.expenses.filter((e: any) => !e.isPaid).length
+          : 0;
+        setPendingFixedCount(pending);
+        const total = res.summary?.totalCount || 0;
+        const paid = res.summary?.paidCount || 0;
+        setOrganizedPct(total > 0 ? Math.round((paid / total) * 100) : 0);
+      }
+
+      if (recRes && recRes.summary) {
+        setPendingReceivablesCount(recRes.summary.pendingCount || 0);
+      }
     } catch (e) {
       // ignore
     }
@@ -143,6 +156,7 @@ export const App: React.FC = () => {
         onClose={() => setMobileSidebarOpen(false)}
         fixedPendingCount={pendingFixedCount}
         fixedOrganizedPct={organizedPct}
+        receivablesPendingCount={pendingReceivablesCount}
       />
 
       {/* Main Content Area */}
@@ -173,6 +187,10 @@ export const App: React.FC = () => {
 
           {currentTab === 'credit-cards' && (
             <CreditCardsView onDataChanged={refreshSidebarBadges} />
+          )}
+
+          {currentTab === 'receivables' && (
+            <ReceivablesView onDataChanged={refreshSidebarBadges} />
           )}
 
           {currentTab === 'revenues' && (
@@ -219,7 +237,7 @@ export const App: React.FC = () => {
               <CalendarCheck2 size={20} />
             </div>
             <div>
-              <div className="quick-action-title">Despesa fixa</div>
+              <div className="quick-action-title">Conta a pagar</div>
               <div className="quick-action-desc">
                 Compromissos recorrentes como aluguel e internet
               </div>
@@ -250,7 +268,7 @@ export const App: React.FC = () => {
               <ShoppingBag size={20} />
             </div>
             <div>
-              <div className="quick-action-title">Despesa variável</div>
+              <div className="quick-action-title">Gasto variável</div>
               <div className="quick-action-desc">
                 Gastos pontuais como lanches, mercado e transporte
               </div>
@@ -284,6 +302,37 @@ export const App: React.FC = () => {
               <div className="quick-action-title">Compra no cartão de crédito</div>
               <div className="quick-action-desc">
                 Lançamento parcelado ou à vista faturado no cartão
+              </div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setQuickLaunchOpen(false);
+              setCurrentTab('receivables');
+            }}
+            className="quick-action-item"
+          >
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                backgroundColor: '#e0e7ff',
+                color: '#4338ca',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <HandCoins size={20} />
+            </div>
+            <div>
+              <div className="quick-action-title">Conta a receber</div>
+              <div className="quick-action-desc">
+                Cobranças, empréstimos ou compras de terceiros no cartão
               </div>
             </div>
           </button>
