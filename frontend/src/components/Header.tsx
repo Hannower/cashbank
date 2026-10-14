@@ -16,7 +16,7 @@ const TAB_TITLES: Record<NavTab, { title: string; breadcrumb: string }> = {
   'variable-expenses': { title: 'Gastos variáveis', breadcrumb: 'CashBank / Gastos variáveis' },
   'credit-cards': { title: 'Cartões de crédito', breadcrumb: 'CashBank / Cartões de crédito' },
   receivables: { title: 'Contas a receber', breadcrumb: 'CashBank / Contas a receber' },
-  revenues: { title: 'Receitas', breadcrumb: 'CashBank / Receitas' },
+  revenues: { title: 'Minha renda', breadcrumb: 'CashBank / Minha renda' },
   savings: { title: 'Poupança', breadcrumb: 'CashBank / Poupança' },
 };
 

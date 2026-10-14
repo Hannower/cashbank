@@ -26,6 +26,7 @@ model User {
   creditCardPurchases CreditCardPurchase[]
   creditCardInvoices  CreditCardInvoice[]
   receivables         Receivable[]
+  receivableReceipts  ReceivableReceipt[]
 }
 
 model FixedExpense {
@@ -100,7 +101,8 @@ model Revenue {
   category    String
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
-  receivables Receivable[]
+  receivables        Receivable[]
+  receivableReceipts ReceivableReceipt[]
 }
 
 model PiggyBank {
@@ -215,7 +217,11 @@ model Receivable {
   user                    User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   description             String
   amount                  Float
-  dueDate                 DateTime               // Data prevista para recebimento
+  dueDate                 DateTime               // Data prevista para recebimento (ou primeiro vencimento)
+  dueDay                  Int?                   // Dia do mês de vencimento (1 - 31)
+  endDate                 DateTime?              // Data final (opcional): se informada, repete até esta data
+  isRecurring             Boolean                @default(false)
+  isSale                  Boolean                @default(false) // Se for Venda, soma e lista em Minha renda ao receber
   category                String                 @default("Outros")
   payer                   String?                // De quem vai receber (ex: devedor ou terceiro)
   isReceived              Boolean                @default(false)
@@ -229,8 +235,44 @@ model Receivable {
   revenue                 Revenue?               @relation(fields: [revenueId], references: [id], onDelete: SetNull)
   createdAt               DateTime               @default(now())
   updatedAt               DateTime               @updatedAt
+  receipts                ReceivableReceipt[]
+  adjustments             ReceivableAdjustment[]
 
   @@index([userId, dueDate])
   @@index([userId, isReceived])
 }
+
+model ReceivableAdjustment {
+  id           String     @id @default(uuid())
+  receivableId String
+  receivable   Receivable @relation(fields: [receivableId], references: [id], onDelete: Cascade)
+  startMonth   Int        // 1 - 12
+  startYear    Int        // 2026, 2027...
+  amount       Float      // Novo valor recorrente a partir deste mês/ano em diante
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([receivableId, startYear, startMonth])
+}
+
+model ReceivableReceipt {
+  id           String     @id @default(uuid())
+  receivableId String
+  receivable   Receivable @relation(fields: [receivableId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  month        Int        // 1 - 12
+  year         Int        // 2026, 2027...
+  isReceived   Boolean    @default(false)
+  receivedAt   DateTime?
+  amount       Float?     // Ajuste customizado pontual para este mês específico
+  revenueId    String?
+  revenue      Revenue?   @relation(fields: [revenueId], references: [id], onDelete: SetNull)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([receivableId, month, year])
+  @@index([userId, month, year])
+}
+
 

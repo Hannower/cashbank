@@ -439,18 +439,25 @@ export async function createCreditCardPurchase(req: AuthenticatedRequest, res: R
           const dueDayToUse = Math.min(card.dueDay || 10, 28);
           const dueDate = new Date(Date.UTC(insYear, insMonth - 1, dueDayToUse, 12, 0, 0));
 
+          const installmentDesc = safeInstallments > 1
+            ? `${purchase.description} (${i + 1}/${safeInstallments})`
+            : purchase.description;
+
           await tx.receivable.create({
             data: {
               userId,
               creditCardPurchaseId: purchase.id,
               creditCardInstallmentId: installment.id,
-              description: `${safeThirdPartyName} - ${purchase.description} (${i + 1}/${safeInstallments})`,
+              description: installmentDesc,
               amount: Math.round(insTpAmount * 100) / 100,
               dueDate,
+              dueDay: dueDayToUse,
               category: 'Cartão de Terceiros',
               payer: safeThirdPartyName,
               notes: `Fatura ${card.name} (${String(insMonth).padStart(2, '0')}/${insYear})`,
               isReceived: false,
+              isRecurring: false,
+              isSale: false,
             },
           });
         }
