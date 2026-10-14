@@ -700,7 +700,8 @@ body.dark-theme textarea::placeholder {
   transition: all 0.15s ease;
 }
 
-.data-table-row:hover td {
+.data-table-row:hover td,
+table tbody tr:not(.empty-row):hover td {
   background-color: #fafbfc;
 }
 
@@ -724,25 +725,27 @@ body.dark-theme .data-table-row {
   border-bottom: 1px solid var(--border-color) !important;
 }
 
-/* Green border hover for table rows in Dark Theme */
+/* Subtle row hover for tables in Dark Theme (matches light theme behavior, adapted for dark) */
 body.dark-theme .data-table-row:hover td,
 body.dark-theme table tbody tr:not(.empty-row):hover td {
-  background-color: rgba(22, 163, 74, 0.08) !important;
-  border-top: 1px solid #16a34a !important;
-  border-bottom: 1px solid #16a34a !important;
-  box-shadow: inset 0 1px 0 #16a34a, inset 0 -1px 0 #16a34a !important;
+  background-color: rgba(255, 255, 255, 0.035) !important;
+  border-top: none !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  border-left: none !important;
+  border-right: none !important;
+  box-shadow: none !important;
 }
 
 body.dark-theme .data-table-row:hover td:first-child,
 body.dark-theme table tbody tr:not(.empty-row):hover td:first-child {
-  border-left: 3px solid #16a34a !important;
-  box-shadow: inset 3px 0 0 #16a34a, inset 0 1px 0 #16a34a, inset 0 -1px 0 #16a34a !important;
+  border-left: none !important;
+  box-shadow: none !important;
 }
 
 body.dark-theme .data-table-row:hover td:last-child,
 body.dark-theme table tbody tr:not(.empty-row):hover td:last-child {
-  border-right: 2px solid #16a34a !important;
-  box-shadow: inset -2px 0 0 #16a34a, inset 0 1px 0 #16a34a, inset 0 -1px 0 #16a34a !important;
+  border-right: none !important;
+  box-shadow: none !important;
 }
 
 body.dark-theme table tbody tr.empty-row:hover td,
@@ -812,10 +815,10 @@ body.dark-theme .month-pill {
 }
 
 body.dark-theme .month-pill:hover:not(.selected) {
-  background-color: #0c1829 !important;
-  border-color: #16a34a !important;
+  background-color: #0e1628 !important;
+  border-color: var(--border-input) !important;
   color: var(--text-main) !important;
-  box-shadow: 0 0 0 1px #16a34a, 0 4px 10px rgba(22, 163, 74, 0.18) !important;
+  box-shadow: none !important;
 }
 
 body.dark-theme .month-pill.selected {
@@ -903,9 +906,9 @@ body.dark-theme .dashboard-list-item {
 }
 
 body.dark-theme .dashboard-list-item:hover {
-  background-color: #0c1829 !important;
-  border-color: #16a34a !important;
-  box-shadow: 0 0 0 1px #16a34a, 0 4px 14px rgba(22, 163, 74, 0.2) !important;
+  background-color: #0e1628 !important;
+  border-color: var(--border-input) !important;
+  box-shadow: none !important;
 }
 
 /* Fallback color and border overrides in dark theme */
@@ -982,9 +985,9 @@ body.dark-theme [style*="borderBottom: 1px solid #f1f5f9"] {
   }
 
   body.dark-theme .expense-mobile-item:hover {
-    background-color: #0c1829 !important;
-    border-color: #16a34a !important;
-    box-shadow: 0 0 0 1px #16a34a, 0 4px 14px rgba(22, 163, 74, 0.2) !important;
+    background-color: #0e1628 !important;
+    border-color: var(--border-input) !important;
+    box-shadow: none !important;
   }
 
   .expense-mobile-header {
@@ -1080,9 +1083,9 @@ body.dark-theme .quick-action-item {
 }
 
 body.dark-theme .quick-action-item:hover {
-  background-color: #0c1829 !important;
-  border-color: #16a34a !important;
-  box-shadow: 0 0 0 1px #16a34a, 0 4px 14px rgba(22, 163, 74, 0.2) !important;
+  background-color: #0e1628 !important;
+  border-color: var(--border-input) !important;
+  box-shadow: none !important;
 }
 
 body.dark-theme .quick-action-title {
@@ -1108,8 +1111,8 @@ body.dark-theme .quick-action-desc {
 
 body.dark-theme .piggy-card:hover {
   transform: translateY(-2px);
-  border-color: #16a34a !important;
-  box-shadow: 0 0 0 1px #16a34a, 0 8px 28px rgba(0, 0, 0, 0.45) !important;
+  border-color: var(--border-input) !important;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45) !important;
 }
 
 .create-piggy-card {
@@ -1652,6 +1655,23 @@ body.dark-theme .sidebar-status-widget .status-widget-desc {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  transition: all 0.15s ease;
+}
+
+.receivables-mobile-card:hover {
+  background-color: #fafbfc;
+  border-color: #e2e8f0;
+}
+
+body.dark-theme .receivables-mobile-card {
+  background-color: #070b16 !important;
+  border-color: var(--border-color) !important;
+}
+
+body.dark-theme .receivables-mobile-card:hover {
+  background-color: #0e1628 !important;
+  border-color: var(--border-input) !important;
+  box-shadow: none !important;
 }
 
 .receivables-mobile-header {
