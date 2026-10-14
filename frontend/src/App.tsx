@@ -361,9 +361,9 @@ export const App: React.FC = () => {
               <ArrowDownLeft size={20} />
             </div>
             <div>
-              <div className="quick-action-title">Receita</div>
+              <div className="quick-action-title">Minha renda</div>
               <div className="quick-action-desc">
-                Entradas financeiras como salários e freelas
+                Entradas financeiras como salários, freelas e vendas
               </div>
             </div>
           </button>

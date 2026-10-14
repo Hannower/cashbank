@@ -5,6 +5,7 @@ import {
   updateReceivable,
   deleteReceivable,
   toggleReceivableReceived,
+  updateReceivableMonthAmount,
 } from '../controllers/receivableController';
 import { authMiddleware } from '../middleware/auth';
 
@@ -17,5 +18,6 @@ router.post('/', createReceivable);
 router.put('/:id', updateReceivable);
 router.delete('/:id', deleteReceivable);
 router.patch('/:id/toggle-received', toggleReceivableReceived);
+router.patch('/:id/adjustment', updateReceivableMonthAmount);
 
 export default router;

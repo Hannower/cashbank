@@ -177,7 +177,7 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
             ENTRADAS DO MÊS
           </div>
           <h1 style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.5px', margin: 0 }}>
-            Receitas
+            Minha renda
           </h1>
           <p style={{ fontSize: 14, color: '#64748b', marginTop: 4, margin: 0 }}>
             Registre e acompanhe todas as suas fontes de renda.
@@ -185,7 +185,7 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
         </div>
 
         <button className="btn-primary" onClick={openCreateModal}>
-          <Plus size={18} /> Registrar receita
+          <Plus size={18} /> Registrar renda
         </button>
       </div>
 
@@ -206,7 +206,7 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
       >
         <div>
           <div style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.85)', marginBottom: 6 }}>
-            Receitas acumuladas em {selectedMonth.label}
+            Renda acumulada em {selectedMonth.label}
           </div>
           <div className="hero-amount" style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 6 }}>
             {formatCurrency(totalAmount)}
@@ -247,7 +247,7 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
           }}
         >
           <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-main, #0f172a)', margin: 0 }}>
-            Histórico de receitas de {selectedMonth.label}
+            Histórico de renda de {selectedMonth.label}
           </h3>
           <span style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)' }}>
             {revenues.length} registro{revenues.length !== 1 ? 's' : ''}
@@ -282,13 +282,13 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
                   <tr className="empty-row">
                     <td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
                       <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px' }} />
-                      Carregando receitas...
+                      Carregando renda...
                     </td>
                   </tr>
                 ) : revenues.length === 0 ? (
                   <tr className="empty-row">
                     <td colSpan={5} style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>
-                      Nenhuma receita cadastrada para {selectedMonth.label}. Clique em "+ Registrar receita" acima para adicionar.
+                      Nenhuma renda cadastrada para {selectedMonth.label}. Clique em "+ Registrar renda" acima para adicionar.
                     </td>
                   </tr>
                 ) : (
@@ -410,11 +410,11 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
           {loading ? (
             <div style={{ padding: 30, textAlign: 'center', color: '#64748b' }}>
               <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px' }} />
-              Carregando receitas...
+              Carregando renda...
             </div>
           ) : revenues.length === 0 ? (
             <div style={{ padding: 24, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
-              Nenhuma receita cadastrada para {selectedMonth.label}. Clique em "+ Registrar receita" acima para adicionar.
+              Nenhuma renda cadastrada para {selectedMonth.label}. Clique em "+ Registrar renda" acima para adicionar.
             </div>
           ) : (
             revenues.map((rev) => (
@@ -546,7 +546,7 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Registrar receita"
+        title="Registrar renda"
         subtitle="Adicione uma nova entrada financeira."
         icon={<ArrowDownLeft size={22} />}
       >
@@ -683,7 +683,7 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
       <Modal
         isOpen={!!editingRevenue}
         onClose={() => setEditingRevenue(null)}
-        title="Editar receita"
+        title="Editar renda"
         subtitle="Altere os dados da entrada financeira."
         icon={<ArrowDownLeft size={22} />}
       >
@@ -819,7 +819,7 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
         isOpen={!!deletingRevenue}
         onClose={() => setDeletingRevenue(null)}
         onConfirm={handleDeleteConfirm}
-        title="Excluir receita"
+        title="Excluir renda"
         itemDescription={deletingRevenue?.description}
         loading={actionLoading}
       />

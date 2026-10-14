@@ -200,7 +200,13 @@ export const api = {
     request<any>(`/receivables/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteReceivable: (id: string) =>
     request<any>(`/receivables/${id}`, { method: 'DELETE' }),
-  toggleReceivableReceived: (id: string, data: { isReceived?: boolean; receivedAt?: string }) =>
-    request<any>(`/receivables/${id}/toggle-received`, { method: 'PATCH', body: JSON.stringify(data) }),
+  toggleReceivableReceived: (
+    id: string,
+    data: { isReceived?: boolean; receivedAt?: string; month?: number; year?: number }
+  ) => request<any>(`/receivables/${id}/toggle-received`, { method: 'PATCH', body: JSON.stringify(data) }),
+  adjustReceivableAmount: (
+    id: string,
+    data: { month: number; year: number; amount: number | null; scope: 'onward' | 'month' | 'all' }
+  ) => request<any>(`/receivables/${id}/adjustment`, { method: 'PATCH', body: JSON.stringify(data) }),
 };
 

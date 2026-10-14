@@ -699,10 +699,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
           </div>
         </div>
 
-        {/* Card 2: Receitas */}
+        {/* Card 2: Minha renda */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 140 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>Receitas</span>
+            <span style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>Minha renda</span>
             <div
               style={{
                 width: 36,
@@ -1071,7 +1071,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                               : isSavingsWithdraw
                               ? 'Resgate'
                               : isRevenue
-                              ? 'Receita'
+                              ? 'Minha renda'
                               : isCreditCard
                               ? 'Cartão'
                               : isFixed
@@ -1349,10 +1349,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
             </div>
           </div>
 
-          {/* Receitas Anuais */}
+          {/* Renda Anual */}
           <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 140 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-muted, #64748b)', fontWeight: 500 }}>Receitas do ano</span>
+              <span style={{ fontSize: 13, color: 'var(--text-muted, #64748b)', fontWeight: 500 }}>Renda do ano</span>
               <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#ecfdf5', color: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ArrowDownLeft size={18} />
               </div>
@@ -1415,7 +1415,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
             <div>
               <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--text-main, #0f172a)' }}>
-                Comparativo de receitas e despesas por mês
+                Comparativo de renda e despesas por mês
               </h3>
               <p style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)', margin: '2px 0 0' }}>
                 Evolução financeira ao longo dos 12 meses de {selectedAnnualYear} (clique em um mês para abrir)
@@ -1425,7 +1425,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 12, fontWeight: 600 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: '#16a34a' }} />
-                <span style={{ color: 'var(--text-secondary, #64748b)' }}>Receitas</span>
+                <span style={{ color: 'var(--text-secondary, #64748b)' }}>Minha renda</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: '#ea580c' }} />
@@ -1520,7 +1520,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                 Detalhamento mensal consolidado
               </h3>
               <p style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)', margin: '2px 0 0' }}>
-                Todos os meses do ano com demonstrativo de receitas, despesas e saldo
+                Todos os meses do ano com demonstrativo de renda, despesas e saldo
               </p>
             </div>
             <span style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)' }}>
@@ -1536,7 +1536,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                     MÊS
                   </th>
                   <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: 'var(--text-muted, #94a3b8)', letterSpacing: '0.5px' }}>
-                    RECEITAS
+                    MINHA RENDA
                   </th>
                   <th style={{ padding: '12px 20px', fontSize: 11, fontWeight: 700, color: 'var(--text-muted, #94a3b8)', letterSpacing: '0.5px' }}>
                     DESPESAS
@@ -1575,7 +1575,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                         {formatCurrency(m.saldo)}
                       </td>
                       <td style={{ padding: '16px 20px', fontSize: 12, color: 'var(--text-muted, #64748b)' }}>
-                        {m.fixedCount} fixas • {m.varCount} variáveis • {m.revCount} receitas
+                        {m.fixedCount} fixas • {m.varCount} variáveis • {m.revCount} rendas
                       </td>
                       <td style={{ padding: '16px 24px', textAlign: 'right' }}>
                         <button
@@ -1745,7 +1745,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                 }}
               >
                 {editingTx.type === 'revenue'
-                  ? 'Receita (Entrada)'
+                  ? 'Minha renda (Entrada)'
                   : editingTx.type === 'variable_expense'
                   ? 'Gasto Variável'
                   : editingTx.type === 'credit_card_payment' || editingTx.originalId?.startsWith('card-invoice-')

@@ -82,7 +82,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'revenues' as NavTab,
-      label: 'Receitas',
+      label: 'Minha renda',
       icon: <ArrowDownLeft size={18} />,
     },
     {
@@ -221,33 +221,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Bottom Monthly Status Widget */}
         <div style={{ padding: '0 16px 16px' }}>
-          <div
-            style={{
-              backgroundColor: '#f0fdf4',
-              border: '1px solid #dcfce7',
-              borderRadius: 14,
-              padding: '14px',
-            }}
-          >
-            <div
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 8,
-                backgroundColor: '#dcfce7',
-                color: '#15803d',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 10,
-              }}
-            >
+          <div className="sidebar-status-widget">
+            <div className="status-widget-icon">
               <Wallet size={16} />
             </div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#166534', marginBottom: 2 }}>
+            <div className="status-widget-title">
               Seu mês em ordem
             </div>
-            <div style={{ fontSize: 12, color: '#15803d', lineHeight: 1.4 }}>
+            <div className="status-widget-desc">
               {fixedOrganizedPct > 0
                 ? `Você já organizou ${fixedOrganizedPct}% das contas a pagar.`
                 : 'Cadastre contas a pagar para organizar seu mês.'}
