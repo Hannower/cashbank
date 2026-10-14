@@ -270,6 +270,9 @@ export async function getInvoicesOverview(req: AuthenticatedRequest, res: Respon
             thirdPartyName: tpName,
             thirdPartyAmount: tpAmount,
             isReceived,
+            creditCardId: ins.creditCardId,
+            month: ins.month,
+            year: ins.year,
           };
         }),
         installmentsSum,
@@ -470,6 +473,209 @@ export async function createCreditCardPurchase(req: AuthenticatedRequest, res: R
   } catch (error) {
     console.error('createCreditCardPurchase error:', error);
     res.status(500).json({ message: 'Erro ao registrar compra no cartão' });
+  }
+}
+
+/**
+ * 7. Update an existing credit card purchase and recalculate installments/receivables
+ */
+export async function updateCreditCardPurchase(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const userId = req.userId!;
+    const { id } = req.params;
+    const {
+      creditCardId,
+      description,
+      totalAmount,
+      installmentsCount,
+      purchaseDate,
+      category,
+      firstInvoiceMonth,
+      firstInvoiceYear,
+      isThirdParty,
+      thirdPartyName,
+      thirdPartyAmount,
+    } = req.body;
+
+    const existingPurchase = await prisma.creditCardPurchase.findFirst({
+      where: { id, userId },
+      include: {
+        receivables: true,
+        installments: true,
+      },
+    });
+
+    if (!existingPurchase) {
+      res.status(404).json({ message: 'Compra não encontrada' });
+      return;
+    }
+
+    const targetCardId = creditCardId || existingPurchase.creditCardId;
+    const card = await prisma.creditCard.findFirst({
+      where: { id: targetCardId, userId },
+    });
+
+    if (!card) {
+      res.status(404).json({ message: 'Cartão não encontrado' });
+      return;
+    }
+
+    const safeDescription = description !== undefined ? String(description).trim() : existingPurchase.description;
+    if (!safeDescription) {
+      res.status(400).json({ message: 'Descrição é obrigatória' });
+      return;
+    }
+
+    const parsedTotal = totalAmount !== undefined
+      ? parseFloat(String(totalAmount).replace(',', '.'))
+      : existingPurchase.totalAmount;
+
+    if (isNaN(parsedTotal) || parsedTotal <= 0) {
+      res.status(400).json({ message: 'Valor da compra deve ser maior que zero' });
+      return;
+    }
+
+    const safeIsThirdParty = isThirdParty !== undefined ? Boolean(isThirdParty) : existingPurchase.isThirdParty;
+    const safeThirdPartyName = safeIsThirdParty
+      ? ((thirdPartyName && String(thirdPartyName).trim()) || existingPurchase.thirdPartyName || 'Terceiro')
+      : null;
+
+    const parsedThirdPartyTotal = safeIsThirdParty
+      ? (thirdPartyAmount !== undefined && thirdPartyAmount !== null && thirdPartyAmount !== ''
+          ? parseFloat(String(thirdPartyAmount).replace(',', '.'))
+          : (existingPurchase.thirdPartyAmount ?? parsedTotal))
+      : null;
+
+    const count = installmentsCount !== undefined
+      ? parseInt(String(installmentsCount))
+      : existingPurchase.installmentsCount;
+    const safeInstallments = isNaN(count) || count < 1 ? 1 : count;
+
+    const pDate = purchaseDate ? new Date(purchaseDate) : existingPurchase.purchaseDate;
+
+    // Determine starting month and year for the first invoice:
+    let startMonth: number;
+    let startYear: number;
+
+    if (firstInvoiceMonth && firstInvoiceYear) {
+      startMonth = parseInt(String(firstInvoiceMonth));
+      startYear = parseInt(String(firstInvoiceYear));
+    } else {
+      const pDay = pDate.getUTCDate() || pDate.getDate();
+      let pMonth = pDate.getUTCMonth() + 1;
+      let pYear = pDate.getUTCFullYear();
+
+      if (pDay > card.closingDay) {
+        pMonth += 1;
+        if (pMonth > 12) {
+          pMonth = 1;
+          pYear += 1;
+        }
+      }
+      startMonth = pMonth;
+      startYear = pYear;
+    }
+
+    // Base installment calculation
+    const baseInstallmentAmount = Math.floor((parsedTotal / safeInstallments) * 100) / 100;
+    const remainder = Math.round((parsedTotal - baseInstallmentAmount * safeInstallments) * 100) / 100;
+
+    // Third party installment distribution
+    const tpTotal = parsedThirdPartyTotal ?? 0;
+    const baseTpAmount = safeIsThirdParty ? Math.floor((tpTotal / safeInstallments) * 100) / 100 : 0;
+    const tpRemainder = safeIsThirdParty ? Math.round((tpTotal - baseTpAmount * safeInstallments) * 100) / 100 : 0;
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Clean up revenues from existing receivables of this purchase
+      for (const rec of existingPurchase.receivables) {
+        if (rec.revenueId) {
+          await tx.revenue.delete({ where: { id: rec.revenueId } }).catch(() => {});
+        }
+      }
+
+      // 2. Delete existing receivables and installments
+      await tx.receivable.deleteMany({
+        where: { creditCardPurchaseId: id },
+      });
+      await tx.creditCardInstallment.deleteMany({
+        where: { purchaseId: id },
+      });
+
+      // 3. Update the purchase record
+      const updatedPurchase = await tx.creditCardPurchase.update({
+        where: { id },
+        data: {
+          creditCardId: card.id,
+          description: safeDescription,
+          totalAmount: parsedTotal,
+          installmentsCount: safeInstallments,
+          purchaseDate: pDate,
+          category: category !== undefined ? (category ? category.trim() : 'Outros') : existingPurchase.category,
+          isThirdParty: safeIsThirdParty,
+          thirdPartyName: safeThirdPartyName,
+          thirdPartyAmount: parsedThirdPartyTotal,
+        },
+      });
+
+      // 4. Create recalculated installments and linked receivables
+      for (let i = 0; i < safeInstallments; i++) {
+        const { month: insMonth, year: insYear } = calculateInstallmentDate(startMonth, startYear, i);
+        const insAmount = i === 0 ? baseInstallmentAmount + remainder : baseInstallmentAmount;
+        const insTpAmount = safeIsThirdParty
+          ? (i === 0 ? baseTpAmount + tpRemainder : baseTpAmount)
+          : null;
+
+        const installment = await tx.creditCardInstallment.create({
+          data: {
+            purchaseId: updatedPurchase.id,
+            creditCardId: card.id,
+            installmentNumber: i + 1,
+            totalInstallments: safeInstallments,
+            amount: Math.round(insAmount * 100) / 100,
+            month: insMonth,
+            year: insYear,
+            isThirdParty: safeIsThirdParty,
+            thirdPartyName: safeThirdPartyName,
+            thirdPartyAmount: insTpAmount !== null ? Math.round(insTpAmount * 100) / 100 : null,
+          },
+        });
+
+        // If this purchase was made for a third party, create a corresponding Receivable in Contas a receber!
+        if (safeIsThirdParty && insTpAmount && insTpAmount > 0) {
+          const dueDayToUse = Math.min(card.dueDay || 10, 28);
+          const dueDate = new Date(Date.UTC(insYear, insMonth - 1, dueDayToUse, 12, 0, 0));
+
+          const installmentDesc = safeInstallments > 1
+            ? `${updatedPurchase.description} (${i + 1}/${safeInstallments})`
+            : updatedPurchase.description;
+
+          await tx.receivable.create({
+            data: {
+              userId,
+              creditCardPurchaseId: updatedPurchase.id,
+              creditCardInstallmentId: installment.id,
+              description: installmentDesc,
+              amount: Math.round(insTpAmount * 100) / 100,
+              dueDate,
+              dueDay: dueDayToUse,
+              category: 'Cartão de Terceiros',
+              payer: safeThirdPartyName,
+              notes: `Fatura ${card.name} (${String(insMonth).padStart(2, '0')}/${insYear})`,
+              isReceived: false,
+              isRecurring: false,
+              isSale: false,
+            },
+          });
+        }
+      }
+
+      return updatedPurchase;
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('updateCreditCardPurchase error:', error);
+    res.status(500).json({ message: 'Erro ao atualizar compra no cartão' });
   }
 }
 

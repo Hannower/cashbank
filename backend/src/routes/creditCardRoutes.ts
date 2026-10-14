@@ -6,6 +6,7 @@ import {
   deleteCreditCard,
   getInvoicesOverview,
   createCreditCardPurchase,
+  updateCreditCardPurchase,
   deleteCreditCardPurchase,
   toggleInvoicePayment,
   updateInvoiceAdjustment,
@@ -25,6 +26,7 @@ router.delete('/:id', deleteCreditCard);
 // Invoices & Purchases
 router.get('/invoices', getInvoicesOverview);
 router.post('/purchases', createCreditCardPurchase);
+router.put('/purchases/:id', updateCreditCardPurchase);
 router.delete('/purchases/:id', deleteCreditCardPurchase);
 router.patch('/:id/invoices/toggle-payment', toggleInvoicePayment);
 router.patch('/:id/invoices/adjustment', updateInvoiceAdjustment);

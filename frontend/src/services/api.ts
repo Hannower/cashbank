@@ -166,6 +166,8 @@ export const api = {
   },
   createCreditCardPurchase: (data: any) =>
     request<any>('/credit-cards/purchases', { method: 'POST', body: JSON.stringify(data) }),
+  updateCreditCardPurchase: (id: string, data: any) =>
+    request<any>(`/credit-cards/purchases/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteCreditCardPurchase: (id: string) =>
     request<any>(`/credit-cards/purchases/${id}`, { method: 'DELETE' }),
   toggleCreditCardInvoicePayment: (id: string, data: { month: number; year: number; isPaid: boolean }) =>

@@ -124,6 +124,7 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [isCardModalOpen, setIsCardModalOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<CreditCardInfo | null>(null);
+  const [editingPurchase, setEditingPurchase] = useState<InstallmentItem | null>(null);
   const [deletingCard, setDeletingCard] = useState<CreditCardInfo | null>(null);
   const [deletingPurchase, setDeletingPurchase] = useState<InstallmentItem | null>(null);
   const [adjustingCardItem, setAdjustingCardItem] = useState<CardOverviewItem | null>(null);
@@ -252,8 +253,9 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
     }
   };
 
-  // --- Handlers: Purchase Create & Delete ---
+  // --- Handlers: Purchase Create, Edit & Delete ---
   const handleOpenPurchaseModal = (targetCardId?: string) => {
+    setEditingPurchase(null);
     if (targetCardId) {
       setPurchaseCardId(targetCardId);
     } else if (overview?.cards?.length) {
@@ -267,6 +269,25 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
     setPurchaseIsThirdParty(false);
     setPurchaseThirdPartyName('');
     setPurchaseThirdPartyAmount('');
+    setIsPurchaseModalOpen(true);
+  };
+
+  const handleOpenEditPurchaseModal = (ins: InstallmentItem, card: CreditCardInfo) => {
+    setEditingPurchase(ins);
+    setPurchaseCardId(card.id);
+    setPurchaseDesc(ins.description);
+    setPurchaseAmount(String(ins.totalPurchaseAmount));
+    setPurchaseInstallments(String(ins.totalInstallments || 1));
+    const formattedDate = ins.purchaseDate ? ins.purchaseDate.split('T')[0] : new Date().toISOString().split('T')[0];
+    setPurchaseDate(formattedDate);
+    setPurchaseCategory(ins.category || 'Alimentação');
+    setPurchaseIsThirdParty(Boolean(ins.isThirdParty));
+    setPurchaseThirdPartyName(ins.thirdPartyName || '');
+    setPurchaseThirdPartyAmount(
+      ins.thirdPartyAmount !== null && ins.thirdPartyAmount !== undefined
+        ? String(ins.thirdPartyAmount)
+        : (ins.isThirdParty ? String(ins.totalPurchaseAmount) : '')
+    );
     setIsPurchaseModalOpen(true);
   };
 
@@ -293,13 +314,19 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
         }
       }
 
-      await api.createCreditCardPurchase(payload);
+      if (editingPurchase) {
+        await api.updateCreditCardPurchase(editingPurchase.purchaseId, payload);
+      } else {
+        await api.createCreditCardPurchase(payload);
+      }
+
       setIsPurchaseModalOpen(false);
+      setEditingPurchase(null);
       await fetchOverview();
       onDataChanged?.();
     } catch (err) {
-      console.error('Error creating purchase:', err);
-      alert('Erro ao registrar compra no cartão.');
+      console.error('Error saving purchase:', err);
+      alert(editingPurchase ? 'Erro ao atualizar compra no cartão.' : 'Erro ao registrar compra no cartão.');
     } finally {
       setActionLoading(false);
     }
@@ -1358,25 +1385,46 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
                           {formatCurrency(ins.totalPurchaseAmount)}
                         </td>
                         <td style={{ padding: '14px 20px', textAlign: 'right' }}>
-                          <button
-                            onClick={() => setDeletingPurchase(ins)}
-                            title="Excluir compra e parcelas"
-                            style={{
-                              color: '#94a3b8',
-                              padding: 6,
-                              borderRadius: 6,
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
-                            onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <button
+                              onClick={() => handleOpenEditPurchaseModal(ins, card)}
+                              title="Editar compra"
+                              style={{
+                                color: '#94a3b8',
+                                padding: 6,
+                                borderRadius: 6,
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.color = '#2563eb')}
+                              onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <button
+                              onClick={() => setDeletingPurchase(ins)}
+                              title="Excluir compra e parcelas"
+                              style={{
+                                color: '#94a3b8',
+                                padding: 6,
+                                borderRadius: 6,
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
+                              onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1479,7 +1527,24 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
                     </div>
                   </div>
 
-                  <div className="expense-mobile-footer" style={{ justifyContent: 'flex-end' }}>
+                  <div className="expense-mobile-footer" style={{ justifyContent: 'flex-end', gap: 10 }}>
+                    <button
+                      onClick={() => handleOpenEditPurchaseModal(ins, card)}
+                      title="Editar compra"
+                      style={{
+                        color: '#2563eb',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        fontSize: 12,
+                        padding: '4px 8px',
+                      }}
+                    >
+                      <Pencil size={14} /> Editar compra
+                    </button>
                     <button
                       onClick={() => setDeletingPurchase(ins)}
                       title="Excluir compra"
@@ -1506,14 +1571,21 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
       </div>
 
       {/* =========================================================
-         MODAL 1: NOVA COMPRA NO CARTÃO
+         MODAL 1: NOVA COMPRA / EDITAR COMPRA NO CARTÃO
          ========================================================= */}
       <Modal
         isOpen={isPurchaseModalOpen}
-        onClose={() => setIsPurchaseModalOpen(false)}
-        title="Nova compra no cartão"
-        subtitle="Informe os dados da compra e as parcelas serão distribuídas automaticamente."
-        icon={<CreditCard size={22} />}
+        onClose={() => {
+          setIsPurchaseModalOpen(false);
+          setEditingPurchase(null);
+        }}
+        title={editingPurchase ? 'Editar compra no cartão' : 'Nova compra no cartão'}
+        subtitle={
+          editingPurchase
+            ? 'Altere as informações da compra e as parcelas serão recalculadas automaticamente.'
+            : 'Informe os dados da compra e as parcelas serão distribuídas automaticamente.'
+        }
+        icon={editingPurchase ? <Pencil size={22} /> : <CreditCard size={22} />}
         maxWidth="500px"
       >
         <form onSubmit={handleSavePurchase} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1701,11 +1773,18 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
 
           {/* Action buttons */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
-            <button type="button" className="btn-secondary" onClick={() => setIsPurchaseModalOpen(false)}>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                setIsPurchaseModalOpen(false);
+                setEditingPurchase(null);
+              }}
+            >
               Cancelar
             </button>
             <button type="submit" className="btn-primary" disabled={actionLoading}>
-              {actionLoading ? 'Salvando...' : 'Salvar compra'}
+              {actionLoading ? 'Salvando...' : editingPurchase ? 'Salvar alterações' : 'Salvar compra'}
             </button>
           </div>
         </form>

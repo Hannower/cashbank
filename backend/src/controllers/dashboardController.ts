@@ -79,7 +79,7 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
       };
     });
 
-    // Credit Card invoices for currentMonth/currentYear
+    // Credit Card invoices for currentMonth/currentYear (excluding third-party purchases from Visão geral)
     const creditCards = await prisma.creditCard.findMany({
       where: { userId },
       include: {
@@ -88,13 +88,15 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
         },
         installments: {
           where: { month: currentMonth, year: currentYear },
+          include: {
+            purchase: true,
+          },
         },
       },
       orderBy: { dueDay: 'asc' },
     });
 
     const creditCardExpenses = creditCards
-      .filter((card) => card.installments.length > 0 || (card.invoices[0] && (card.invoices[0].manualAdjustment !== null || card.invoices[0].isPaid)))
       .map((card) => {
         const invoice = card.invoices[0];
         const installmentsSum = card.installments.reduce((acc, curr) => acc + curr.amount, 0);
@@ -102,24 +104,43 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
         const totalAmount = Math.max(0, Math.round((installmentsSum + manualAdj) * 100) / 100);
         const isPaid = invoice ? invoice.isPaid : false;
 
+        // Compras de terceiros no cartão não são computadas para a seção Visão geral
+        const thirdPartySum = card.installments.reduce((acc, curr) => {
+          const isThird = curr.isThirdParty || curr.purchase?.isThirdParty;
+          if (isThird) {
+            const val = curr.thirdPartyAmount !== null && curr.thirdPartyAmount !== undefined
+              ? curr.thirdPartyAmount
+              : curr.amount;
+            return acc + val;
+          }
+          return acc;
+        }, 0);
+        const roundedThirdParty = Math.round(thirdPartySum * 100) / 100;
+        const holderSum = Math.max(0, Math.round((totalAmount - roundedThirdParty) * 100) / 100);
+
         return {
           id: `card-invoice-${card.id}`,
+          creditCardId: card.id,
           description: `Fatura ${card.name}`,
-          amount: totalAmount,
-          baseAmount: totalAmount,
-          adjustedBaseAmount: totalAmount,
+          amount: holderSum, // Apenas o valor do titular é considerado na Visão geral
+          totalInvoiceAmount: totalAmount,
+          holderAmount: holderSum,
+          thirdPartyAmount: roundedThirdParty,
+          baseAmount: holderSum,
+          adjustedBaseAmount: holderSum,
           hasCustomAmount: invoice?.manualAdjustment !== null && invoice?.manualAdjustment !== undefined,
           isEstimated: false,
           hasAdjustment: false,
           dueDay: card.dueDay,
-          firstDueDate: new Date(Date.UTC(currentYear, currentMonth - 1, card.dueDay)),
+          firstDueDate: new Date(Date.UTC(currentYear, currentMonth - 1, Math.min(card.dueDay, 28))),
           endDate: null,
           category: 'Cartão de Crédito',
           pixKey: null,
           isPaid,
           paidAt: invoice?.paidAt || null,
         };
-      });
+      })
+      .filter((card) => card.amount > 0 || (card.isPaid && card.totalInvoiceAmount > 0) || card.hasCustomAmount);
 
     const allFixedFormatted = [...fixedFormatted, ...creditCardExpenses];
 
@@ -228,7 +249,7 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
 
     // 8. Upcoming Bills (pending fixed expenses with effective amounts)
     const upcomingBills = allFixedFormatted
-      .filter((e) => !e.isPaid)
+      .filter((e) => !e.isPaid && e.amount > 0)
       .map((e) => {
         const monthLabel = FULL_MONTH_NAMES[currentMonth - 1]?.slice(0, 3) || 'mês';
         return {
@@ -470,7 +491,7 @@ export async function getDashboardAnnual(req: AuthenticatedRequest, res: Respons
     const startOfYear = new Date(Date.UTC(year, 0, 1, 0, 0, 0, 0));
     const endOfYear = new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999));
 
-    const [user, revenues, variableExpenses, fixedExpenses, savings] = await Promise.all([
+    const [user, revenues, variableExpenses, fixedExpenses, savings, creditCards] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
         select: { name: true, createdAt: true },
@@ -495,6 +516,20 @@ export async function getDashboardAnnual(req: AuthenticatedRequest, res: Respons
       prisma.savings.findMany({
         where: { userId, date: { gte: startOfYear, lte: endOfYear } },
         orderBy: { date: 'asc' },
+      }),
+      prisma.creditCard.findMany({
+        where: { userId },
+        include: {
+          invoices: {
+            where: { year },
+          },
+          installments: {
+            where: { year },
+            include: {
+              purchase: true,
+            },
+          },
+        },
       }),
     ]);
 
@@ -540,7 +575,37 @@ export async function getDashboardAnnual(req: AuthenticatedRequest, res: Respons
         return acc + effectiveAmount;
       }, 0);
 
-      const monthExpensesTotal = monthVarTotal + monthFixedTotal;
+      // Month credit cards (titular amount only, excluding third party purchases)
+      let monthCardsHolderTotal = 0;
+      for (const card of creditCards) {
+        const cardIns = card.installments.filter((ins) => ins.month === m);
+        const inv = card.invoices.find((i) => i.month === m);
+        if (cardIns.length > 0 || (inv && (inv.manualAdjustment !== null || inv.isPaid))) {
+          const insSum = cardIns.reduce((acc, curr) => acc + curr.amount, 0);
+          const manualAdj = inv?.manualAdjustment ?? 0;
+          const totalAmount = Math.max(0, Math.round((insSum + manualAdj) * 100) / 100);
+
+          const tpSum = cardIns.reduce((acc, curr) => {
+            const isThird = curr.isThirdParty || curr.purchase?.isThirdParty;
+            if (isThird) {
+              const val = curr.thirdPartyAmount !== null && curr.thirdPartyAmount !== undefined
+                ? curr.thirdPartyAmount
+                : curr.amount;
+              return acc + val;
+            }
+            return acc;
+          }, 0);
+          const roundedTp = Math.round(tpSum * 100) / 100;
+          const holderSum = Math.max(0, Math.round((totalAmount - roundedTp) * 100) / 100);
+
+          monthCardsHolderTotal += holderSum;
+          if (holderSum > 0) {
+            categoryTotals['Cartão de Crédito'] = (categoryTotals['Cartão de Crédito'] || 0) + holderSum;
+          }
+        }
+      }
+
+      const monthExpensesTotal = monthVarTotal + monthFixedTotal + monthCardsHolderTotal;
       const monthSaldo = monthRevTotal - monthExpensesTotal;
 
       totalAnnualRevenues += monthRevTotal;
