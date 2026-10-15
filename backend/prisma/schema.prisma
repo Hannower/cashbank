@@ -13,7 +13,7 @@ model User {
   name             String
   email            String                @unique
   password         String
-  savingsGoal      Float                 @default(2720.0) // Target amount for savings goal (e.g. 1850 / 2720 = ~68%)
+  savingsGoal      Float                 @default(0.0) // Meta opcional de poupança
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
   fixedExpenses    FixedExpense[]

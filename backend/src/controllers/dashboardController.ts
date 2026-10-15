@@ -215,7 +215,7 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
 
     const totalSavings = savingsItems.reduce((acc, curr) => acc + curr.amount, 0);
     const sumPiggyGoals = allPiggyBanks.reduce((acc, curr) => acc + (curr.targetAmount || 0), 0);
-    const savingsGoal = sumPiggyGoals > 0 ? sumPiggyGoals : (user.savingsGoal || 0);
+    const savingsGoal = sumPiggyGoals > 0 ? sumPiggyGoals : 0;
     const savingsPct = savingsGoal > 0 ? Math.min(Math.round((totalSavings / savingsGoal) * 100), 100) : 0;
 
     const monthSavings = savingsItems.filter((s) => {

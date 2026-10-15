@@ -571,8 +571,9 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
                 </span>
               </div>
             ) : (
-              <div style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
-                Defina metas em seus cofrinhos para acompanhar o progresso passo a passo.
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(255, 255, 255, 0.8)', fontSize: 13 }}>
+                <Target size={15} style={{ opacity: 0.65 }} />
+                <span>Sem metas determinadas</span>
               </div>
             )}
           </div>
@@ -775,7 +776,7 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
                       {formatCurrency(pb.currentAmount)}
                     </div>
 
-                    {pb.targetAmount > 0 && (
+                    {pb.targetAmount > 0 ? (
                       <div style={{ fontSize: 12, color: 'var(--text-secondary, #64748b)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span>Meta: {formatCurrency(pb.targetAmount)}</span>
                         <span>•</span>
@@ -786,6 +787,11 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
                         ) : (
                           <span>Faltam {formatCurrency(pb.remainingAmount)}</span>
                         )}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <Target size={13} style={{ opacity: 0.6 }} />
+                        <span>Sem meta definida</span>
                       </div>
                     )}
                   </div>
@@ -1346,18 +1352,21 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label className="form-label">
-                Meta de Valor (R$)
+                Meta de Valor (R$) <span style={{ fontWeight: 400, color: 'var(--text-muted, #94a3b8)' }}>(Opcional)</span>
               </label>
               <div className="currency-input-wrapper">
                 <span className="currency-input-prefix">R$</span>
                 <input
                   type="text"
-                  placeholder="0,00"
+                  placeholder="0,00 (sem meta)"
                   value={piggyTargetAmount}
                   onChange={(e) => setPiggyTargetAmount(e.target.value)}
                   className="currency-input-field"
                 />
               </div>
+              <span style={{ fontSize: 11, color: 'var(--text-muted, #94a3b8)', marginTop: 4, display: 'block' }}>
+                Deixe em branco ou zerado para guardar livremente.
+              </span>
             </div>
 
             <div>

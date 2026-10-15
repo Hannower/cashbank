@@ -58,9 +58,9 @@ export async function getSavings(req: AuthenticatedRequest, res: Response): Prom
     });
 
     const totalSaved = savings.reduce((acc, curr) => acc + curr.amount, 0);
-    // Goal can be sum of all piggy banks targetAmount, or fallback to user.savingsGoal
-    const totalGoalsFromPiggy = formattedPiggyBanks.reduce((acc, curr) => acc + curr.targetAmount, 0);
-    const savingsGoal = totalGoalsFromPiggy > 0 ? totalGoalsFromPiggy : (user?.savingsGoal || 2720.59);
+    // A meta acumulada é a soma das metas dos cofrinhos ativos (totalmente opcional)
+    const totalGoalsFromPiggy = formattedPiggyBanks.reduce((acc, curr) => acc + (curr.targetAmount || 0), 0);
+    const savingsGoal = totalGoalsFromPiggy > 0 ? totalGoalsFromPiggy : 0;
     const progressPercentage = savingsGoal > 0 ? Math.min(Math.round((totalSaved / savingsGoal) * 100), 100) : 0;
 
     res.json({
