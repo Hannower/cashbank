@@ -465,8 +465,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
     )
     .reduce((acc, t) => acc + (t.amount || 0), 0);
 
-  const saldo = data?.kpis?.saldoDisponivel ?? 0;
-  const isNegative = saldo < 0;
+  const saldoAtual = data?.kpis?.saldoAtual ?? data?.kpis?.saldoDisponivel ?? 0;
+  const saldoPrevisto = data?.kpis?.saldoPrevisto ?? saldoAtual;
+  const despesasPagas = data?.kpis?.despesasPagas ?? 0;
+  const despesasPendentes = data?.kpis?.despesasPendentes ?? 0;
+  const despesasTotais = data?.kpis?.despesasTotais ?? 0;
+  const isNegative = saldoAtual < 0;
 
   return (
     <div className="content-container animate-fade-in">
@@ -640,14 +644,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
 
       {/* KPI Cards Grid */}
       <div className="kpi-cards-grid">
-        {/* Card 1: Saldo Disponível (Vermelho se negativo, verde se positivo) */}
+        {/* Card 1: Saldo em conta (Realizado) e Previsto pós-contas (Abordagem Híbrida) */}
         <div
           style={{
             background: isNegative
               ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
               : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
             borderRadius: 16,
-            padding: 24,
+            padding: '20px 22px',
             color: 'white',
             position: 'relative',
             overflow: 'hidden',
@@ -675,9 +679,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
           />
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.9)', fontWeight: 500 }}>
-              Saldo disponível
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.95)', fontWeight: 600 }}>
+                Saldo em conta
+              </span>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: '0.4px',
+                  padding: '2px 7px',
+                  borderRadius: 6,
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  color: '#ffffff',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Realizado
+              </span>
+            </div>
             <button
               onClick={() => setShowBalance(!showBalance)}
               style={{
@@ -693,13 +713,42 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
             </button>
           </div>
 
-          <div style={{ margin: '14px 0 10px' }}>
+          <div style={{ margin: '10px 0 8px' }}>
             <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.5px' }}>
-              {showBalance ? formatCurrency(saldo) : '••••••'}
+              {showBalance ? formatCurrency(saldoAtual) : '••••••'}
             </span>
           </div>
 
-          <div style={{ fontSize: 12, color: isNegative ? '#fecaca' : '#86efac', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+          {/* Projeção Prevista pós-contas */}
+          <div
+            style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.16)',
+              backdropFilter: 'blur(4px)',
+              border: '1px solid rgba(255, 255, 255, 0.16)',
+              borderRadius: 8,
+              padding: '6px 10px',
+              marginBottom: 8,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8,
+              fontSize: 11,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ opacity: 0.9, fontWeight: 500 }}>Previsto pós-contas:</span>
+              <strong style={{ fontWeight: 800, color: saldoPrevisto < 0 ? '#fca5a5' : '#ffffff' }}>
+                {showBalance ? formatCurrency(saldoPrevisto) : '••••••'}
+              </strong>
+            </div>
+            <span style={{ opacity: 0.85, fontSize: 10 }}>
+              {despesasPendentes > 0
+                ? `(${showBalance ? formatCurrency(despesasPendentes) : '••••'} a pagar)`
+                : '✓ Contas quitadas'}
+            </span>
+          </div>
+
+          <div style={{ fontSize: 11, color: isNegative ? '#fecaca' : '#86efac', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
             <span>{data?.kpis?.saldoGrowthPct > 0 ? `↑ ${data.kpis.saldoGrowthPct}%` : '0.0%'}</span>
             <span style={{ color: 'rgba(255, 255, 255, 0.8)', fontWeight: 400 }}>em relação ao mês anterior</span>
           </div>
@@ -759,12 +808,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
 
           <div style={{ margin: '14px 0 10px' }}>
             <span style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.5px' }}>
-              {showBalance ? formatCurrency(data?.kpis?.despesasTotais ?? 0) : '••••••'}
+              {showBalance ? formatCurrency(despesasTotais) : '••••••'}
             </span>
           </div>
 
           <div style={{ fontSize: 12, color: '#64748b' }}>
-            Fixas e variáveis
+            {despesasPendentes > 0 ? (
+              <span>
+                <strong style={{ color: '#16a34a' }}>{showBalance ? formatCurrency(despesasPagas) : '••••'}</strong> pagas •{' '}
+                <strong style={{ color: '#ea580c' }}>{showBalance ? formatCurrency(despesasPendentes) : '••••'}</strong> a pagar
+              </span>
+            ) : (
+              <span style={{ color: '#16a34a', fontWeight: 600 }}>
+                ✓ Todas as despesas pagas
+              </span>
+            )}
           </div>
         </div>
 

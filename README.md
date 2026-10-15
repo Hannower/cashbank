@@ -100,19 +100,30 @@ A arquitetura do backend segue o padrão em camadas desacoplado:
 
 O Dashboard centraliza a saúde financeira do usuário no mês selecionado e oferece um modo analítico anual.
 
-#### 1.1. Cálculo do Saldo Disponível
-O Saldo Disponível reflete o dinheiro líquido em conta corrente / disponível para uso imediato no mês corrente:
+#### 1.1. Cálculo do Saldo em Conta e Saldo Previsto (Abordagem Híbrida)
+O CashBank adota a **Abordagem Híbrida** para o gerenciamento do saldo, combinando a precisão do **Regime de Caixa** (o que já aconteceu na sua conta hoje) com a previsibilidade do **Regime de Competência / Orçamento** (o que vai sobrar no fim do mês):
 
-$$\text{Saldo Disponível} = \text{Receitas Totais} - \text{Despesas Totais} - \text{Depósitos na Poupança} + \text{Retiradas da Poupança}$$
+1. **Saldo Atual em Conta (Realizado):**
+   $$\text{Saldo Atual} = \text{Receitas Totais} - \text{Despesas Realizadas/Pagas} - \text{Depósitos na Poupança} + \text{Retiradas da Poupança}$$
+   - Deduz apenas despesas fixas e faturas de cartão efetivamente quitadas (`isPaid === true`), além de gastos variáveis e depósitos líquidos em cofrinhos.
+   - Reflete com exatidão o saldo presente na sua conta bancária no momento atual.
+   - Bate 100% com o **Extrato de Movimentações Financeiras** exibido na parte inferior do Dashboard.
 
-- **Depósitos na Poupança (Aportes):** Reduzem o saldo disponível da conta corrente, pois o recurso foi guardado em uma reserva.
-- **Retiradas da Poupança (Resgates):** Aumentam o saldo disponível da conta corrente, pois o recurso voltou para a conta corrente.
-- **Regra Fundamental de Poupança:** Os lançamentos de poupança (aportes ou resgates) **NUNCA são computados como despesas operacionais**. O card de Despesas Totais reflete unicamente contas a pagar e gastos do período.
+2. **Saldo Previsto pós-contas (Projetado / Fim do Mês):**
+   $$\text{Saldo Previsto} = \text{Receitas Totais} - \text{Despesas Totais do Mês} - \text{Depósitos Líquidos na Poupança}$$
+   $$\text{Saldo Previsto} = \text{Saldo Atual em Conta} - \text{Despesas Pendentes a Pagar}$$
+   - Exibido de forma elegante e transparente dentro do card principal de saldo, indicando quanto sobrará ao final do mês após quitar todas as faturas e contas pendentes.
+   - Se todas as contas do mês já estiverem pagas, o card indica automaticamente `✓ Contas quitadas`.
+
+3. **Regra Fundamental de Poupança:**
+   - Movimentações de poupança (aportes ou resgates) **NUNCA são computadas como despesas operacionais**. O card de Despesas Totais reflete unicamente contas a pagar e gastos de consumo.
+   - Aportes reduzem o saldo em conta corrente; resgates aumentam o saldo em conta corrente.
+   - Cofrinhos em andamento com saldo inicial pré-existente (`isInitialBalance`) não afetam o fluxo de caixa corrente.
 
 #### 1.2. Cartões Herói (KPIs)
-- **Saldo Disponível:** Exibe o saldo calculado dinamicamente. O card adota estilo esmeralda quando positivo e vermelho carmesim quando negativo, acompanhado do percentual de crescimento em relação ao mês anterior.
+- **Saldo em Conta (Realizado & Previsto):** Exibe com destaque o saldo atual realizado e, logo abaixo, a pílula com o saldo projetado pós-contas e o montante pendente de pagamento. O card adota estilo esmeralda quando positivo e vermelho carmesim quando negativo, acompanhado do percentual de crescimento em relação ao mês anterior.
 - **Minha Renda:** Soma estrita de todas as receitas do mês selecionado.
-- **Despesas Totais:** Soma das contas fixas ativas no mês (incluindo faturas de cartão de crédito do titular) e despesas variáveis realizadas.
+- **Despesas Totais:** Soma de todas as contas fixas e variáveis do mês, acompanhado do detalhamento em tempo real: `R$ X pagas • R$ Y a pagar`.
 - **Na Poupança:** Saldo consolidado acumulado em todos os cofrinhos do usuário e percentual de atingimento da meta global.
 
 #### 1.3. Extrato Unificado de Transações

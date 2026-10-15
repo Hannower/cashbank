@@ -145,6 +145,12 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
     const allFixedFormatted = [...fixedFormatted, ...creditCardExpenses];
 
     const fixedTotal = allFixedFormatted.reduce((acc, curr) => acc + curr.amount, 0);
+    const fixedPaidTotal = allFixedFormatted
+      .filter((e) => e.isPaid)
+      .reduce((acc, curr) => acc + curr.amount, 0);
+    const fixedPendingTotal = allFixedFormatted
+      .filter((e) => !e.isPaid)
+      .reduce((acc, curr) => acc + curr.amount, 0);
     const fixedPaidCount = allFixedFormatted.filter((e) => e.isPaid).length;
     const fixedTotalCount = allFixedFormatted.length;
     const fixedOrganizedPct = fixedTotalCount > 0 ? Math.round((fixedPaidCount / fixedTotalCount) * 100) : 0;
@@ -162,7 +168,9 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
     });
 
     const variableTotal = variableExpenses.reduce((acc, curr) => acc + curr.amount, 0);
-    const totalExpenses = fixedTotal + variableTotal;
+    const totalExpenses = Math.round((fixedTotal + variableTotal) * 100) / 100;
+    const despesasPagas = Math.round((fixedPaidTotal + variableTotal) * 100) / 100;
+    const despesasPendentes = Math.round(fixedPendingTotal * 100) / 100;
 
     // 4. Revenues for the specified month/year
     const revenues = await prisma.revenue.findMany({
@@ -230,9 +238,14 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
 
     const monthSavingsNet = monthSavingsDeposits - monthSavingsWithdrawals;
 
-    // 6. Current Month Net Balance: Receitas - Despesas - Depósitos na Poupança (que afetam saldo) + Retiradas da Poupança
-    // Nota: Lançamentos de poupança NÃO são considerados despesas operacionais.
-    const saldoDisponivel = Math.round((totalRevenues - totalExpenses - monthSavingsNet) * 100) / 100;
+    // 6. Abordagem Híbrida:
+    // - Saldo Atual em Conta (Realizado): Receitas - Despesas Realizadas/Pagas - Depósitos Líquidos Poupança
+    //   Reflete o dinheiro real disponível em conta hoje e bate 100% com o extrato de movimentações.
+    // - Saldo Previsto (Fim do Mês / Projetado): Receitas - Despesas Totais Previstas - Depósitos Líquidos Poupança
+    //   Reflete quanto sobrará após quitar todas as contas a pagar do mês.
+    const saldoAtual = Math.round((totalRevenues - despesasPagas - monthSavingsNet) * 100) / 100;
+    const saldoPrevisto = Math.round((totalRevenues - totalExpenses - monthSavingsNet) * 100) / 100;
+    const saldoDisponivel = saldoAtual; // Compatibilidade com componentes legados
 
     // 7. Previous month metrics for real growth calculation
     const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
@@ -266,7 +279,7 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
 
     const saldoGrowthPct =
       prevSaldo > 0
-        ? Math.round(((saldoDisponivel - prevSaldo) / prevSaldo) * 1000) / 10
+        ? Math.round(((saldoAtual - prevSaldo) / prevSaldo) * 1000) / 10
         : 0;
 
     // 8. Upcoming Bills (pending fixed expenses with effective amounts)
@@ -472,11 +485,15 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
       currentYear,
       kpis: {
         saldoDisponivel,
+        saldoAtual,
+        saldoPrevisto,
         saldoGrowthPct,
         receitasTotais: totalRevenues,
         receitasGrowthPct,
         despesasTotais: totalExpenses,
-        despesasSubtitle: 'Contas a pagar e gastos variáveis',
+        despesasPagas,
+        despesasPendentes,
+        despesasSubtitle: `${despesasPagas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} pagas • ${despesasPendentes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} a pagar`,
         naPoupanca: totalSavings,
         totalPoupancaAcumulada: totalSavings,
         poupancaGoalPct: savingsPct,
