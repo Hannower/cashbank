@@ -215,8 +215,24 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
       return d >= startOfMonth && d <= endOfMonth;
     });
 
-    // 6. Current Month Net Balance
-    const saldoDisponivel = totalRevenues - totalExpenses;
+    // Movimentações de poupança no mês corrente (depósitos e retiradas)
+    // Depósitos (> 0): dinheiro guardado, reduz o saldo disponível em conta
+    // Retiradas (< 0): dinheiro resgatado, aumenta o saldo disponível em conta
+    // REGRA DE COFRINHO EM ANDAMENTO: Depósitos marcados como saldo inicial (isInitialBalance)
+    // NÃO são deduzidos do saldo disponível da conta corrente!
+    const monthSavingsDeposits = monthSavings
+      .filter((s) => s.amount > 0 && !s.isInitialBalance)
+      .reduce((acc, curr) => acc + curr.amount, 0);
+
+    const monthSavingsWithdrawals = monthSavings
+      .filter((s) => s.amount < 0)
+      .reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
+
+    const monthSavingsNet = monthSavingsDeposits - monthSavingsWithdrawals;
+
+    // 6. Current Month Net Balance: Receitas - Despesas - Depósitos na Poupança (que afetam saldo) + Retiradas da Poupança
+    // Nota: Lançamentos de poupança NÃO são considerados despesas operacionais.
+    const saldoDisponivel = Math.round((totalRevenues - totalExpenses - monthSavingsNet) * 100) / 100;
 
     // 7. Previous month metrics for real growth calculation
     const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
@@ -224,18 +240,24 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
     const startOfPrevMonth = new Date(Date.UTC(prevYear, prevMonth - 1, 1, 0, 0, 0, 0));
     const endOfPrevMonth = new Date(Date.UTC(prevYear, prevMonth, 0, 23, 59, 59, 999));
 
-    const [prevRevenues, prevVariable] = await Promise.all([
+    const [prevRevenues, prevVariable, prevSavings] = await Promise.all([
       prisma.revenue.findMany({
         where: { userId, date: { gte: startOfPrevMonth, lte: endOfPrevMonth } },
       }),
       prisma.variableExpense.findMany({
         where: { userId, date: { gte: startOfPrevMonth, lte: endOfPrevMonth } },
       }),
+      prisma.savings.findMany({
+        where: { userId, date: { gte: startOfPrevMonth, lte: endOfPrevMonth } },
+      }),
     ]);
 
     const prevTotalRevenues = prevRevenues.reduce((acc, curr) => acc + curr.amount, 0);
     const prevTotalExpenses = fixedTotal + prevVariable.reduce((acc, curr) => acc + curr.amount, 0);
-    const prevSaldo = prevTotalRevenues - prevTotalExpenses;
+    const prevSavingsNet = prevSavings
+      .filter((s) => !s.isInitialBalance)
+      .reduce((acc, curr) => acc + curr.amount, 0);
+    const prevSaldo = prevTotalRevenues - prevTotalExpenses - prevSavingsNet;
 
     const receitasGrowthPct =
       prevTotalRevenues > 0
@@ -333,7 +355,9 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
             statusLabel: 'Pago',
           };
         }),
-      ...monthSavings.map((s) => {
+      ...monthSavings
+        .filter((s) => !s.isInitialBalance) // Saldo inicial pré-existente de cofrinho em andamento não é saída de conta do mês
+        .map((s) => {
         const d = new Date(s.date);
         const day = String(d.getUTCDate()).padStart(2, '0');
         const mLabel = FULL_MONTH_NAMES[d.getUTCMonth()]?.slice(0, 3) || '';
@@ -456,6 +480,9 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
         naPoupanca: totalSavings,
         totalPoupancaAcumulada: totalSavings,
         poupancaGoalPct: savingsPct,
+        monthSavingsDeposits: Math.round(monthSavingsDeposits * 100) / 100,
+        monthSavingsWithdrawals: Math.round(monthSavingsWithdrawals * 100) / 100,
+        monthSavingsNet: Math.round(monthSavingsNet * 100) / 100,
       },
       receivablesSummary: {
         pendingTotal: Math.round(receivablesPendingTotal * 100) / 100,
@@ -605,8 +632,16 @@ export async function getDashboardAnnual(req: AuthenticatedRequest, res: Respons
         }
       }
 
+      // Month savings net (depósitos reduzem saldo em conta, retiradas aumentam saldo em conta; saldo inicial não afeta fluxo)
+      const mSavings = savings.filter((s) => {
+        const d = new Date(s.date);
+        return d.getUTCMonth() + 1 === m && !s.isInitialBalance;
+      });
+      const monthSavingsNet = mSavings.reduce((acc, curr) => acc + curr.amount, 0);
+
       const monthExpensesTotal = monthVarTotal + monthFixedTotal + monthCardsHolderTotal;
-      const monthSaldo = monthRevTotal - monthExpensesTotal;
+      // Saldo mensal considerando receitas, despesas e lançamentos de poupança (sem computar poupança como despesa)
+      const monthSaldo = Math.round((monthRevTotal - monthExpensesTotal - monthSavingsNet) * 100) / 100;
 
       totalAnnualRevenues += monthRevTotal;
       totalAnnualExpenses += monthExpensesTotal;
@@ -618,13 +653,17 @@ export async function getDashboardAnnual(req: AuthenticatedRequest, res: Respons
         receitas: monthRevTotal,
         despesas: monthExpensesTotal,
         saldo: monthSaldo,
+        savingsNet: monthSavingsNet,
         fixedCount: mFixed.length,
         varCount: mVars.length,
         revCount: mRevs.length,
       });
     }
 
-    const saldoAnual = totalAnnualRevenues - totalAnnualExpenses;
+    const annualSavingsFlow = savings
+      .filter((s) => !s.isInitialBalance)
+      .reduce((acc, curr) => acc + curr.amount, 0);
+    const saldoAnual = Math.round((totalAnnualRevenues - totalAnnualExpenses - annualSavingsFlow) * 100) / 100;
 
     const categoriesList = Object.entries(categoryTotals)
       .map(([name, total]) => ({

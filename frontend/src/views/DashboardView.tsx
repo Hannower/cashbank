@@ -452,11 +452,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
   });
 
   const totalEntradas = sortedTransactions
-    .filter((t) => t.type === 'revenue')
+    .filter((t) => t.type === 'revenue' || t.type === 'savings_withdraw')
     .reduce((acc, t) => acc + (t.amount || 0), 0);
 
   const totalSaidas = sortedTransactions
-    .filter((t) => t.type !== 'revenue')
+    .filter(
+      (t) =>
+        t.type === 'variable_expense' ||
+        t.type === 'fixed_expense' ||
+        t.type === 'credit_card_payment' ||
+        t.type === 'savings_deposit'
+    )
     .reduce((acc, t) => acc + (t.amount || 0), 0);
 
   const saldo = data?.kpis?.saldoDisponivel ?? 0;

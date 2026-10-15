@@ -38,6 +38,8 @@ export interface PiggyBankItem {
   color: string;
   icon: string;
   description: string | null;
+  isOngoing?: boolean;
+  initialAmount?: number;
   currentAmount: number;
   progressPercentage: number;
   remainingAmount: number;
@@ -50,6 +52,7 @@ export interface SavingsItem {
   amount: number;
   date: string;
   objective: string;
+  isInitialBalance?: boolean;
   piggyBankId?: string | null;
   piggyBank?: {
     id: string;
@@ -126,6 +129,7 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
   const [piggyIcon, setPiggyIcon] = useState('piggy');
   const [piggyDesc, setPiggyDesc] = useState('');
   const [piggyInitialDeposit, setPiggyInitialDeposit] = useState('');
+  const [piggyIsOngoing, setPiggyIsOngoing] = useState(false);
 
   // Deposit / Withdraw Form State
   const [selectedPiggyId, setSelectedPiggyId] = useState('');
@@ -182,6 +186,7 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
     setPiggyIcon('piggy');
     setPiggyDesc('');
     setPiggyInitialDeposit('');
+    setPiggyIsOngoing(false);
     setIsPiggyModalOpen(true);
   };
 
@@ -194,7 +199,8 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
     setPiggyColor(pb.color || '#15803d');
     setPiggyIcon(pb.icon || 'piggy');
     setPiggyDesc(pb.description || '');
-    setPiggyInitialDeposit('');
+    setPiggyInitialDeposit(pb.initialAmount ? String(pb.initialAmount) : '');
+    setPiggyIsOngoing(Boolean(pb.isOngoing));
     setIsPiggyModalOpen(true);
   };
 
@@ -219,6 +225,8 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
           color: piggyColor,
           icon: piggyIcon,
           description: piggyDesc,
+          isOngoing: piggyIsOngoing,
+          initialDeposit: initialVal,
         });
       } else {
         await api.createPiggyBank({
@@ -229,6 +237,7 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
           color: piggyColor,
           icon: piggyIcon,
           description: piggyDesc,
+          isOngoing: piggyIsOngoing,
           initialDeposit: initialVal > 0 ? initialVal : undefined,
         });
       }
@@ -693,9 +702,27 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
                         <IconComp size={22} />
                       </div>
                       <div>
-                        <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-main, #0f172a)', margin: 0, lineHeight: 1.2 }}>
-                          {pb.name}
-                        </h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-main, #0f172a)', margin: 0, lineHeight: 1.2 }}>
+                            {pb.name}
+                          </h3>
+                          {pb.isOngoing && (
+                            <span
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 700,
+                                padding: '1px 6px',
+                                borderRadius: 4,
+                                backgroundColor: '#ecfdf5',
+                                color: '#15803d',
+                                border: '1px solid #bbf7d0',
+                              }}
+                              title="Cofrinho em andamento (saldo inicial existente)"
+                            >
+                              Em andamento
+                            </span>
+                          )}
+                        </div>
                         {pb.description && (
                           <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', marginTop: 2 }}>
                             {pb.description}
@@ -1049,12 +1076,35 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
                                     fontWeight: 700,
                                     padding: '1px 8px',
                                     borderRadius: 6,
-                                    backgroundColor: isWithdrawal ? '#fee2e2' : '#ecfdf5',
-                                    color: isWithdrawal ? '#b91c1c' : '#15803d',
+                                    backgroundColor: item.isInitialBalance
+                                      ? '#ede9fe'
+                                      : isWithdrawal
+                                      ? '#fee2e2'
+                                      : '#ecfdf5',
+                                    color: item.isInitialBalance
+                                      ? '#7c3aed'
+                                      : isWithdrawal
+                                      ? '#b91c1c'
+                                      : '#15803d',
                                   }}
                                 >
-                                  {isWithdrawal ? 'Resgate' : 'Depósito'}
+                                  {item.isInitialBalance ? 'Saldo inicial' : isWithdrawal ? 'Resgate' : 'Depósito'}
                                 </span>
+                                {item.isInitialBalance && (
+                                  <span
+                                    style={{
+                                      fontSize: 10,
+                                      fontWeight: 600,
+                                      color: '#7c3aed',
+                                      backgroundColor: 'rgba(124, 58, 237, 0.08)',
+                                      padding: '1px 6px',
+                                      borderRadius: 4,
+                                    }}
+                                    title="Valor inicial já acumulado no cofrinho (não deduz do saldo disponível da conta)"
+                                  >
+                                    Não afeta saldo
+                                  </span>
+                                )}
                                 {pb && (
                                   <span style={{ fontSize: 12, color: 'var(--text-muted, #64748b)' }}>
                                     em <strong>{pb.name}</strong>
@@ -1192,11 +1242,19 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
                               fontWeight: 700,
                               padding: '1px 6px',
                               borderRadius: 4,
-                              backgroundColor: isWithdrawal ? '#fee2e2' : '#ecfdf5',
-                              color: isWithdrawal ? '#b91c1c' : '#15803d',
+                              backgroundColor: item.isInitialBalance
+                                ? '#ede9fe'
+                                : isWithdrawal
+                                ? '#fee2e2'
+                                : '#ecfdf5',
+                              color: item.isInitialBalance
+                                ? '#7c3aed'
+                                : isWithdrawal
+                                ? '#b91c1c'
+                                : '#15803d',
                             }}
                           >
-                            {isWithdrawal ? 'Resgate' : 'Depósito'}
+                            {item.isInitialBalance ? 'Saldo inicial' : isWithdrawal ? 'Resgate' : 'Depósito'}
                           </span>
                         </div>
                         <div className="expense-mobile-meta">
@@ -1315,10 +1373,49 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
             </div>
           </div>
 
-          {!editingPiggy && (
+          {/* Seção Cofrinho em andamento / Saldo inicial */}
+          <div
+            style={{
+              padding: '14px 16px',
+              borderRadius: 12,
+              backgroundColor: 'var(--bg-card-subtle, #f8fafc)',
+              border: '1px solid var(--border-color, #e2e8f0)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+            }}
+          >
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 700,
+                color: 'var(--text-main, #0f172a)',
+                userSelect: 'none',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={piggyIsOngoing}
+                onChange={(e) => setPiggyIsOngoing(e.target.checked)}
+                style={{
+                  width: 18,
+                  height: 18,
+                  accentColor: '#15803d',
+                  cursor: 'pointer',
+                }}
+              />
+              <span>Cofrinho já em andamento (já possui valores guardados)</span>
+            </label>
+
             <div>
-              <label className="form-label">
-                Depósito Inicial (R$) (Opcional)
+              <label className="form-label" style={{ marginBottom: 4 }}>
+                {piggyIsOngoing
+                  ? 'Valor já acumulado anteriormente (R$)'
+                  : 'Depósito inicial (R$) (Opcional)'}
               </label>
               <div className="currency-input-wrapper">
                 <span className="currency-input-prefix">R$</span>
@@ -1330,8 +1427,41 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
                   className="currency-input-field"
                 />
               </div>
+
+              {piggyIsOngoing ? (
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: '#15803d',
+                    backgroundColor: '#ecfdf5',
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    marginTop: 8,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
+                  <span>
+                    <strong>Não afeta o saldo:</strong> Este valor constará no saldo do cofrinho e na meta, mas <strong>não será deduzido do Saldo Disponível</strong> da Visão Geral.
+                  </span>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    fontSize: 11.5,
+                    color: '#64748b',
+                    marginTop: 6,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Este valor será debitado do seu Saldo Disponível como um novo depósito realizado neste mês.
+                </div>
+              )}
             </div>
-          )}
+          </div>
 
           {/* Color Picker */}
           <div>

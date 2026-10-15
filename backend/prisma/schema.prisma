@@ -116,23 +116,25 @@ model PiggyBank {
   color        String    @default("#15803d")
   icon         String    @default("piggy")
   description  String?
+  isOngoing    Boolean   @default(false)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   savings      Savings[]
 }
 
 model Savings {
-  id          String     @id @default(uuid())
-  userId      String
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  piggyBankId String?
-  piggyBank   PiggyBank? @relation(fields: [piggyBankId], references: [id], onDelete: Cascade)
-  description String
-  amount      Float
-  date        DateTime
-  objective   String     @default("Poupança")
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id               String     @id @default(uuid())
+  userId           String
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  piggyBankId      String?
+  piggyBank        PiggyBank? @relation(fields: [piggyBankId], references: [id], onDelete: Cascade)
+  description      String
+  amount           Float
+  date             DateTime
+  objective        String     @default("Poupança")
+  isInitialBalance Boolean    @default(false)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 }
 
 model CreditCard {

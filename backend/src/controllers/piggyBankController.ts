@@ -22,6 +22,8 @@ export async function getPiggyBanks(req: AuthenticatedRequest, res: Response): P
       const target = pb.targetAmount || 0;
       const progressPercentage = target > 0 ? Math.min(Math.round((currentAmount / target) * 100), 100) : 0;
       const remainingAmount = Math.max(0, target - currentAmount);
+      const initialSavings = pb.savings.find((s) => s.isInitialBalance);
+      const initialAmount = initialSavings ? initialSavings.amount : 0;
 
       return {
         id: pb.id,
@@ -32,6 +34,8 @@ export async function getPiggyBanks(req: AuthenticatedRequest, res: Response): P
         color: pb.color,
         icon: pb.icon,
         description: pb.description,
+        isOngoing: pb.isOngoing,
+        initialAmount,
         createdAt: pb.createdAt,
         updatedAt: pb.updatedAt,
         currentAmount,
@@ -70,6 +74,7 @@ export async function createPiggyBank(req: AuthenticatedRequest, res: Response):
       color,
       icon,
       description,
+      isOngoing,
       initialDeposit,
     } = req.body;
 
@@ -78,6 +83,7 @@ export async function createPiggyBank(req: AuthenticatedRequest, res: Response):
       return;
     }
 
+    const isOngoingBool = Boolean(isOngoing);
     const targetVal = targetAmount !== undefined ? Math.abs(parseFloat(String(targetAmount).replace(',', '.'))) : 0;
     const initialVal = initialDeposit !== undefined ? Math.abs(parseFloat(String(initialDeposit).replace(',', '.'))) : 0;
 
@@ -91,26 +97,30 @@ export async function createPiggyBank(req: AuthenticatedRequest, res: Response):
         color: color || '#15803d',
         icon: icon || 'piggy',
         description: description?.trim() || null,
+        isOngoing: isOngoingBool,
       },
     });
 
-    // If an initial deposit was requested, create the transaction automatically
+    // Se informou um saldo inicial ou valor de cofrinho em andamento, cria a transação correspondente
     if (!isNaN(initialVal) && initialVal > 0) {
       await prisma.savings.create({
         data: {
           userId,
           piggyBankId: piggyBank.id,
-          description: 'Depósito inicial',
+          description: isOngoingBool ? 'Saldo inicial (em andamento)' : 'Depósito inicial',
           amount: initialVal,
           date: new Date(),
           objective: piggyBank.name,
+          isInitialBalance: isOngoingBool,
         },
       });
     }
 
-    // Return the newly created piggy bank with calculated amounts
+    // Retorna o novo cofrinho com os totais calculados
     res.status(201).json({
       ...piggyBank,
+      isOngoing: isOngoingBool,
+      initialAmount: initialVal,
       currentAmount: initialVal,
       progressPercentage: targetVal > 0 ? Math.min(Math.round((initialVal / targetVal) * 100), 100) : 0,
       remainingAmount: Math.max(0, targetVal - initialVal),
@@ -134,10 +144,13 @@ export async function updatePiggyBank(req: AuthenticatedRequest, res: Response):
       color,
       icon,
       description,
+      isOngoing,
+      initialDeposit,
     } = req.body;
 
     const existing = await prisma.piggyBank.findFirst({
       where: { id, userId },
+      include: { savings: true },
     });
 
     if (!existing) {
@@ -146,6 +159,43 @@ export async function updatePiggyBank(req: AuthenticatedRequest, res: Response):
     }
 
     const targetVal = targetAmount !== undefined ? Math.abs(parseFloat(String(targetAmount).replace(',', '.'))) : existing.targetAmount;
+    const isOngoingBool = isOngoing !== undefined ? Boolean(isOngoing) : existing.isOngoing;
+
+    // Atualiza ou cria/remove o registro de saldo inicial se informado
+    if (initialDeposit !== undefined && initialDeposit !== null) {
+      const parsedInitial = Math.abs(parseFloat(String(initialDeposit).replace(',', '.')));
+      const initialVal = isNaN(parsedInitial) ? 0 : parsedInitial;
+      const existingInitial = existing.savings.find((s) => s.isInitialBalance);
+
+      if (existingInitial) {
+        if (initialVal > 0) {
+          await prisma.savings.update({
+            where: { id: existingInitial.id },
+            data: {
+              amount: initialVal,
+              description: isOngoingBool ? 'Saldo inicial (em andamento)' : 'Depósito inicial',
+              isInitialBalance: isOngoingBool,
+            },
+          });
+        } else {
+          await prisma.savings.delete({
+            where: { id: existingInitial.id },
+          });
+        }
+      } else if (initialVal > 0) {
+        await prisma.savings.create({
+          data: {
+            userId,
+            piggyBankId: id,
+            description: isOngoingBool ? 'Saldo inicial (em andamento)' : 'Depósito inicial',
+            amount: initialVal,
+            date: new Date(),
+            objective: name ? name.trim() : existing.name,
+            isInitialBalance: isOngoingBool,
+          },
+        });
+      }
+    }
 
     const updated = await prisma.piggyBank.update({
       where: { id },
@@ -157,6 +207,7 @@ export async function updatePiggyBank(req: AuthenticatedRequest, res: Response):
         color: color ?? existing.color,
         icon: icon ?? existing.icon,
         description: description !== undefined ? (description?.trim() || null) : existing.description,
+        isOngoing: isOngoingBool,
       },
       include: {
         savings: true,
@@ -165,9 +216,12 @@ export async function updatePiggyBank(req: AuthenticatedRequest, res: Response):
 
     const currentAmount = updated.savings.reduce((acc, curr) => acc + curr.amount, 0);
     const progressPercentage = updated.targetAmount > 0 ? Math.min(Math.round((currentAmount / updated.targetAmount) * 100), 100) : 0;
+    const initialSavings = updated.savings.find((s) => s.isInitialBalance);
+    const initialAmount = initialSavings ? initialSavings.amount : 0;
 
     res.json({
       ...updated,
+      initialAmount,
       currentAmount,
       progressPercentage,
       remainingAmount: Math.max(0, updated.targetAmount - currentAmount),

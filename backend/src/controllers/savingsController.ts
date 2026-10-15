@@ -34,6 +34,8 @@ export async function getSavings(req: AuthenticatedRequest, res: Response): Prom
       const target = pb.targetAmount || 0;
       const progressPercentage = target > 0 ? Math.min(Math.round((currentAmount / target) * 100), 100) : 0;
       const remainingAmount = Math.max(0, target - currentAmount);
+      const initialSavings = pb.savings.find((s) => s.isInitialBalance);
+      const initialAmount = initialSavings ? initialSavings.amount : 0;
 
       return {
         id: pb.id,
@@ -44,6 +46,8 @@ export async function getSavings(req: AuthenticatedRequest, res: Response): Prom
         color: pb.color,
         icon: pb.icon,
         description: pb.description,
+        isOngoing: pb.isOngoing,
+        initialAmount,
         createdAt: pb.createdAt,
         updatedAt: pb.updatedAt,
         currentAmount,
@@ -76,7 +80,7 @@ export async function getSavings(req: AuthenticatedRequest, res: Response): Prom
 export async function createSavings(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const userId = req.userId!;
-    const { description, amount, date, objective, piggyBankId, time } = req.body;
+    const { description, amount, date, objective, piggyBankId, time, isInitialBalance } = req.body;
 
     if (!description || amount === undefined || !date) {
       res.status(400).json({ message: 'Descrição, valor e data são obrigatórios' });
@@ -118,6 +122,7 @@ export async function createSavings(req: AuthenticatedRequest, res: Response): P
         amount: parseFloat(amount),
         date: parseDateWithTime(date, time),
         objective: finalObjective,
+        isInitialBalance: isInitialBalance !== undefined ? Boolean(isInitialBalance) : false,
       },
       include: {
         piggyBank: true,
@@ -135,7 +140,7 @@ export async function updateSavings(req: AuthenticatedRequest, res: Response): P
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const { description, amount, date, objective, piggyBankId, time } = req.body;
+    const { description, amount, date, objective, piggyBankId, time, isInitialBalance } = req.body;
 
     const existing = await prisma.savings.findFirst({
       where: { id, userId },
@@ -175,6 +180,7 @@ export async function updateSavings(req: AuthenticatedRequest, res: Response): P
         amount: amount !== undefined ? parseFloat(amount) : existing.amount,
         date: updatedDate,
         objective: finalObjective,
+        isInitialBalance: isInitialBalance !== undefined ? Boolean(isInitialBalance) : existing.isInitialBalance,
       },
       include: {
         piggyBank: true,
