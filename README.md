@@ -2,6 +2,8 @@
 
 > Plataforma completa de controle, planejamento e administração financeira pessoal, desenvolvida com foco em alta fidelidade visual, experiência de uso intuitiva, responsividade e robustez arquitetural.
 
+🌐 **Deploy em Produção:** [https://cashbank-three.vercel.app/](https://cashbank-three.vercel.app/)
+
 ---
 
 ## 📑 Sumário
@@ -20,6 +22,7 @@
   - [8. Autenticação, Segurança e Multi-Tenancy](#8-autenticação-segurança-e-multi-tenancy)
 - [Estrutura do Projeto](#-estrutura-do-projeto)
 - [Instalação e Execução](#-instalação-e-execução)
+  - [Acesso Online (Deploy)](#-acesso-online-deploy)
   - [Pré-requisitos](#pré-requisitos)
   - [Variáveis de Ambiente (.env)](#variáveis-de-ambiente-env)
   - [Executando o Backend](#executando-o-backend)
@@ -289,6 +292,14 @@ cashbank/
 ---
 
 ## 🚀 Instalação e Execução
+
+### 🌐 Acesso Online (Deploy)
+
+A aplicação está hospedada e disponível publicamente para acesso direto:
+
+👉 **[https://cashbank-three.vercel.app/](https://cashbank-three.vercel.app/)**
+
+---
 
 ### Pré-requisitos
 - **Node.js** v18.0.0 ou superior instalado.
