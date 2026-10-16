@@ -867,7 +867,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
               Gastos por categoria em {FULL_MONTH_NAMES[selectedMonth.month - 1]} de {selectedMonth.year}
             </h3>
             <p style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)', margin: '2px 0 0' }}>
-              Distribuição proporcional de contas a pagar e gastos variáveis deste mês
+              Distribuição proporcional de contas a pagar e gastos do dia a dia deste mês
             </p>
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-secondary, #64748b)' }}>
@@ -1687,7 +1687,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                 Gastos por categoria em {selectedAnnualYear}
               </h3>
               <p style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)', margin: '2px 0 0' }}>
-                Consolidação anual de contas a pagar e gastos variáveis por categoria
+                Consolidação anual de contas a pagar e gastos do dia a dia por categoria
               </p>
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-secondary, #64748b)' }}>
@@ -1811,7 +1811,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                 {editingTx.type === 'revenue'
                   ? 'Minha renda (Entrada)'
                   : editingTx.type === 'variable_expense'
-                  ? 'Gasto Variável'
+                  ? 'Gasto do Dia a Dia'
                   : editingTx.type === 'credit_card_payment' || editingTx.originalId?.startsWith('card-invoice-')
                   ? 'Fatura de Cartão de Crédito'
                   : editingTx.type === 'fixed_expense'

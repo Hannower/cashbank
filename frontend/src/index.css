@@ -21,6 +21,7 @@
   --bg-app: #f8fafc;
   --bg-sidebar: #ffffff;
   --bg-card: #ffffff;
+  --bg-card-subtle: #f8fafc;
   --bg-input: #ffffff;
   --bg-modal-overlay: rgba(15, 23, 42, 0.45);
 
@@ -52,6 +53,7 @@ body.dark-theme,
   --bg-app: #060911;
   --bg-sidebar: #090e1b;
   --bg-card: #0c1424;
+  --bg-card-subtle: #060911;
   --bg-input: #111a2f;
   --bg-item: #070b16;
   --bg-item-hover: #0c1326;
@@ -1135,6 +1137,16 @@ body.dark-theme .create-piggy-card {
 body.dark-theme .create-piggy-card:hover {
   border-color: #16a34a !important;
   background-color: rgba(22, 163, 74, 0.08) !important;
+}
+
+.ongoing-piggy-card {
+  background-color: var(--bg-card-subtle, #f8fafc);
+  border: 1px solid var(--border-color, #e2e8f0);
+}
+
+body.dark-theme .ongoing-piggy-card {
+  background-color: var(--bg-card-subtle, #060911) !important;
+  border-color: var(--border-color, #152037) !important;
 }
 
 /* =========================================================

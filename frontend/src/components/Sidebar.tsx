@@ -66,7 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'variable-expenses' as NavTab,
-      label: 'Gastos variáveis',
+      label: 'Gastos do dia a dia',
       icon: <ShoppingBag size={18} />,
     },
     {

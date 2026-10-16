@@ -1384,14 +1384,18 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
 
           {/* Seção Cofrinho em andamento / Saldo inicial */}
           <div
+            className="ongoing-piggy-card"
             style={{
               padding: '14px 16px',
               borderRadius: 12,
               backgroundColor: 'var(--bg-card-subtle, #f8fafc)',
-              border: '1px solid var(--border-color, #e2e8f0)',
+              border: piggyIsOngoing
+                ? '1px solid rgba(21, 128, 61, 0.4)'
+                : '1px solid var(--border-color, #e2e8f0)',
               display: 'flex',
               flexDirection: 'column',
               gap: 12,
+              transition: 'border-color 0.2s ease, background-color 0.2s ease',
             }}
           >
             <label
@@ -1413,7 +1417,7 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
                 style={{
                   width: 18,
                   height: 18,
-                  accentColor: '#15803d',
+                  accentColor: 'var(--primary, #15803d)',
                   cursor: 'pointer',
                 }}
               />
@@ -1441,8 +1445,9 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
                 <div
                   style={{
                     fontSize: 12,
-                    color: '#15803d',
-                    backgroundColor: '#ecfdf5',
+                    color: 'var(--primary-badge-text, #15803d)',
+                    backgroundColor: 'var(--primary-light, #ecfdf5)',
+                    border: '1px solid var(--primary-badge, rgba(21, 128, 61, 0.25))',
                     padding: '8px 12px',
                     borderRadius: 8,
                     marginTop: 8,
@@ -1461,7 +1466,7 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
                 <div
                   style={{
                     fontSize: 11.5,
-                    color: '#64748b',
+                    color: 'var(--text-secondary, #64748b)',
                     marginTop: 6,
                     lineHeight: 1.4,
                   }}

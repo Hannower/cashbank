@@ -33,7 +33,7 @@
 
 ## 🎯 Visão Geral
 
-O **CashBank** foi projetado para solucionar os desafios reais da organização financeira diária. Diferente de planilhas complexas ou aplicativos genéricos, o sistema consolida receitas, despesas fixas recorrentes, gastos variáveis, faturas de cartão de crédito (com distinção de compras de terceiros), cofrinhos com metas e contas a receber em uma visão unificada e em tempo real.
+O **CashBank** foi projetado para solucionar os desafios reais da organização financeira diária. Diferente de planilhas complexas ou aplicativos genéricos, o sistema consolida receitas, despesas fixas recorrentes, gastos do dia a dia, faturas de cartão de crédito (com distinção de compras de terceiros), cofrinhos com metas e contas a receber em uma visão unificada e em tempo real.
 
 O sistema inicia limpo (**Zero Mock**), pronto para receber lançamentos reais com isolamento absoluto de dados por usuário.
 
@@ -108,7 +108,7 @@ O CashBank adota a **Abordagem Híbrida** para o gerenciamento do saldo, combina
 
 1. **Saldo Atual em Conta (Realizado):**
    $$\text{Saldo Atual} = \text{Receitas Totais} - \text{Despesas Realizadas/Pagas} - \text{Depósitos na Poupança} + \text{Retiradas da Poupança}$$
-   - Deduz apenas despesas fixas e faturas de cartão efetivamente quitadas (`isPaid === true`), além de gastos variáveis e depósitos líquidos em cofrinhos.
+   - Deduz apenas despesas fixas e faturas de cartão efetivamente quitadas (`isPaid === true`), além de gastos do dia a dia e depósitos líquidos em cofrinhos.
    - Reflete com exatidão o saldo presente na sua conta bancária no momento atual.
    - Bate 100% com o **Extrato de Movimentações Financeiras** exibido na parte inferior do Dashboard.
 

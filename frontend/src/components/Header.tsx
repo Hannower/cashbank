@@ -13,7 +13,7 @@ interface HeaderProps {
 const TAB_TITLES: Record<NavTab, { title: string; breadcrumb: string }> = {
   dashboard: { title: 'Visão geral', breadcrumb: 'CashBank / Visão geral' },
   'fixed-expenses': { title: 'Contas a pagar', breadcrumb: 'CashBank / Contas a pagar' },
-  'variable-expenses': { title: 'Gastos variáveis', breadcrumb: 'CashBank / Gastos variáveis' },
+  'variable-expenses': { title: 'Gastos do dia a dia', breadcrumb: 'CashBank / Gastos do dia a dia' },
   'credit-cards': { title: 'Cartões de crédito', breadcrumb: 'CashBank / Cartões de crédito' },
   receivables: { title: 'Contas a receber', breadcrumb: 'CashBank / Contas a receber' },
   revenues: { title: 'Minha renda', breadcrumb: 'CashBank / Minha renda' },

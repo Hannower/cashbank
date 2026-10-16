@@ -448,10 +448,10 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
                 alignItems: 'center',
                 gap: 6,
               }}
-              title="Soma de todos os lançamentos em Gastos Variáveis neste mês"
+              title="Soma de todos os lançamentos em Gastos do dia a dia neste mês"
             >
               <Zap size={13} />
-              <span>Gastos variáveis deste mês: {formatCurrency(monthVariableExpensesSum)}</span>
+              <span>Gastos do dia a dia deste mês: {formatCurrency(monthVariableExpensesSum)}</span>
             </div>
           )}
         </div>
@@ -1260,7 +1260,7 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
                   Fatura do Cartão / Gastos do Mês
                 </div>
                 <div style={{ fontSize: 11, color: '#3b82f6', marginTop: 2 }}>
-                  Você teve <strong>{formatCurrency(monthVariableExpensesSum)}</strong> em gastos variáveis em {selectedMonth.label}.
+                  Você teve <strong>{formatCurrency(monthVariableExpensesSum)}</strong> em gastos do dia a dia em {selectedMonth.label}.
                 </div>
               </div>
               <button
