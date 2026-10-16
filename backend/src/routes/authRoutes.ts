@@ -11,6 +11,8 @@ import {
   forgotPassword,
   verifyResetToken,
   resetPasswordWithToken,
+  verifyTwoFactor,
+  resendTwoFactorCode,
 } from '../controllers/authController';
 import { authMiddleware } from '../middleware/auth';
 
@@ -18,6 +20,8 @@ const router = Router();
 
 router.post('/login', login);
 router.post('/register', register);
+router.post('/verify-2fa', verifyTwoFactor);
+router.post('/send-2fa-code', resendTwoFactorCode);
 router.post('/verify-reset-email', verifyResetEmail);
 router.post('/reset-password', resetPassword);
 router.post('/forgot-password', forgotPassword);

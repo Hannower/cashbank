@@ -16,6 +16,8 @@ import savingsRoutes from './routes/savingsRoutes';
 import piggyBankRoutes from './routes/piggyBankRoutes';
 import creditCardRoutes from './routes/creditCardRoutes';
 import receivableRoutes from './routes/receivableRoutes';
+import adminRoutes from './routes/adminRoutes';
+import { prisma } from './prisma/client';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -53,16 +55,50 @@ app.use('/api/savings', savingsRoutes);
 app.use('/api/piggy-banks', piggyBankRoutes);
 app.use('/api/credit-cards', creditCardRoutes);
 app.use('/api/receivables', receivableRoutes);
+app.use('/api/admin', adminRoutes);
 
-// Error handler
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+// Error handler with automatic persistence to systemErrorLog
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
   console.error('Unhandled server error:', err);
+
+  prisma.systemErrorLog.create({
+    data: {
+      endpoint: req.originalUrl || req.url,
+      method: req.method,
+      statusCode: err.status || 500,
+      message: err.message || 'Erro interno no servidor',
+      stack: err.stack ? String(err.stack).slice(0, 2000) : null,
+      userId: (req as any).userId || null,
+      userEmail: (req as any).userEmail || null,
+      ipAddress: (req.headers['x-forwarded-for'] as string) || req.ip || null,
+    },
+  }).catch(() => {});
+
   res.status(err.status || 500).json({
     message: err.message || 'Erro interno no servidor',
   });
 });
 
-app.listen(PORT, () => {
+async function ensureAdminUser() {
+  try {
+    const adminEmail = 'hannowersousa@gmail.com';
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: adminEmail, mode: 'insensitive' } },
+    });
+    if (user && (user.role !== 'admin' || user.status !== 'active')) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { role: 'admin', status: 'active' },
+      });
+      console.log(`🛡️ Administrador garantido com sucesso no startup: ${adminEmail}`);
+    }
+  } catch (e) {
+    console.warn('Could not verify admin user on startup:', e);
+  }
+}
+
+app.listen(PORT, async () => {
   console.log(`🚀 CashBank Backend running at http://localhost:${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/api/health`);
+  await ensureAdminUser();
 });

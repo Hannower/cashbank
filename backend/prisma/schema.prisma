@@ -13,20 +13,28 @@ model User {
   name             String
   email            String                @unique
   password         String
-  savingsGoal      Float                 @default(0.0) // Meta opcional de poupança
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
-  fixedExpenses    FixedExpense[]
+  savingsGoal          Float                 @default(0.0) // Meta opcional de poupança
+  role                 String                @default("user") // "user" | "admin"
+  status               String                @default("active") // "active" | "suspended" | "pending"
+  lastLogin            DateTime?
+  twoFactorEnabled     Boolean               @default(false)
+  twoFactorSecret      String?
+  twoFactorTempCode    String?
+  twoFactorCodeExpires DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  fixedExpenses        FixedExpense[]
   fixedExpensePayments FixedExpensePayment[]
-  variableExpenses VariableExpense[]
-  revenues         Revenue[]
-  savings          Savings[]
-  piggyBanks       PiggyBank[]
-  creditCards      CreditCard[]
-  creditCardPurchases CreditCardPurchase[]
-  creditCardInvoices  CreditCardInvoice[]
-  receivables         Receivable[]
-  receivableReceipts  ReceivableReceipt[]
+  variableExpenses     VariableExpense[]
+  revenues             Revenue[]
+  savings              Savings[]
+  piggyBanks           PiggyBank[]
+  creditCards          CreditCard[]
+  creditCardPurchases  CreditCardPurchase[]
+  creditCardInvoices   CreditCardInvoice[]
+  receivables          Receivable[]
+  receivableReceipts   ReceivableReceipt[]
+  auditLogsTarget      AuditLog[]            @relation("AuditTargetUser")
 }
 
 model FixedExpense {
@@ -275,6 +283,54 @@ model ReceivableReceipt {
 
   @@unique([receivableId, month, year])
   @@index([userId, month, year])
+}
+
+model AuditLog {
+  id              String   @id @default(uuid())
+  adminId         String
+  adminEmail      String
+  action          String   // e.g. "BAN_USER", "ACTIVATE_USER", "SUSPEND_USER", "CHANGE_ROLE", "DELETE_USER", "SEND_PASSWORD_RESET"
+  targetUserId    String?
+  targetUserEmail String?
+  details         String?
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+  targetUser      User?    @relation("AuditTargetUser", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([adminId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model SystemErrorLog {
+  id         String   @id @default(uuid())
+  endpoint   String
+  method     String
+  statusCode Int
+  message    String
+  stack      String?
+  userId     String?
+  userEmail  String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([statusCode])
+  @@index([createdAt])
+}
+
+model SecurityLog {
+  id        String   @id @default(uuid())
+  email     String
+  ipAddress String?
+  userAgent String?
+  status    String   // "SUCCESS" | "FAILED_PASSWORD" | "USER_NOT_FOUND" | "SUSPENDED" | "2FA_REQUIRED" | "2FA_FAILED"
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
 }
 
 

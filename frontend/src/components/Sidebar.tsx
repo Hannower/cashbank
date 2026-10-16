@@ -10,6 +10,7 @@ import {
   HandCoins,
   LogOut,
   X,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -20,7 +21,8 @@ export type NavTab =
   | 'credit-cards'
   | 'receivables'
   | 'revenues'
-  | 'savings';
+  | 'savings'
+  | 'admin';
 
 interface SidebarProps {
   currentTab: NavTab;
@@ -52,44 +54,59 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return name.slice(0, 2).toUpperCase();
   };
 
-  const navItems = [
+  const navItems: Array<{
+    id: NavTab;
+    label: string;
+    icon: React.ReactNode;
+    badge?: number | string;
+  }> = [
     {
-      id: 'dashboard' as NavTab,
+      id: 'dashboard',
       label: 'Visão geral',
       icon: <LayoutGrid size={18} />,
     },
     {
-      id: 'fixed-expenses' as NavTab,
+      id: 'fixed-expenses',
       label: 'Contas a pagar',
       icon: <CalendarCheck2 size={18} />,
       badge: fixedPendingCount > 0 ? fixedPendingCount : undefined,
     },
     {
-      id: 'variable-expenses' as NavTab,
+      id: 'variable-expenses',
       label: 'Gastos do dia a dia',
       icon: <ShoppingBag size={18} />,
     },
     {
-      id: 'credit-cards' as NavTab,
+      id: 'credit-cards',
       label: 'Cartões de crédito',
       icon: <CreditCard size={18} />,
     },
     {
-      id: 'receivables' as NavTab,
+      id: 'receivables',
       label: 'Contas a receber',
       icon: <HandCoins size={18} />,
       badge: receivablesPendingCount > 0 ? receivablesPendingCount : undefined,
     },
     {
-      id: 'revenues' as NavTab,
+      id: 'revenues',
       label: 'Minha renda',
       icon: <ArrowDownLeft size={18} />,
     },
     {
-      id: 'savings' as NavTab,
+      id: 'savings',
       label: 'Poupança',
       icon: <PiggyBank size={18} />,
     },
+    ...(user?.role === 'admin'
+      ? [
+          {
+            id: 'admin' as NavTab,
+            label: 'Painel Admin',
+            icon: <ShieldCheck size={18} />,
+            badge: 'ADMIN',
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -200,12 +217,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {item.badge !== undefined && (
                   <span
                     style={{
-                      backgroundColor: '#ffedd5',
-                      color: '#c2410c',
-                      fontSize: 11,
-                      fontWeight: 700,
-                      padding: '1px 7px',
+                      backgroundColor:
+                        typeof item.badge === 'string'
+                          ? 'rgba(124, 58, 237, 0.15)'
+                          : '#ffedd5',
+                      color: typeof item.badge === 'string' ? '#7c3aed' : '#c2410c',
+                      fontSize: typeof item.badge === 'string' ? 10 : 11,
+                      fontWeight: 800,
+                      padding: typeof item.badge === 'string' ? '2px 7px' : '1px 7px',
                       borderRadius: 12,
+                      letterSpacing: typeof item.badge === 'string' ? '0.5px' : 'normal',
+                      border:
+                        typeof item.badge === 'string'
+                          ? '1px solid rgba(124, 58, 237, 0.3)'
+                          : 'none',
                     }}
                   >
                     {item.badge}
@@ -265,17 +290,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {getInitials(user?.name)}
             </div>
             <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: 'var(--text-main, #0f172a)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {user?.name || 'Minha Conta'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: 'var(--text-main, #0f172a)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {user?.name || 'Minha Conta'}
+                </div>
+                {user?.role === 'admin' && (
+                  <span
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 800,
+                      backgroundColor: '#7c3aed',
+                      color: '#ffffff',
+                      padding: '1px 5px',
+                      borderRadius: 4,
+                      letterSpacing: '0.5px',
+                    }}
+                  >
+                    ADMIN
+                  </span>
+                )}
               </div>
               <div
                 style={{

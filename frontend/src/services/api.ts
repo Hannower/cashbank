@@ -210,5 +210,66 @@ export const api = {
     id: string,
     data: { month: number; year: number; amount: number | null; scope: 'onward' | 'month' | 'all' }
   ) => request<any>(`/receivables/${id}/adjustment`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  // 2FA Authentication
+  verify2FA: (data: { email: string; code: string }) =>
+    request<any>('/auth/verify-2fa', { method: 'POST', body: JSON.stringify(data) }),
+  send2FACode: (data: { email: string }) =>
+    request<any>('/auth/send-2fa-code', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Admin Dashboard API
+  getAdminUsers: (params?: { search?: string; status?: string; startDate?: string; endDate?: string; page?: number; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.search) qs.append('search', params.search);
+    if (params?.status && params.status !== 'all') qs.append('status', params.status);
+    if (params?.startDate) qs.append('startDate', params.startDate);
+    if (params?.endDate) qs.append('endDate', params.endDate);
+    if (params?.page) qs.append('page', String(params.page));
+    if (params?.limit) qs.append('limit', String(params.limit));
+    const query = qs.toString();
+    return request<any>(`/admin/users${query ? `?${query}` : ''}`);
+  },
+  updateAdminUserStatus: (id: string, status: 'active' | 'suspended' | 'pending') =>
+    request<any>(`/admin/users/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  updateAdminUserRole: (id: string, role: 'user' | 'admin') =>
+    request<any>(`/admin/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+  adminResetPassword: (id: string) =>
+    request<any>(`/admin/users/${id}/reset-password`, { method: 'POST' }),
+  deleteAdminUser: (id: string) =>
+    request<any>(`/admin/users/${id}`, { method: 'DELETE' }),
+
+  getAdminAnalytics: () => request<any>('/admin/analytics'),
+
+  getAdminAuditLogs: (params?: { page?: number; limit?: number; action?: string; search?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.append('page', String(params.page));
+    if (params?.limit) qs.append('limit', String(params.limit));
+    if (params?.action) qs.append('action', params.action);
+    if (params?.search) qs.append('search', params.search);
+    const query = qs.toString();
+    return request<any>(`/admin/audit-logs${query ? `?${query}` : ''}`);
+  },
+
+  getAdminErrorLogs: (params?: { page?: number; limit?: number; statusCode?: number; search?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.append('page', String(params.page));
+    if (params?.limit) qs.append('limit', String(params.limit));
+    if (params?.statusCode) qs.append('statusCode', String(params.statusCode));
+    if (params?.search) qs.append('search', params.search);
+    const query = qs.toString();
+    return request<any>(`/admin/error-logs${query ? `?${query}` : ''}`);
+  },
+  clearAdminErrorLogs: () => request<any>('/admin/error-logs/clear', { method: 'POST' }),
+
+  getAdminSecurityLogs: (params?: { page?: number; limit?: number; status?: string; search?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.append('page', String(params.page));
+    if (params?.limit) qs.append('limit', String(params.limit));
+    if (params?.status && params.status !== 'all') qs.append('status', params.status);
+    if (params?.search) qs.append('search', params.search);
+    const query = qs.toString();
+    return request<any>(`/admin/security-logs${query ? `?${query}` : ''}`);
+  },
 };
+
 

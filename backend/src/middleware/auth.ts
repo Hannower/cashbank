@@ -6,6 +6,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'cashbank-super-secret-jwt-key-2025
 export interface AuthenticatedRequest extends Request {
   userId?: string;
   userEmail?: string;
+  userRole?: string;
 }
 
 export function authMiddleware(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
@@ -19,9 +20,10 @@ export function authMiddleware(req: AuthenticatedRequest, res: Response, next: N
   const token = authHeader.split(' ')[1];
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; email: string };
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; email: string; role?: string };
     req.userId = decoded.userId;
     req.userEmail = decoded.email;
+    req.userRole = decoded.role;
     next();
   } catch (error) {
     res.status(401).json({ message: 'Token de autenticação inválido ou expirado' });

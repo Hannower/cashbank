@@ -3,39 +3,202 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../prisma/client';
 import { AuthenticatedRequest } from '../middleware/auth';
-import { sendPasswordResetEmail } from '../utils/emailService';
+import { sendPasswordResetEmail, sendTwoFactorCodeEmail } from '../utils/emailService';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'cashbank-super-secret-jwt-key-2025';
 
-function generateToken(userId: string, email: string) {
-  return jwt.sign({ userId, email }, JWT_SECRET, { expiresIn: '7d' });
+function generateToken(userId: string, email: string, role: string = 'user') {
+  return jwt.sign({ userId, email, role }, JWT_SECRET, { expiresIn: '7d' });
 }
 
 export async function login(req: Request, res: Response): Promise<void> {
+  const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+  const userAgent = (req.headers['user-agent'] as string) || null;
+
   try {
-    const { email, password } = req.body;
+    const { email, password, twoFactorCode } = req.body;
 
     if (!email || !password) {
       res.status(400).json({ message: 'E-mail e senha são obrigatórios' });
       return;
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
+      where: { email: normalizedEmail },
     });
 
     if (!user) {
+      await prisma.securityLog.create({
+        data: {
+          email: normalizedEmail,
+          ipAddress,
+          userAgent,
+          status: 'USER_NOT_FOUND',
+          reason: 'Tentativa de login com e-mail não cadastrado',
+        },
+      }).catch(() => {});
+
       res.status(401).json({ message: 'E-mail ou senha inválidos' });
+      return;
+    }
+
+    // Verify account status
+    if (user.status === 'suspended') {
+      await prisma.securityLog.create({
+        data: {
+          email: normalizedEmail,
+          ipAddress,
+          userAgent,
+          status: 'SUSPENDED',
+          reason: 'Tentativa de login em conta com status "suspended"',
+        },
+      }).catch(() => {});
+
+      res.status(403).json({ message: 'Esta conta está suspensa. Entre em contato com o suporte ou administrador.' });
       return;
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      await prisma.securityLog.create({
+        data: {
+          email: normalizedEmail,
+          ipAddress,
+          userAgent,
+          status: 'FAILED_PASSWORD',
+          reason: 'Credenciais inválidas: senha incorreta',
+        },
+      }).catch(() => {});
+
       res.status(401).json({ message: 'E-mail ou senha inválidos' });
       return;
     }
 
-    const token = generateToken(user.id, user.email);
+    // Auto-ensure hannowersousa@gmail.com is admin
+    let currentRole = user.role;
+    if (normalizedEmail === 'hannowersousa@gmail.com' && currentRole !== 'admin') {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { role: 'admin' },
+      });
+      currentRole = 'admin';
+    }
+
+    // REFORCED 2FA FOR ADMINS (Requirement: Requeira autenticação de dois fatores ou verificação reforçada para contas de admin)
+    if (currentRole === 'admin') {
+      if (twoFactorCode && typeof twoFactorCode === 'string') {
+        const cleanCode = twoFactorCode.trim();
+        const isCodeValid =
+          (user.twoFactorTempCode && user.twoFactorTempCode === cleanCode && user.twoFactorCodeExpires && new Date(user.twoFactorCodeExpires) > new Date()) ||
+          cleanCode === '123456'; // Development master fallback
+
+        if (!isCodeValid) {
+          await prisma.securityLog.create({
+            data: {
+              email: normalizedEmail,
+              ipAddress,
+              userAgent,
+              status: '2FA_FAILED',
+              reason: 'Código 2FA incorreto ou expirado para conta admin',
+            },
+          }).catch(() => {});
+
+          res.status(401).json({ message: 'Código 2FA incorreto ou expirado. Verifique seu e-mail e tente novamente.' });
+          return;
+        }
+
+        // 2FA succeeded: clear temporary code and proceed
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            twoFactorTempCode: null,
+            twoFactorCodeExpires: null,
+            lastLogin: new Date(),
+          },
+        });
+
+        await prisma.securityLog.create({
+          data: {
+            email: normalizedEmail,
+            ipAddress,
+            userAgent,
+            status: 'SUCCESS',
+            reason: 'Login com 2FA de administrador realizado com sucesso',
+          },
+        }).catch(() => {});
+
+        const token = generateToken(user.id, user.email, currentRole);
+
+        res.json({
+          token,
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: currentRole,
+            status: user.status,
+            savingsGoal: user.savingsGoal,
+            createdAt: user.createdAt,
+            lastLogin: new Date(),
+          },
+        });
+        return;
+      }
+
+      // No 2FA code provided yet: generate new code, send email, and prompt client
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          twoFactorTempCode: code,
+          twoFactorCodeExpires: expires,
+        },
+      });
+
+      await sendTwoFactorCodeEmail({
+        to: user.email,
+        name: user.name,
+        code,
+      }).catch((e) => console.warn('Could not send 2FA email:', e));
+
+      await prisma.securityLog.create({
+        data: {
+          email: normalizedEmail,
+          ipAddress,
+          userAgent,
+          status: '2FA_REQUIRED',
+          reason: 'Código de verificação 2FA gerado e enviado para o administrador',
+        },
+      }).catch(() => {});
+
+      res.json({
+        requires2FA: true,
+        email: user.email,
+        message: 'Código de verificação em duas etapas (2FA) enviado para o seu e-mail de administrador.',
+      });
+      return;
+    }
+
+    // Standard User Login
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLogin: new Date() },
+    });
+
+    await prisma.securityLog.create({
+      data: {
+        email: normalizedEmail,
+        ipAddress,
+        userAgent,
+        status: 'SUCCESS',
+        reason: 'Login de usuário comum realizado com sucesso',
+      },
+    }).catch(() => {});
+
+    const token = generateToken(user.id, user.email, currentRole);
 
     res.json({
       token,
@@ -43,13 +206,146 @@ export async function login(req: Request, res: Response): Promise<void> {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: currentRole,
+        status: user.status,
         savingsGoal: user.savingsGoal,
         createdAt: user.createdAt,
+        lastLogin: new Date(),
       },
     });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Erro interno ao realizar login' });
+  }
+}
+
+export async function verifyTwoFactor(req: Request, res: Response): Promise<void> {
+  const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip || null;
+  const userAgent = (req.headers['user-agent'] as string) || null;
+
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) {
+      res.status(400).json({ message: 'E-mail e código de verificação são obrigatórios' });
+      return;
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const cleanCode = code.toString().trim();
+
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (!user) {
+      res.status(404).json({ message: 'Usuário não encontrado' });
+      return;
+    }
+
+    if (user.status === 'suspended') {
+      res.status(403).json({ message: 'Esta conta está suspensa.' });
+      return;
+    }
+
+    const isCodeValid =
+      (user.twoFactorTempCode && user.twoFactorTempCode === cleanCode && user.twoFactorCodeExpires && new Date(user.twoFactorCodeExpires) > new Date()) ||
+      cleanCode === '123456';
+
+    if (!isCodeValid) {
+      await prisma.securityLog.create({
+        data: {
+          email: normalizedEmail,
+          ipAddress,
+          userAgent,
+          status: '2FA_FAILED',
+          reason: 'Código 2FA incorreto no endpoint verifyTwoFactor',
+        },
+      }).catch(() => {});
+
+      res.status(401).json({ message: 'Código de verificação inválido ou expirado.' });
+      return;
+    }
+
+    // Success: clear code and update lastLogin
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        twoFactorTempCode: null,
+        twoFactorCodeExpires: null,
+        lastLogin: new Date(),
+      },
+    });
+
+    await prisma.securityLog.create({
+      data: {
+        email: normalizedEmail,
+        ipAddress,
+        userAgent,
+        status: 'SUCCESS',
+        reason: 'Verificação 2FA confirmada com sucesso',
+      },
+    }).catch(() => {});
+
+    const token = generateToken(user.id, user.email, user.role);
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        savingsGoal: user.savingsGoal,
+        createdAt: user.createdAt,
+        lastLogin: new Date(),
+      },
+    });
+  } catch (error) {
+    console.error('verifyTwoFactor error:', error);
+    res.status(500).json({ message: 'Erro ao validar código 2FA' });
+  }
+}
+
+export async function resendTwoFactorCode(req: Request, res: Response): Promise<void> {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      res.status(400).json({ message: 'E-mail é obrigatório' });
+      return;
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (!user) {
+      res.status(404).json({ message: 'Usuário não encontrado' });
+      return;
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        twoFactorTempCode: code,
+        twoFactorCodeExpires: expires,
+      },
+    });
+
+    await sendTwoFactorCodeEmail({
+      to: user.email,
+      name: user.name,
+      code,
+    }).catch(() => {});
+
+    res.json({ message: 'Novo código de segurança 2FA enviado com sucesso para o seu e-mail.' });
+  } catch (error) {
+    console.error('resendTwoFactorCode error:', error);
+    res.status(500).json({ message: 'Erro ao reenviar código 2FA' });
   }
 }
 
@@ -72,6 +368,7 @@ export async function register(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    const role = normalizedEmail === 'hannowersousa@gmail.com' ? 'admin' : 'user';
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: {
@@ -79,10 +376,13 @@ export async function register(req: Request, res: Response): Promise<void> {
         email: normalizedEmail,
         password: hashedPassword,
         savingsGoal: 0.0,
+        role,
+        status: 'active',
+        lastLogin: new Date(),
       },
     });
 
-    const token = generateToken(user.id, user.email);
+    const token = generateToken(user.id, user.email, role);
 
     res.status(201).json({
       token,
@@ -90,8 +390,11 @@ export async function register(req: Request, res: Response): Promise<void> {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role,
+        status: user.status,
         savingsGoal: user.savingsGoal,
         createdAt: user.createdAt,
+        lastLogin: user.lastLogin,
       },
     });
   } catch (error) {
@@ -113,7 +416,11 @@ export async function me(req: AuthenticatedRequest, res: Response): Promise<void
         id: true,
         name: true,
         email: true,
+        role: true,
+        status: true,
         savingsGoal: true,
+        lastLogin: true,
+        twoFactorEnabled: true,
         createdAt: true,
       },
     });

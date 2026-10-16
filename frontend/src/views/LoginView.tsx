@@ -19,12 +19,13 @@ import {
   EyeOff,
   Sun,
   Moon,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 
 export const LoginView: React.FC = () => {
-  const { login, register } = useAuth();
+  const { login, register, verify2FA, resend2FA } = useAuth();
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -33,6 +34,13 @@ export const LoginView: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 2FA Admin Verification state
+  const [is2FAMode, setIs2FAMode] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [twoFactorEmail, setTwoFactorEmail] = useState('');
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+  const [twoFactorResentMsg, setTwoFactorResentMsg] = useState<string | null>(null);
 
   // Link Recovery Modal state (Requesting link by email)
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
@@ -107,7 +115,6 @@ export const LoginView: React.FC = () => {
     }
   };
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -117,12 +124,47 @@ export const LoginView: React.FC = () => {
       if (isRegisterMode) {
         await register(name, email, password);
       } else {
-        await login(email, password);
+        const result = await login(email, password);
+        if (result.requires2FA) {
+          setIs2FAMode(true);
+          setTwoFactorEmail(result.email || email);
+          setTwoFactorCode('');
+          setError(null);
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Falha ao autenticar. Verifique seus dados.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerify2FA = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!twoFactorCode.trim()) {
+      setError('Por favor, informe o código de 6 dígitos.');
+      return;
+    }
+    setError(null);
+    setTwoFactorLoading(true);
+    try {
+      await verify2FA(twoFactorEmail, twoFactorCode.trim());
+    } catch (err: any) {
+      setError(err.message || 'Código de autenticação inválido ou expirado.');
+    } finally {
+      setTwoFactorLoading(false);
+    }
+  };
+
+  const handleResend2FACode = async () => {
+    setError(null);
+    setTwoFactorResentMsg(null);
+    try {
+      await resend2FA(twoFactorEmail);
+      setTwoFactorResentMsg('Novo código enviado com sucesso para seu e-mail!');
+      setTimeout(() => setTwoFactorResentMsg(null), 4000);
+    } catch (err: any) {
+      setError(err.message || 'Erro ao reenviar código de autenticação.');
     }
   };
 
@@ -293,297 +335,503 @@ export const LoginView: React.FC = () => {
         </div>
 
         <div style={{ width: '100%', maxWidth: 420 }}>
-          <div style={{ marginBottom: 32 }}>
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: '#15803d',
-                display: 'block',
-                marginBottom: 6,
-              }}
-            >
-              {isRegisterMode ? 'Comece agora' : 'Bem-vindo de volta'}
-            </span>
-            <h2
-              style={{
-                fontSize: 32,
-                fontWeight: 800,
-                color: '#0f172a',
-                letterSpacing: '-0.8px',
-                marginBottom: 6,
-              }}
-            >
-              {isRegisterMode ? 'Crie sua conta' : 'Acesse sua conta'}
-            </h2>
-            <p style={{ fontSize: 14, color: '#64748b' }}>
-              {isRegisterMode
-                ? 'Preencha seus dados para começar a organizar sua vida financeira.'
-                : 'Entre com seus dados para continuar.'}
-            </p>
-          </div>
-
-          {error && (
-            <div
-              style={{
-                backgroundColor: '#fef2f2',
-                color: '#b91c1c',
-                border: '1px solid #fecaca',
-                borderRadius: 10,
-                padding: '12px 14px',
-                fontSize: 13,
-                marginBottom: 20,
-              }}
-            >
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-            {isRegisterMode && (
-              <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: '#334155',
-                    marginBottom: 6,
-                  }}
-                >
-                  Nome completo
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <UserIcon
-                    size={18}
-                    color="#94a3b8"
-                    style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }}
-                  />
-                  <input
-                    type="text"
-                    required
-                    placeholder="Seu nome completo"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 14px 12px 42px',
-                      borderRadius: 10,
-                      border: '1px solid #cbd5e1',
-                      outline: 'none',
-                    }}
-                    onFocus={(e) => (e.target.style.borderColor = '#15803d')}
-                    onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
-                  />
-                </div>
-              </div>
-            )}
-
+          {is2FAMode ? (
             <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: '#334155',
-                  marginBottom: 6,
-                }}
-              >
-                E-mail
-              </label>
-              <div style={{ position: 'relative' }}>
-                <Mail
-                  size={18}
-                  color="#94a3b8"
-                  style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }}
-                />
-                <input
-                  type="email"
-                  required
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+              <div style={{ marginBottom: 28, textAlign: 'center' }}>
+                <div
                   style={{
-                    width: '100%',
-                    padding: '12px 14px 12px 42px',
-                    borderRadius: 10,
-                    border: '1px solid #cbd5e1',
-                    outline: 'none',
-                  }}
-                  onFocus={(e) => (e.target.style.borderColor = '#15803d')}
-                  onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: '#334155',
-                  marginBottom: 6,
-                }}
-              >
-                Senha
-              </label>
-              <div style={{ position: 'relative' }}>
-                <Lock
-                  size={18}
-                  color="#94a3b8"
-                  style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }}
-                />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '12px 42px 12px 42px',
-                    borderRadius: 10,
-                    border: '1px solid #cbd5e1',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                  }}
-                  onFocus={(e) => (e.target.style.borderColor = '#15803d')}
-                  onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: 12,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    padding: 4,
-                    cursor: 'pointer',
-                    color: '#94a3b8',
+                    width: 60,
+                    height: 60,
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                    color: '#7c3aed',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    margin: '0 auto 16px',
+                    border: '1px solid rgba(124, 58, 237, 0.25)',
                   }}
-                  title={showPassword ? 'Ocultar senha' : 'Exibir senha'}
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-
-            {!isRegisterMode && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <label
+                  <ShieldCheck size={30} />
+                </div>
+                <span
                   style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: '#7c3aed',
+                    letterSpacing: '1px',
+                    textTransform: 'uppercase',
+                    display: 'block',
+                    marginBottom: 6,
+                  }}
+                >
+                  Segurança Reforçada (2FA)
+                </span>
+                <h2
+                  style={{
+                    fontSize: 26,
+                    fontWeight: 800,
+                    color: 'var(--text-main, #0f172a)',
+                    letterSpacing: '-0.6px',
+                    marginBottom: 8,
+                  }}
+                >
+                  Verificação de Admin
+                </h2>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary, #64748b)', lineHeight: 1.5 }}>
+                  Para proteger o ambiente de administração do CashBank, enviamos um código de 6 dígitos para o seu e-mail:
+                  <br />
+                  <strong style={{ color: 'var(--text-main, #0f172a)' }}>{twoFactorEmail}</strong>
+                </p>
+              </div>
+
+              {error && (
+                <div
+                  style={{
+                    backgroundColor: '#fef2f2',
+                    color: '#b91c1c',
+                    border: '1px solid #fecaca',
+                    borderRadius: 10,
+                    padding: '12px 14px',
+                    fontSize: 13,
+                    marginBottom: 20,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
-                    fontSize: 13,
-                    color: 'var(--text-secondary, #475569)',
-                    cursor: 'pointer',
                   }}
                 >
+                  <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              {twoFactorResentMsg && (
+                <div
+                  style={{
+                    backgroundColor: '#ecfdf5',
+                    color: '#15803d',
+                    border: '1px solid #a7f3d0',
+                    borderRadius: 10,
+                    padding: '12px 14px',
+                    fontSize: 13,
+                    marginBottom: 20,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
+                  <span>{twoFactorResentMsg}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleVerify2FA} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                <div>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: 'var(--text-main, #334155)',
+                      marginBottom: 8,
+                      textAlign: 'center',
+                    }}
+                  >
+                    Código de 6 dígitos
+                  </label>
                   <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    style={{ accentColor: '#15803d', width: 16, height: 16 }}
+                    type="text"
+                    maxLength={6}
+                    autoFocus
+                    required
+                    placeholder="000000"
+                    value={twoFactorCode}
+                    onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ''))}
+                    style={{
+                      width: '100%',
+                      padding: '14px',
+                      fontSize: 26,
+                      fontWeight: 800,
+                      letterSpacing: '8px',
+                      textAlign: 'center',
+                      borderRadius: 10,
+                      border: '2px solid var(--border-input, #cbd5e1)',
+                      backgroundColor: 'var(--bg-input, #ffffff)',
+                      color: 'var(--text-main, #0f172a)',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = '#7c3aed')}
+                    onBlur={(e) => (e.target.style.borderColor = 'var(--border-input, #cbd5e1)')}
                   />
-                  Lembrar de mim
-                </label>
+                </div>
+
                 <button
-                  type="button"
-                  onClick={handleOpenRecovery}
+                  type="submit"
+                  disabled={twoFactorLoading || twoFactorCode.length < 6}
+                  className="btn-primary"
+                  style={{
+                    width: '100%',
+                    padding: '13px',
+                    borderRadius: 10,
+                    fontSize: 15,
+                    fontWeight: 700,
+                    backgroundColor: '#7c3aed',
+                    borderColor: '#7c3aed',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    opacity: twoFactorCode.length < 6 ? 0.7 : 1,
+                    cursor: twoFactorCode.length < 6 ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {twoFactorLoading ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" /> Verificando...
+                    </>
+                  ) : (
+                    <>
+                      Confirmar e Acessar <ArrowRight size={18} />
+                    </>
+                  )}
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIs2FAMode(false);
+                      setError(null);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 13,
+                      color: 'var(--text-secondary, #64748b)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 0,
+                    }}
+                  >
+                    <ArrowLeft size={16} /> Voltar ao login
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleResend2FACode}
+                    style={{
+                      fontSize: 13,
+                      color: '#7c3aed',
+                      fontWeight: 600,
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: 0,
+                    }}
+                  >
+                    Reenviar código
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : (
+            <>
+              <div style={{ marginBottom: 32 }}>
+                <span
                   style={{
                     fontSize: 13,
+                    fontWeight: 700,
                     color: '#15803d',
-                    fontWeight: 600,
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: 0,
+                    display: 'block',
+                    marginBottom: 6,
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
-                  onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
                 >
-                  Esqueci minha senha
-                </button>
+                  {isRegisterMode ? 'Comece agora' : 'Bem-vindo de volta'}
+                </span>
+                <h2
+                  style={{
+                    fontSize: 32,
+                    fontWeight: 800,
+                    color: '#0f172a',
+                    letterSpacing: '-0.8px',
+                    marginBottom: 6,
+                  }}
+                >
+                  {isRegisterMode ? 'Crie sua conta' : 'Acesse sua conta'}
+                </h2>
+                <p style={{ fontSize: 14, color: '#64748b' }}>
+                  {isRegisterMode
+                    ? 'Preencha seus dados para começar a organizar sua vida financeira.'
+                    : 'Entre com seus dados para continuar.'}
+                </p>
               </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary"
-              style={{
-                width: '100%',
-                padding: '13px',
-                borderRadius: 10,
-                fontSize: 15,
-                fontWeight: 700,
-                marginTop: 6,
-              }}
-            >
-              {loading ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" /> Carregando...
-                </>
-              ) : isRegisterMode ? (
-                <>
-                  Criar conta agora <ArrowRight size={18} />
-                </>
-              ) : (
-                <>
-                  Entrar na conta <ArrowRight size={18} />
-                </>
+              {error && (
+                <div
+                  style={{
+                    backgroundColor: '#fef2f2',
+                    color: '#b91c1c',
+                    border: '1px solid #fecaca',
+                    borderRadius: 10,
+                    padding: '12px 14px',
+                    fontSize: 13,
+                    marginBottom: 20,
+                  }}
+                >
+                  {error}
+                </div>
               )}
-            </button>
-          </form>
 
-          {/* Divider */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              margin: '28px 0 20px',
-              gap: 12,
-            }}
-          >
-            <div className="login-divider-line" style={{ flex: 1, height: 1 }} />
-            <span style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)' }}>ou</span>
-            <div className="login-divider-line" style={{ flex: 1, height: 1 }} />
-          </div>
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                {isRegisterMode && (
+                  <div>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: '#334155',
+                        marginBottom: 6,
+                      }}
+                    >
+                      Nome completo
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <UserIcon
+                        size={18}
+                        color="#94a3b8"
+                        style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }}
+                      />
+                      <input
+                        type="text"
+                        required
+                        placeholder="Seu nome completo"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 14px 12px 42px',
+                          borderRadius: 10,
+                          border: '1px solid #cbd5e1',
+                          outline: 'none',
+                        }}
+                        onFocus={(e) => (e.target.style.borderColor = '#15803d')}
+                        onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
+                      />
+                    </div>
+                  </div>
+                )}
 
-          {/* Toggle Register / Login */}
-          <div style={{ textAlign: 'center', fontSize: 14, color: '#64748b' }}>
-            {isRegisterMode ? (
-              <>
-                Já possui uma conta?{' '}
+                <div>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: '#334155',
+                      marginBottom: 6,
+                    }}
+                  >
+                    E-mail
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Mail
+                      size={18}
+                      color="#94a3b8"
+                      style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }}
+                    />
+                    <input
+                      type="email"
+                      required
+                      placeholder="seu@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '12px 14px 12px 42px',
+                        borderRadius: 10,
+                        border: '1px solid #cbd5e1',
+                        outline: 'none',
+                      }}
+                      onFocus={(e) => (e.target.style.borderColor = '#15803d')}
+                      onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: '#334155',
+                      marginBottom: 6,
+                    }}
+                  >
+                    Senha
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Lock
+                      size={18}
+                      color="#94a3b8"
+                      style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }}
+                    />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '12px 42px 12px 42px',
+                        borderRadius: 10,
+                        border: '1px solid #cbd5e1',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                      onFocus={(e) => (e.target.style.borderColor = '#15803d')}
+                      onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: 12,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        padding: 4,
+                        cursor: 'pointer',
+                        color: '#94a3b8',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      title={showPassword ? 'Ocultar senha' : 'Exibir senha'}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                {!isRegisterMode && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        fontSize: 13,
+                        color: 'var(--text-secondary, #475569)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        style={{ accentColor: '#15803d', width: 16, height: 16 }}
+                      />
+                      Lembrar de mim
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleOpenRecovery}
+                      style={{
+                        fontSize: 13,
+                        color: '#15803d',
+                        fontWeight: 600,
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+                      onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
+                    >
+                      Esqueci minha senha
+                    </button>
+                  </div>
+                )}
+
                 <button
-                  type="button"
-                  onClick={() => setIsRegisterMode(false)}
-                  style={{ color: '#15803d', fontWeight: 700, textDecoration: 'underline' }}
+                  type="submit"
+                  disabled={loading}
+                  className="btn-primary"
+                  style={{
+                    width: '100%',
+                    padding: '13px',
+                    borderRadius: 10,
+                    fontSize: 15,
+                    fontWeight: 700,
+                    marginTop: 6,
+                  }}
                 >
-                  Fazer login
+                  {loading ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" /> Carregando...
+                    </>
+                  ) : isRegisterMode ? (
+                    <>
+                      Criar conta agora <ArrowRight size={18} />
+                    </>
+                  ) : (
+                    <>
+                      Entrar na conta <ArrowRight size={18} />
+                    </>
+                  )}
                 </button>
-              </>
-            ) : (
-              <>
-                Ainda não tem uma conta?{' '}
-                <button
-                  type="button"
-                  onClick={() => setIsRegisterMode(true)}
-                  style={{ color: '#15803d', fontWeight: 700, textDecoration: 'underline' }}
-                >
-                  Criar conta grátis
-                </button>
-              </>
-            )}
-          </div>
+              </form>
+
+              {/* Divider */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  margin: '28px 0 20px',
+                  gap: 12,
+                }}
+              >
+                <div className="login-divider-line" style={{ flex: 1, height: 1 }} />
+                <span style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)' }}>ou</span>
+                <div className="login-divider-line" style={{ flex: 1, height: 1 }} />
+              </div>
+
+              {/* Toggle Register / Login */}
+              <div style={{ textAlign: 'center', fontSize: 14, color: '#64748b' }}>
+                {isRegisterMode ? (
+                  <>
+                    Já possui uma conta?{' '}
+                    <button
+                      type="button"
+                      onClick={() => setIsRegisterMode(false)}
+                      style={{ color: '#15803d', fontWeight: 700, textDecoration: 'underline' }}
+                    >
+                      Fazer login
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    Ainda não tem uma conta?{' '}
+                    <button
+                      type="button"
+                      onClick={() => setIsRegisterMode(true)}
+                      style={{ color: '#15803d', fontWeight: 700, textDecoration: 'underline' }}
+                    >
+                      Criar conta grátis
+                    </button>
+                  </>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
 

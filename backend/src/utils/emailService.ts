@@ -334,3 +334,90 @@ export async function sendPasswordResetEmail({
     reason: 'Nenhum provedor de e-mail configurado',
   };
 }
+
+export async function sendTwoFactorCodeEmail(params: {
+  to: string;
+  name: string;
+  code: string;
+}): Promise<SendEmailResult> {
+  const { to, name, code } = params;
+  const firstName = name.split(' ')[0] || 'Administrador';
+
+  console.log(`\n======================================================`);
+  console.log(`🔐 [CASHBANK ADMIN 2FA CODE]`);
+  console.log(`Destinatário: ${to} (${name})`);
+  console.log(`Código 2FA: >>> ${code} <<<`);
+  console.log(`Válido por: 10 minutos`);
+  console.log(`======================================================\n`);
+
+  const html = `
+    <div style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; max-width: 560px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+      <div style="background-color: #0c1424; padding: 28px 32px; text-align: center; border-bottom: 2px solid #15803d;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">CashBank</h1>
+        <p style="color: #94a3b8; margin: 4px 0 0; font-size: 13px;">Segurança & Controle de Acesso Administrativo</p>
+      </div>
+      <div style="padding: 32px; color: #0f172a;">
+        <h2 style="font-size: 18px; font-weight: 700; margin-top: 0; color: #0f172a;">Olá, ${firstName}!</h2>
+        <p style="font-size: 14px; line-height: 1.6; color: #475569;">
+          Uma solicitação de acesso administrativo (2FA) foi iniciada para a sua conta no <strong>CashBank</strong>.
+        </p>
+        <div style="background-color: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 20px; text-align: center; margin: 24px 0;">
+          <span style="font-size: 12px; font-weight: 700; color: #64748b; letter-spacing: 1px; text-transform: uppercase; display: block; margin-bottom: 8px;">Seu Código de Verificação 2FA</span>
+          <span style="font-size: 36px; font-weight: 900; letter-spacing: 8px; color: #15803d; font-family: monospace;">${code}</span>
+          <span style="font-size: 11px; color: #94a3b8; display: block; margin-top: 8px;">Este código expira em <strong>10 minutos</strong>.</span>
+        </div>
+        <p style="font-size: 13px; line-height: 1.5; color: #64748b;">
+          Se você não tentou acessar o painel administrativo, recomendamos alterar sua senha imediatamente para garantir a segurança da plataforma.
+        </p>
+        <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 24px 0;" />
+        <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">
+          CashBank • Sistema de Gestão Financeira Pessoal • Segurança RBAC
+        </p>
+      </div>
+    </div>
+  `;
+
+  const text = `Olá, ${firstName}!\n\nSeu código de verificação em duas etapas (2FA) para acesso ao painel de administração do CashBank é:\n\n${code}\n\nEste código expira em 10 minutos.\nSe você não tentou acessar, altere sua senha imediatamente.`;
+  const subject = `Código de Segurança 2FA: ${code} - CashBank Admin`;
+
+  const resendKey = process.env.RESEND_API_KEY || process.env.RESEND_KEY;
+  if (resendKey) {
+    const from = process.env.EMAIL_FROM || process.env.RESEND_FROM || 'CashBank <onboarding@resend.dev>';
+    const res = await sendViaResend(resendKey, from, to, subject, html, text);
+    if (res.success) return res;
+  }
+
+  const brevoKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY;
+  if (brevoKey) {
+    const fromEmail = (process.env.EMAIL_USER || process.env.BREVO_FROM || 'suporte@cashbank.com').trim();
+    const res = await sendViaBrevo(brevoKey, fromEmail, to, firstName, subject, html, text);
+    if (res.success) return res;
+  }
+
+  const sendgridKey = process.env.SENDGRID_API_KEY;
+  if (sendgridKey) {
+    const from = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'suporte@cashbank.com';
+    const res = await sendViaSendGrid(sendgridKey, from, to, subject, html, text);
+    if (res.success) return res;
+  }
+
+  const smtpConfig = getSmtpTransporter();
+  if (smtpConfig) {
+    try {
+      const info = await smtpConfig.transporter.sendMail({
+        from: smtpConfig.from,
+        to,
+        subject,
+        text,
+        html,
+      });
+      console.log(`[2FA EMAIL] Enviado com sucesso via SMTP para ${to}. ID: ${info.messageId}`);
+      return { success: true, method: 'smtp', messageId: info.messageId };
+    } catch (err: any) {
+      console.warn(`[2FA SMTP FAILED] ${err.message}`);
+    }
+  }
+
+  return { success: true, method: 'none', messageId: 'logged-to-console' };
+}
+

@@ -6,14 +6,26 @@ export interface User {
   name: string;
   email: string;
   savingsGoal: number;
+  role?: 'user' | 'admin';
+  status?: 'active' | 'suspended' | 'pending';
+  lastLogin?: string;
+  twoFactorEnabled?: boolean;
   createdAt?: string;
+}
+
+export interface LoginResult {
+  requires2FA?: boolean;
+  email?: string;
+  message?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, twoFactorCode?: string) => Promise<LoginResult>;
+  verify2FA: (email: string, code: string) => Promise<void>;
+  resend2FA: (email: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -55,11 +67,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [token]);
 
-  const login = async (email: string, password: string) => {
-    const res = await api.login({ email, password });
+  const login = async (email: string, password: string, twoFactorCode?: string): Promise<LoginResult> => {
+    const res = await api.login({ email, password, twoFactorCode });
+    if (res.requires2FA) {
+      return { requires2FA: true, email: res.email, message: res.message };
+    }
+
     setToken(res.token);
     setTokenState(res.token);
     setUser(res.user);
+    return { requires2FA: false };
+  };
+
+  const verify2FA = async (email: string, code: string) => {
+    const res = await api.verify2FA({ email, code });
+    setToken(res.token);
+    setTokenState(res.token);
+    setUser(res.user);
+  };
+
+  const resend2FA = async (email: string) => {
+    await api.send2FACode({ email });
   };
 
   const register = async (name: string, email: string, password: string) => {
@@ -82,6 +110,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         loading,
         login,
+        verify2FA,
+        resend2FA,
         register,
         logout,
         refreshUser,
@@ -99,3 +129,4 @@ export function useAuth() {
   }
   return context;
 }
+
