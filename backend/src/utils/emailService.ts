@@ -14,6 +14,23 @@ export interface SendEmailResult {
 }
 
 /**
+ * Helper to determine the best 'from' address for Resend.
+ * Resend rejects unverified public domains (@gmail.com, @hotmail.com, etc.) with HTTP 403.
+ * It requires either a verified custom domain or 'onboarding@resend.dev'.
+ */
+function getResendSender(): string {
+  if (process.env.RESEND_FROM && process.env.RESEND_FROM.trim()) {
+    return process.env.RESEND_FROM.trim();
+  }
+  const emailFrom = (process.env.EMAIL_FROM || '').trim();
+  const isPublicDomain = /@(gmail|yahoo|hotmail|outlook|live|icloud)\.com/i.test(emailFrom);
+  if (emailFrom && !isPublicDomain) {
+    return emailFrom;
+  }
+  return 'CashBank <onboarding@resend.dev>';
+}
+
+/**
  * Sends email via Resend API (HTTPS port 443 - works everywhere in cloud/deploy)
  */
 async function sendViaResend(
@@ -25,6 +42,11 @@ async function sendViaResend(
   text: string
 ): Promise<SendEmailResult> {
   try {
+    // Ensure public domains like gmail.com are never sent to Resend (causes 403 domain not verified)
+    const isPublicDomain = /@(gmail|yahoo|hotmail|outlook|live|icloud)\.com/i.test(from);
+    const resolvedFrom = isPublicDomain ? 'CashBank <onboarding@resend.dev>' : from;
+    const cleanFrom = resolvedFrom.includes('<') ? resolvedFrom : `CashBank <${resolvedFrom}>`;
+
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -32,7 +54,7 @@ async function sendViaResend(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: from.includes('<') ? from : `CashBank <${from}>`,
+        from: cleanFrom,
         to: [to],
         subject,
         html,
@@ -46,7 +68,7 @@ async function sendViaResend(
       return { success: false, method: 'resend', reason: data.message || `HTTP ${res.status}` };
     }
 
-    console.log(`[PASSWORD RESET] Email enviado com sucesso via Resend para ${to}. ID: ${data.id}`);
+    console.log(`[EMAIL RESEND SUCCESS] Email enviado com sucesso via Resend para ${to}. ID: ${data.id}`);
     return { success: true, method: 'resend', messageId: data.id };
   } catch (err: any) {
     console.warn('[EMAIL RESEND FAILED]', err.message);
@@ -282,7 +304,7 @@ export async function sendPasswordResetEmail({
   // 1. Try Resend if configured (HTTP port 443 - recommended for deploy on Render)
   const resendKey = process.env.RESEND_API_KEY || process.env.RESEND_KEY;
   if (resendKey) {
-    const from = process.env.EMAIL_FROM || process.env.RESEND_FROM || 'CashBank <onboarding@resend.dev>';
+    const from = getResendSender();
     const resendResult = await sendViaResend(resendKey, from, to, subject, html, text);
     if (resendResult.success) return resendResult;
   }
@@ -341,7 +363,7 @@ export async function sendTwoFactorCodeEmail(params: {
   code: string;
 }): Promise<SendEmailResult> {
   const { to, name, code } = params;
-  const firstName = name.split(' ')[0] || 'Administrador';
+  const firstName = name ? name.trim().split(' ')[0] : 'Administrador';
 
   console.log(`\n======================================================`);
   console.log(`🔐 [CASHBANK ADMIN 2FA CODE]`);
@@ -382,7 +404,7 @@ export async function sendTwoFactorCodeEmail(params: {
 
   const resendKey = process.env.RESEND_API_KEY || process.env.RESEND_KEY;
   if (resendKey) {
-    const from = process.env.EMAIL_FROM || process.env.RESEND_FROM || 'CashBank <onboarding@resend.dev>';
+    const from = getResendSender();
     const res = await sendViaResend(resendKey, from, to, subject, html, text);
     if (res.success) return res;
   }
@@ -418,6 +440,11 @@ export async function sendTwoFactorCodeEmail(params: {
     }
   }
 
-  return { success: true, method: 'none', messageId: 'logged-to-console' };
+  console.warn('[2FA EMAIL ERROR] Nenhum serviço de envio de e-mail conseguiu entregar a mensagem.');
+  return {
+    success: false,
+    method: 'none',
+    reason: 'Nenhum provedor de e-mail conseguiu entregar o código (portas SMTP bloqueadas no deploy ou RESEND_API_KEY ausente).',
+  };
 }
 

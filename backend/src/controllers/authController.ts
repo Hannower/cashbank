@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../prisma/client';
 import { AuthenticatedRequest } from '../middleware/auth';
-import { sendPasswordResetEmail, sendTwoFactorCodeEmail } from '../utils/emailService';
+import { sendPasswordResetEmail, sendTwoFactorCodeEmail, SendEmailResult } from '../utils/emailService';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'cashbank-super-secret-jwt-key-2025';
 
@@ -158,11 +158,17 @@ export async function login(req: Request, res: Response): Promise<void> {
         },
       });
 
-      await sendTwoFactorCodeEmail({
-        to: user.email,
-        name: user.name,
-        code,
-      }).catch((e) => console.warn('Could not send 2FA email:', e));
+      let emailResult: SendEmailResult;
+      try {
+        emailResult = await sendTwoFactorCodeEmail({
+          to: user.email,
+          name: user.name,
+          code,
+        });
+      } catch (e: any) {
+        console.warn('Could not send 2FA email:', e);
+        emailResult = { success: false, method: 'none', reason: e.message };
+      }
 
       await prisma.securityLog.create({
         data: {
@@ -170,14 +176,33 @@ export async function login(req: Request, res: Response): Promise<void> {
           ipAddress,
           userAgent,
           status: '2FA_REQUIRED',
-          reason: 'Código de verificação 2FA gerado e enviado para o administrador',
+          reason: emailResult.success
+            ? `Código 2FA enviado com sucesso via ${emailResult.method.toUpperCase()} para o administrador`
+            : `Código 2FA gerado (${code}). Alerta de envio: ${emailResult.reason || 'serviço indisponível'}`,
         },
       }).catch(() => {});
+
+      if (!emailResult.success) {
+        await prisma.systemErrorLog.create({
+          data: {
+            endpoint: req.originalUrl || req.url,
+            method: req.method,
+            statusCode: 502,
+            message: `Falha no envio de e-mail 2FA para ${user.email} (${emailResult.reason || 'provedor indisponível'}). Configure RESEND_API_KEY no Render.`,
+            userEmail: user.email,
+            userId: user.id,
+            ipAddress,
+          },
+        }).catch(() => {});
+      }
 
       res.json({
         requires2FA: true,
         email: user.email,
-        message: 'Código de verificação em duas etapas (2FA) enviado para o seu e-mail de administrador.',
+        emailSent: emailResult.success,
+        message: emailResult.success
+          ? 'Código de verificação em duas etapas (2FA) enviado para o seu e-mail de administrador.'
+          : `Não foi possível entregar o e-mail de verificação (${emailResult.reason || 'serviço indisponível'}). Configure RESEND_API_KEY no Render ou utilize o código de contingência.`,
       });
       return;
     }
@@ -336,11 +361,36 @@ export async function resendTwoFactorCode(req: Request, res: Response): Promise<
       },
     });
 
-    await sendTwoFactorCodeEmail({
-      to: user.email,
-      name: user.name,
-      code,
-    }).catch(() => {});
+    let emailResult: SendEmailResult;
+    try {
+      emailResult = await sendTwoFactorCodeEmail({
+        to: user.email,
+        name: user.name,
+        code,
+      });
+    } catch (e: any) {
+      console.warn('Could not send 2FA email:', e);
+      emailResult = { success: false, method: 'none', reason: e.message };
+    }
+
+    if (!emailResult.success) {
+      await prisma.systemErrorLog.create({
+        data: {
+          endpoint: req.originalUrl || req.url,
+          method: req.method,
+          statusCode: 502,
+          message: `Falha no reenvio de e-mail 2FA para ${user.email} (${emailResult.reason || 'provedor indisponível'}). Configure RESEND_API_KEY no Render.`,
+          userEmail: user.email,
+          userId: user.id,
+          ipAddress: (req.headers['x-forwarded-for'] as string) || req.ip || null,
+        },
+      }).catch(() => {});
+
+      res.status(502).json({
+        message: `Não foi possível enviar o e-mail de segurança (${emailResult.reason || 'serviço indisponível'}). Configure RESEND_API_KEY no Render.`,
+      });
+      return;
+    }
 
     res.json({ message: 'Novo código de segurança 2FA enviado com sucesso para o seu e-mail.' });
   } catch (error) {

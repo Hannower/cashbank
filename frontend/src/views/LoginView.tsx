@@ -129,7 +129,11 @@ export const LoginView: React.FC = () => {
           setIs2FAMode(true);
           setTwoFactorEmail(result.email || email);
           setTwoFactorCode('');
-          setError(null);
+          if (result.emailSent === false && result.message) {
+            setError(result.message);
+          } else {
+            setError(null);
+          }
         }
       }
     } catch (err: any) {

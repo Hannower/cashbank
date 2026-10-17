@@ -16,6 +16,7 @@ export interface User {
 export interface LoginResult {
   requires2FA?: boolean;
   email?: string;
+  emailSent?: boolean;
   message?: string;
 }
 
@@ -70,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string, twoFactorCode?: string): Promise<LoginResult> => {
     const res = await api.login({ email, password, twoFactorCode });
     if (res.requires2FA) {
-      return { requires2FA: true, email: res.email, message: res.message };
+      return { requires2FA: true, email: res.email, emailSent: res.emailSent, message: res.message };
     }
 
     setToken(res.token);
