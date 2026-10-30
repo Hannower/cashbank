@@ -14,6 +14,7 @@ import {
   Landmark,
   PiggyBank,
   Check,
+  AlertTriangle,
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -112,12 +113,20 @@ export const AiAssistantWidget: React.FC<AiAssistantWidgetProps> = ({ onDataChan
         onDataChanged();
       }
     } catch (err: any) {
+      const isRateLimit =
+        err?.message?.includes('429') ||
+        err?.message?.includes('quota') ||
+        err?.message?.includes('RESOURCE_EXHAUSTED') ||
+        err?.message?.includes('Limite de requisições');
+
+      const text = isRateLimit
+        ? 'Limite de requisições atingido. A cota gratuita da IA foi atingida temporariamente. Por favor, aguarde alguns instantes e tente novamente.'
+        : (err.message || 'Desculpe, ocorreu uma instabilidade ao me conectar com a IA. Por favor, tente novamente.');
+
       const errorMessage: Message = {
         id: String(Date.now() + 1),
         role: 'model',
-        text:
-          err.message ||
-          'Desculpe, ocorreu uma instabilidade ao me conectar com a IA. Por favor, tente novamente.',
+        text,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -179,60 +188,15 @@ export const AiAssistantWidget: React.FC<AiAssistantWidgetProps> = ({ onDataChan
           onClick={() => setIsOpen(true)}
           title="Abrir Assistente Financeiro IA (CashAI)"
           aria-label="Abrir Assistente IA"
-          style={{
-            position: 'fixed',
-            bottom: 24,
-            right: 24,
-            zIndex: 99999,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            padding: '12px 18px',
-            backgroundColor: '#15803d',
-            backgroundImage: 'linear-gradient(135deg, #15803d 0%, #16a34a 100%)',
-            color: '#ffffff',
-            borderRadius: 30,
-            border: 'none',
-            boxShadow: '0 8px 24px rgba(21, 128, 61, 0.4), 0 2px 6px rgba(0,0,0,0.1)',
-            cursor: 'pointer',
-            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px) scale(1.03)';
-            e.currentTarget.style.boxShadow = '0 12px 28px rgba(21, 128, 61, 0.5), 0 3px 8px rgba(0,0,0,0.12)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0) scale(1)';
-            e.currentTarget.style.boxShadow = '0 8px 24px rgba(21, 128, 61, 0.4), 0 2px 6px rgba(0,0,0,0.1)';
-          }}
+          className="cashai-launcher-btn"
         >
-          <div
-            style={{
-              width: 26,
-              height: 26,
-              borderRadius: '50%',
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
+          <div className="cashai-launcher-icon-wrap">
             <Sparkles size={16} />
           </div>
-          <span style={{ fontWeight: 700, fontSize: 14, letterSpacing: '-0.2px' }}>
+          <span className="cashai-launcher-text">
             CashAI
           </span>
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 800,
-              backgroundColor: '#ffffff',
-              color: '#15803d',
-              padding: '2px 6px',
-              borderRadius: 8,
-              letterSpacing: '0.5px',
-            }}
-          >
+          <span className="cashai-launcher-badge">
             MCP
           </span>
         </button>
@@ -240,24 +204,7 @@ export const AiAssistantWidget: React.FC<AiAssistantWidgetProps> = ({ onDataChan
 
       {/* Floating Chat Drawer Window */}
       {isOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 24,
-            right: 24,
-            width: 'min(420px, calc(100vw - 32px))',
-            height: 'min(620px, calc(100vh - 48px))',
-            backgroundColor: 'var(--bg-card, #ffffff)',
-            borderRadius: 20,
-            boxShadow: '0 20px 45px rgba(15, 23, 42, 0.22), 0 4px 12px rgba(0, 0, 0, 0.08)',
-            border: '1px solid var(--border-color, #e2e8f0)',
-            display: 'flex',
-            flexDirection: 'column',
-            zIndex: 100000,
-            overflow: 'hidden',
-            animation: 'fadeInUp 0.25s ease-out',
-          }}
-        >
+        <div className="cashai-chat-window">
           {/* Header */}
           <div
             style={{
@@ -462,6 +409,62 @@ export const AiAssistantWidget: React.FC<AiAssistantWidgetProps> = ({ onDataChan
             ) : (
               messages.map((msg) => {
                 const isUser = msg.role === 'user';
+                const isRateLimit = !isUser && msg.text.includes('Limite de requisições atingido');
+
+                if (isRateLimit) {
+                  return (
+                    <div
+                      key={msg.id}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                        gap: 4,
+                        width: '100%',
+                      }}
+                    >
+                      <div
+                        style={{
+                          maxWidth: '92%',
+                          padding: '12px 14px',
+                          borderRadius: '16px 16px 16px 4px',
+                          backgroundColor: 'rgba(234, 88, 12, 0.08)',
+                          color: '#c2410c',
+                          border: '1px solid rgba(234, 88, 12, 0.3)',
+                          fontSize: 13,
+                          lineHeight: 1.5,
+                          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: 10,
+                        }}
+                      >
+                        <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: 2, color: '#ea580c' }} />
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2, color: '#ea580c' }}>
+                            Limite de requisições atingido
+                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--text-main, #334155)', lineHeight: 1.4 }}>
+                            A cota gratuita da IA foi atingida temporariamente. Por favor, aguarde alguns instantes e tente novamente.
+                          </div>
+                        </div>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          color: 'var(--text-muted, #94a3b8)',
+                          padding: '0 4px',
+                        }}
+                      >
+                        {new Date(msg.timestamp).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                  );
+                }
+
                 return (
                   <div
                     key={msg.id}

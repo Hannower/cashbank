@@ -1705,3 +1705,133 @@ body.dark-theme .receivables-mobile-card:hover {
 
 
 
+
+
+/* =========================================================
+   CashAI Floating Assistant - Responsive Styles
+   ========================================================= */
+@keyframes cashaiFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cashai-launcher-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  background-color: #15803d;
+  background-image: linear-gradient(135deg, #15803d 0%, #16a34a 100%);
+  color: #ffffff;
+  border-radius: 30px;
+  border: none;
+  box-shadow: 0 8px 24px rgba(21, 128, 61, 0.4), 0 2px 6px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cashai-launcher-btn:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 12px 28px rgba(21, 128, 61, 0.5), 0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+.cashai-launcher-icon-wrap {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cashai-launcher-text {
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: -0.2px;
+}
+
+.cashai-launcher-badge {
+  font-size: 10px;
+  font-weight: 800;
+  background-color: #ffffff;
+  color: #15803d;
+  padding: 2px 6px;
+  border-radius: 8px;
+  letter-spacing: 0.5px;
+}
+
+.cashai-chat-window {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: min(420px, calc(100vw - 32px));
+  height: min(620px, calc(100vh - 48px));
+  background-color: var(--bg-card, #ffffff);
+  border-radius: 20px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.22), 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border-color, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  z-index: 100000;
+  overflow: hidden;
+  animation: cashaiFadeInUp 0.25s ease-out;
+}
+
+body.dark-theme .cashai-chat-window {
+  background-color: var(--bg-card, #0c1424);
+  border-color: var(--border-color, #152037);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Mobile responsive mode */
+@media (max-width: 640px) {
+  .cashai-launcher-btn {
+    bottom: 16px !important;
+    right: 16px !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    justify-content: center !important;
+    box-shadow: 0 4px 16px rgba(21, 128, 61, 0.4) !important;
+  }
+
+  .cashai-launcher-icon-wrap {
+    width: 22px !important;
+    height: 22px !important;
+    background-color: transparent !important;
+  }
+
+  .cashai-launcher-text,
+  .cashai-launcher-badge {
+    display: none !important;
+  }
+
+  .cashai-chat-window {
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100% !important;
+    height: 100dvh !important;
+    border-radius: 0 !important;
+    border: none !important;
+    max-width: 100vw !important;
+    max-height: 100dvh !important;
+  }
+}
