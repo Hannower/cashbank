@@ -12,8 +12,10 @@ import {
   X,
   ShieldCheck,
   Landmark,
+  Download,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { usePwaInstall } from '../hooks/usePwaInstall';
 
 export type NavTab =
   | 'dashboard'
@@ -46,6 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   receivablesPendingCount = 0,
 }) => {
   const { user, logout } = useAuth();
+  const { canInstall, installApp } = usePwaInstall();
 
   const getInitials = (name?: string) => {
     if (!name) return 'CB';
@@ -250,6 +253,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Spacer */}
         <div style={{ flex: 1 }} />
+
+        {canInstall && (
+          <div style={{ padding: '0 16px 12px' }}>
+            <button
+              onClick={async () => {
+                await installApp();
+                onClose();
+              }}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                padding: '10px 14px',
+                backgroundColor: '#15803d',
+                color: '#ffffff',
+                borderRadius: 10,
+                fontSize: 13,
+                fontWeight: 700,
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(21, 128, 61, 0.25)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <Download size={16} />
+              <span>Instalar Aplicativo</span>
+            </button>
+          </div>
+        )}
 
         {/* Bottom Monthly Status Widget */}
         <div style={{ padding: '0 16px 16px' }}>
