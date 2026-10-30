@@ -705,23 +705,6 @@ export const AdminView: React.FC = () => {
               </div>
             </div>
 
-            {/* Aggregated Platform Volume */}
-            <div className="card" style={{ padding: 20 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted, #94a3b8)', textTransform: 'uppercase' }}>
-                  Volume Agregado (Global)
-                </span>
-                <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: 'rgba(37, 99, 235, 0.1)', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <TrendingUp size={18} />
-                </div>
-              </div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-main, #0f172a)', letterSpacing: '-0.5px' }}>
-                {formatCurrency(analytics?.system?.aggregatedPlatformVolume ?? 0)}
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary, #64748b)', marginTop: 6 }}>
-                Montante total agregado processado na plataforma
-              </div>
-            </div>
 
             {/* Total System Transactions */}
             <div className="card" style={{ padding: 20 }}>

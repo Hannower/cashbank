@@ -17,6 +17,7 @@ import piggyBankRoutes from './routes/piggyBankRoutes';
 import creditCardRoutes from './routes/creditCardRoutes';
 import receivableRoutes from './routes/receivableRoutes';
 import adminRoutes from './routes/adminRoutes';
+import bankAccountRoutes from './routes/bankAccountRoutes';
 import { prisma } from './prisma/client';
 
 const app = express();
@@ -56,6 +57,7 @@ app.use('/api/piggy-banks', piggyBankRoutes);
 app.use('/api/credit-cards', creditCardRoutes);
 app.use('/api/receivables', receivableRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/bank-accounts', bankAccountRoutes);
 
 // Error handler with automatic persistence to systemErrorLog
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {

@@ -12,6 +12,7 @@ import { ReceivablesView } from './views/ReceivablesView';
 import { RevenuesView } from './views/RevenuesView';
 import { SavingsView } from './views/SavingsView';
 import { AdminView } from './views/AdminView';
+import { BankAccountsView } from './views/BankAccountsView';
 import { Modal } from './components/Modal';
 import { SettingsModal } from './components/SettingsModal';
 import { api } from './services/api';
@@ -35,7 +36,7 @@ export const App: React.FC = () => {
 
   // Security guard for admin tab
   useEffect(() => {
-    if (currentTab === 'admin' && user?.role !== 'admin') {
+    if ((currentTab === 'admin' || currentTab === 'bank-accounts') && user?.role !== 'admin') {
       setCurrentTab('dashboard');
     }
   }, [currentTab, user]);
@@ -207,6 +208,10 @@ export const App: React.FC = () => {
 
           {currentTab === 'savings' && (
             <SavingsView onDataChanged={refreshSidebarBadges} />
+          )}
+
+          {currentTab === 'bank-accounts' && user?.role === 'admin' && (
+            <BankAccountsView />
           )}
 
           {currentTab === 'admin' && user?.role === 'admin' && (

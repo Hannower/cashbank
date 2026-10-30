@@ -11,6 +11,7 @@ import {
   LogOut,
   X,
   ShieldCheck,
+  Landmark,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -22,6 +23,7 @@ export type NavTab =
   | 'receivables'
   | 'revenues'
   | 'savings'
+  | 'bank-accounts'
   | 'admin';
 
 interface SidebarProps {
@@ -99,6 +101,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     ...(user?.role === 'admin'
       ? [
+          {
+            id: 'bank-accounts' as NavTab,
+            label: 'Contas bancárias',
+            icon: <Landmark size={18} />,
+          },
           {
             id: 'admin' as NavTab,
             label: 'Painel Admin',

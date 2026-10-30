@@ -270,6 +270,12 @@ export const api = {
     const query = qs.toString();
     return request<any>(`/admin/security-logs${query ? `?${query}` : ''}`);
   },
+
+  // Bank Accounts & Open Finance (Pluggy integration - Admin only)
+  getBankAccountsStatus: () => request<any>('/bank-accounts/status'),
+  getBankAccountsOverview: () => request<any>('/bank-accounts/overview'),
+  createBankConnectToken: () => request<any>('/bank-accounts/connect-token', { method: 'POST' }),
+  syncBankAccounts: () => request<any>('/bank-accounts/sync', { method: 'POST' }),
+  addBankLinkedItem: (itemId: string) => request<any>('/bank-accounts/items', { method: 'POST', body: JSON.stringify({ itemId }) }),
+  removeBankLinkedItem: (id: string) => request<any>('/bank-accounts/items/' + id, { method: 'DELETE' }),
 };
-
-

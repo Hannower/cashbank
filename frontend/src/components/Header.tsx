@@ -18,6 +18,7 @@ const TAB_TITLES: Record<NavTab, { title: string; breadcrumb: string }> = {
   receivables: { title: 'Contas a receber', breadcrumb: 'CashBank / Contas a receber' },
   revenues: { title: 'Minha renda', breadcrumb: 'CashBank / Minha renda' },
   savings: { title: 'Poupança', breadcrumb: 'CashBank / Poupança' },
+  'bank-accounts': { title: 'Contas bancárias', breadcrumb: 'CashBank / Contas bancárias' },
   admin: { title: 'Painel de Administração', breadcrumb: 'CashBank / Administração' },
 };
 

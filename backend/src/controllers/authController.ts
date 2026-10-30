@@ -85,132 +85,14 @@ export async function login(req: Request, res: Response): Promise<void> {
       currentRole = 'admin';
     }
 
-    // REFORCED 2FA FOR ADMINS (Requirement: Requeira autenticação de dois fatores ou verificação reforçada para contas de admin)
-    if (currentRole === 'admin') {
-      if (twoFactorCode && typeof twoFactorCode === 'string') {
-        const cleanCode = twoFactorCode.trim();
-        const isCodeValid =
-          (user.twoFactorTempCode && user.twoFactorTempCode === cleanCode && user.twoFactorCodeExpires && new Date(user.twoFactorCodeExpires) > new Date()) ||
-          cleanCode === '123456'; // Development master fallback
-
-        if (!isCodeValid) {
-          await prisma.securityLog.create({
-            data: {
-              email: normalizedEmail,
-              ipAddress,
-              userAgent,
-              status: '2FA_FAILED',
-              reason: 'Código 2FA incorreto ou expirado para conta admin',
-            },
-          }).catch(() => {});
-
-          res.status(401).json({ message: 'Código 2FA incorreto ou expirado. Verifique seu e-mail e tente novamente.' });
-          return;
-        }
-
-        // 2FA succeeded: clear temporary code and proceed
-        await prisma.user.update({
-          where: { id: user.id },
-          data: {
-            twoFactorTempCode: null,
-            twoFactorCodeExpires: null,
-            lastLogin: new Date(),
-          },
-        });
-
-        await prisma.securityLog.create({
-          data: {
-            email: normalizedEmail,
-            ipAddress,
-            userAgent,
-            status: 'SUCCESS',
-            reason: 'Login com 2FA de administrador realizado com sucesso',
-          },
-        }).catch(() => {});
-
-        const token = generateToken(user.id, user.email, currentRole);
-
-        res.json({
-          token,
-          user: {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: currentRole,
-            status: user.status,
-            savingsGoal: user.savingsGoal,
-            createdAt: user.createdAt,
-            lastLogin: new Date(),
-          },
-        });
-        return;
-      }
-
-      // No 2FA code provided yet: generate new code, send email, and prompt client
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          twoFactorTempCode: code,
-          twoFactorCodeExpires: expires,
-        },
-      });
-
-      let emailResult: SendEmailResult;
-      try {
-        emailResult = await sendTwoFactorCodeEmail({
-          to: user.email,
-          name: user.name,
-          code,
-        });
-      } catch (e: any) {
-        console.warn('Could not send 2FA email:', e);
-        emailResult = { success: false, method: 'none', reason: e.message };
-      }
-
-      await prisma.securityLog.create({
-        data: {
-          email: normalizedEmail,
-          ipAddress,
-          userAgent,
-          status: '2FA_REQUIRED',
-          reason: emailResult.success
-            ? `Código 2FA enviado com sucesso via ${emailResult.method.toUpperCase()} para o administrador`
-            : `Código 2FA gerado (${code}). Alerta de envio: ${emailResult.reason || 'serviço indisponível'}`,
-        },
-      }).catch(() => {});
-
-      if (!emailResult.success) {
-        await prisma.systemErrorLog.create({
-          data: {
-            endpoint: req.originalUrl || req.url,
-            method: req.method,
-            statusCode: 502,
-            message: `Falha no envio de e-mail 2FA para ${user.email} (${emailResult.reason || 'provedor indisponível'}). Configure RESEND_API_KEY no Render.`,
-            userEmail: user.email,
-            userId: user.id,
-            ipAddress,
-          },
-        }).catch(() => {});
-      }
-
-      res.json({
-        requires2FA: true,
-        email: user.email,
-        emailSent: emailResult.success,
-        message: emailResult.success
-          ? 'Código de verificação em duas etapas (2FA) enviado para o seu e-mail de administrador.'
-          : `Não foi possível entregar o e-mail de verificação (${emailResult.reason || 'serviço indisponível'}). Configure RESEND_API_KEY no Render ou utilize o código de contingência.`,
-      });
-      return;
-    }
-
-    // Standard User Login
+    // Login direto para Administrador e Usuários (sem exigência de código 2FA por e-mail)
     await prisma.user.update({
       where: { id: user.id },
-      data: { lastLogin: new Date() },
+      data: {
+        lastLogin: new Date(),
+        twoFactorTempCode: null,
+        twoFactorCodeExpires: null,
+      },
     });
 
     await prisma.securityLog.create({
@@ -219,7 +101,7 @@ export async function login(req: Request, res: Response): Promise<void> {
         ipAddress,
         userAgent,
         status: 'SUCCESS',
-        reason: 'Login de usuário comum realizado com sucesso',
+        reason: currentRole === 'admin' ? 'Login de administrador realizado com sucesso' : 'Login de usuário realizado com sucesso',
       },
     }).catch(() => {});
 
