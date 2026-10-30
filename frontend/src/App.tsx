@@ -15,6 +15,7 @@ import { AdminView } from './views/AdminView';
 import { BankAccountsView } from './views/BankAccountsView';
 import { Modal } from './components/Modal';
 import { SettingsModal } from './components/SettingsModal';
+import { AiAssistantWidget } from './components/AiAssistantWidget';
 import { api } from './services/api';
 import {
   CalendarCheck2,
@@ -33,6 +34,12 @@ export const App: React.FC = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [quickLaunchOpen, setQuickLaunchOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [dataVersion, setDataVersion] = useState(0);
+
+  const handleDataChanged = () => {
+    refreshSidebarBadges();
+    setDataVersion((v) => v + 1);
+  };
 
   // Security guard for admin tab
   useEffect(() => {
@@ -187,27 +194,27 @@ export const App: React.FC = () => {
           )}
 
           {currentTab === 'fixed-expenses' && (
-            <FixedExpensesView onDataChanged={refreshSidebarBadges} />
+            <FixedExpensesView key={dataVersion} onDataChanged={handleDataChanged} />
           )}
 
           {currentTab === 'variable-expenses' && (
-            <VariableExpensesView onDataChanged={refreshSidebarBadges} />
+            <VariableExpensesView key={dataVersion} onDataChanged={handleDataChanged} />
           )}
 
           {currentTab === 'credit-cards' && (
-            <CreditCardsView onDataChanged={refreshSidebarBadges} />
+            <CreditCardsView key={dataVersion} onDataChanged={handleDataChanged} />
           )}
 
           {currentTab === 'receivables' && (
-            <ReceivablesView onDataChanged={refreshSidebarBadges} />
+            <ReceivablesView key={dataVersion} onDataChanged={handleDataChanged} />
           )}
 
           {currentTab === 'revenues' && (
-            <RevenuesView onDataChanged={refreshSidebarBadges} />
+            <RevenuesView key={dataVersion} onDataChanged={handleDataChanged} />
           )}
 
           {currentTab === 'savings' && (
-            <SavingsView onDataChanged={refreshSidebarBadges} />
+            <SavingsView key={dataVersion} onDataChanged={handleDataChanged} />
           )}
 
           {currentTab === 'bank-accounts' && user?.role === 'admin' && (
@@ -425,6 +432,9 @@ export const App: React.FC = () => {
         isDark={isDark}
         onToggleTheme={toggleTheme}
       />
+
+      {/* Floating AI Assistant Widget (RAG + MCP) */}
+      <AiAssistantWidget onDataChanged={handleDataChanged} />
     </div>
   );
 };

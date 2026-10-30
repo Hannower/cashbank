@@ -278,4 +278,12 @@ export const api = {
   syncBankAccounts: () => request<any>('/bank-accounts/sync', { method: 'POST' }),
   addBankLinkedItem: (itemId: string) => request<any>('/bank-accounts/items', { method: 'POST', body: JSON.stringify({ itemId }) }),
   removeBankLinkedItem: (id: string) => request<any>('/bank-accounts/items/' + id, { method: 'DELETE' }),
+
+  // Virtual AI Assistant & RAG / MCP
+  chatWithAi: (message: string, history?: Array<{ role: 'user' | 'model'; text: string }>) =>
+    request<{ reply: string; actionExecuted?: any }>('/ai/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message, history }),
+    }),
+  getAiQuickPrompts: () => request<{ prompts: string[] }>('/ai/quick-prompts'),
 };
