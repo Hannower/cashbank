@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import fs from 'fs';
 import path from 'path';
@@ -401,5 +401,122 @@ export async function syncBankAccounts(_req: AuthenticatedRequest, res: Response
     });
   } catch (error: any) {
     res.status(500).json({ message: 'Erro durante a sincronização', error: error.message });
+  }
+}
+
+/**
+ * 7. Handle Pluggy Webhooks (item/created, item/updated, transactions/created, etc.)
+ * Public endpoint (called by Pluggy servers)
+ */
+export async function handlePluggyWebhook(req: Request, res: Response): Promise<void> {
+  try {
+    const { event, eventId, itemId, accountId, error } = req.body || {};
+
+    console.log(`[Pluggy Webhook] Event received: ${event}`, {
+      eventId,
+      itemId,
+      accountId,
+      hasError: Boolean(error),
+    });
+
+    // Automatically manage linked items
+    if (itemId && typeof itemId === 'string') {
+      const cleanItemId = itemId.trim();
+      const stored = getStoredItems();
+
+      if (event === 'item/created' || event === 'item/updated') {
+        if (!stored.includes(cleanItemId)) {
+          stored.push(cleanItemId);
+          saveStoredItems(stored);
+          console.log(`[Pluggy Webhook] Item auto-linked: ${cleanItemId}`);
+        }
+      } else if (event === 'item/deleted') {
+        if (stored.includes(cleanItemId)) {
+          const updated = stored.filter((id) => id !== cleanItemId);
+          saveStoredItems(updated);
+          console.log(`[Pluggy Webhook] Item auto-removed: ${cleanItemId}`);
+        }
+      }
+    }
+
+    // Always respond immediately with 200 OK so Pluggy knows it was received
+    res.status(200).json({
+      received: true,
+      event: event || 'unknown',
+      processedAt: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    console.error('[Pluggy Webhook] Error processing event:', err);
+    // Still return 200 to prevent infinite webhook retries for malformed data
+    res.status(200).json({
+      received: true,
+      error: err.message,
+    });
+  }
+}
+
+/**
+ * 8. Register Webhook in Pluggy API (Admin action)
+ */
+export async function registerPluggyWebhook(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const apiKey = await getPluggyApiKey();
+    if (!apiKey) {
+      res.status(400).json({ message: 'Credenciais da Pluggy não configuradas no .env' });
+      return;
+    }
+
+    const webhookUrl = req.body.url || 'https://cashbank.onrender.com/api/bank-accounts/webhook';
+
+    const createRes = await fetch('https://api.pluggy.ai/webhooks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-KEY': apiKey,
+      },
+      body: JSON.stringify({
+        event: 'all',
+        url: webhookUrl,
+      }),
+    });
+
+    const data = await createRes.json();
+    if (!createRes.ok) {
+      res.status(createRes.status).json({
+        message: 'Erro ao registrar webhook na Pluggy',
+        details: data,
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: 'Webhook registrado com sucesso na Pluggy!',
+      webhook: data,
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Erro ao registrar webhook', error: error.message });
+  }
+}
+
+/**
+ * 9. Get registered Webhooks in Pluggy API (Admin)
+ */
+export async function getPluggyWebhooks(_req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const apiKey = await getPluggyApiKey();
+    if (!apiKey) {
+      res.status(400).json({ message: 'Credenciais da Pluggy não configuradas no .env' });
+      return;
+    }
+
+    const whRes = await fetch('https://api.pluggy.ai/webhooks', {
+      headers: { 'X-API-KEY': apiKey },
+    });
+
+    const data = await whRes.json();
+    res.json(data);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Erro ao listar webhooks', error: error.message });
   }
 }
