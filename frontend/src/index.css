@@ -1835,3 +1835,195 @@ body.dark-theme .cashai-chat-window {
     max-height: 100dvh !important;
   }
 }
+
+
+/* ==========================================================================
+   Bank Accounts Section Responsive & Theming Styles
+   ========================================================================== */
+.bank-accounts-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 40px;
+}
+
+.bank-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.bank-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bank-kpis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.bank-kpi-card {
+  padding: 18px 20px;
+  background-color: var(--bg-card, #ffffff);
+  border-radius: 16px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.bank-kpi-val {
+  font-size: 22px;
+  font-weight: 800;
+  margin-top: 4px;
+  letter-spacing: -0.4px;
+}
+
+.bank-kpi-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bank-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 14px;
+}
+
+.bank-filters-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bank-form-row-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.bank-form-row-2 {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px;
+}
+
+.bank-table-desktop {
+  display: block;
+}
+
+.bank-tx-mobile-list {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .bank-accounts-container {
+    gap: 16px;
+    padding-bottom: 96px; /* Space for floating CashAI button */
+  }
+
+  .bank-header-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .bank-header-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .bank-header-actions > button {
+    flex: 1;
+    justify-content: center;
+    padding: 10px 12px !important;
+    font-size: 12px !important;
+  }
+
+  /* 2x2 compact grid on tablets and phones */
+  .bank-kpis-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .bank-kpi-card {
+    padding: 12px 14px !important;
+    border-radius: 12px !important;
+  }
+
+  .bank-kpi-val {
+    font-size: 17px !important;
+    margin-top: 2px !important;
+  }
+
+  .bank-kpi-icon {
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 9px !important;
+  }
+
+  .bank-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bank-filters-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .bank-filters-wrapper > * {
+    width: 100% !important;
+  }
+
+  .bank-form-row-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .bank-form-row-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .bank-table-desktop {
+    display: none;
+  }
+
+  .bank-tx-mobile-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .bank-kpis-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .bank-kpi-val {
+    font-size: 15px !important;
+  }
+
+  .bank-header-actions {
+    flex-direction: column;
+  }
+}

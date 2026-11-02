@@ -1,522 +1,435 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
-import fs from 'fs';
-import path from 'path';
+import { prisma } from '../prisma/client';
+import { parseStatementFile } from '../utils/statementParser';
 
 /**
- * Controller for Bank Accounts & Open Finance (Pluggy integration)
- * Exclusively available for Admin accounts
- * Pure live data - zero mocks.
+ * Controller for Bank Accounts & Transactions
+ * Supports OFX, CSV and PDF statement imports (Nubank, Inter, PicPay, Mercado Pago, Itaú, etc.)
+ * Available to all authenticated users (isolated per userId)
  */
 
-const ITEMS_FILE_PATH = path.resolve(__dirname, '../data/pluggy_items.json');
-
-function getStoredItems(): string[] {
-  try {
-    if (!fs.existsSync(ITEMS_FILE_PATH)) {
-      return [];
-    }
-    const raw = fs.readFileSync(ITEMS_FILE_PATH, 'utf8');
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
+function getDefaultColorForBank(bankKey: string): string {
+  switch (bankKey.toLowerCase()) {
+    case 'nubank':
+      return '#820AD1';
+    case 'inter':
+      return '#FF7A00';
+    case 'mercadopago':
+      return '#009EE3';
+    case 'picpay':
+      return '#11C76F';
+    case 'itau':
+      return '#EC7000';
+    case 'bradesco':
+      return '#CC092F';
+    case 'santander':
+      return '#CC0000';
+    case 'caixa':
+      return '#005CA9';
+    case 'c6':
+      return '#242424';
+    default:
+      return '#15803d';
   }
 }
 
-function saveStoredItems(items: string[]): void {
+/**
+ * 1. Get all bank accounts with consolidated summary
+ */
+export async function getBankAccounts(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    const dir = path.dirname(ITEMS_FILE_PATH);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(ITEMS_FILE_PATH, JSON.stringify(Array.from(new Set(items)), null, 2), 'utf8');
-  } catch (err) {
-    console.error('Error saving stored Pluggy items:', err);
-  }
-}
+    const userId = req.userId!;
 
-async function getPluggyApiKey(): Promise<string | null> {
-  const clientId = process.env.PLUGGY_CLIENT_ID || '';
-  const clientSecret = process.env.PLUGGY_CLIENT_SECRET || '';
-
-  if (!clientId.trim() || !clientSecret.trim()) {
-    return null;
-  }
-
-  try {
-    const authRes = await fetch('https://api.pluggy.ai/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientId, clientSecret }),
+    const accounts = await prisma.bankAccount.findMany({
+      where: { userId },
+      include: {
+        _count: { select: { transactions: true } },
+      },
+      orderBy: { createdAt: 'desc' },
     });
 
-    if (!authRes.ok) {
-      return null;
-    }
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    const authData = (await authRes.json()) as { apiKey: string };
-    return authData.apiKey || null;
-  } catch (e) {
-    console.error('Pluggy Auth request failed:', e);
-    return null;
-  }
-}
+    const monthTransactions = await prisma.bankTransaction.findMany({
+      where: {
+        userId,
+        date: { gte: startOfMonth, lte: endOfMonth },
+      },
+    });
 
-function detectBankKey(name: string = ''): {
-  bankKey: 'nubank' | 'inter' | 'mercadopago' | 'picpay';
-  brandColor: string;
-  badgeBg: string;
-  officialName: string;
-} {
-  const lower = name.toLowerCase();
-  if (lower.includes('pluggy') || lower.includes('sandbox')) {
-    return { bankKey: 'nubank', brandColor: '#ef294b', badgeBg: '#fee2e2', officialName: 'Pluggy Bank (Sandbox)' };
-  }
-  if (lower.includes('nubank') || lower.includes('nu conta') || lower.includes('nu ')) {
-    return { bankKey: 'nubank', brandColor: '#820AD1', badgeBg: '#F3E8FF', officialName: 'Nubank' };
-  }
-  if (lower.includes('inter') || lower.includes('banco inter')) {
-    return { bankKey: 'inter', brandColor: '#FF7A00', badgeBg: '#FFF7ED', officialName: 'Banco Inter' };
-  }
-  if (lower.includes('mercado') || lower.includes('pago') || lower.includes('mercadopago')) {
-    return { bankKey: 'mercadopago', brandColor: '#009EE3', badgeBg: '#E0F2FE', officialName: 'Mercado Pago' };
-  }
-  if (lower.includes('picpay') || lower.includes('pic pay')) {
-    return { bankKey: 'picpay', brandColor: '#11C76F', badgeBg: '#DCFCE7', officialName: 'PicPay' };
-  }
-  return { bankKey: 'nubank', brandColor: '#820AD1', badgeBg: '#F3E8FF', officialName: name || 'Conta Digital' };
-}
+    const totalBalance = accounts.reduce((sum, a) => sum + (a.balance || 0), 0);
+    const totalIncomeMonth = monthTransactions
+      .filter((t) => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+    const totalExpenseMonth = monthTransactions
+      .filter((t) => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
 
-/**
- * 1. Check Open Finance & Pluggy configuration status
- */
-export async function getBankAccountsStatus(_req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const pluggyClientId = process.env.PLUGGY_CLIENT_ID || '';
-    const pluggyClientSecret = process.env.PLUGGY_CLIENT_SECRET || '';
-    const hasPluggy = Boolean(pluggyClientId.trim() && pluggyClientSecret.trim());
-    const storedItems = getStoredItems();
+    // Mask sensitive API credentials before returning
+    const sanitizedAccounts = accounts.map((acc) => ({
+      ...acc,
+      apiToken: acc.apiToken ? '••••••••' + acc.apiToken.slice(-4) : null,
+      apiClientSecret: acc.apiClientSecret ? '••••••••' : null,
+      apiCert: acc.apiCert ? '[Certificado Instalado]' : null,
+      apiCertKey: acc.apiCertKey ? '[Chave Privada Instalada]' : null,
+    }));
 
     res.json({
-      isConfigured: hasPluggy,
-      hasLinkedItems: storedItems.length > 0,
-      linkedItemsCount: storedItems.length,
-      credentials: {
-        pluggy: {
-          configured: hasPluggy,
-          clientIdMasked: pluggyClientId ? `${pluggyClientId.slice(0, 4)}...${pluggyClientId.slice(-4)}` : null,
-        },
+      summary: {
+        totalBalance: Math.round(totalBalance * 100) / 100,
+        totalIncomeMonth: Math.round(totalIncomeMonth * 100) / 100,
+        totalExpenseMonth: Math.round(totalExpenseMonth * 100) / 100,
+        accountsCount: accounts.length,
       },
-      supportedInstitutions: [
-        { key: 'nubank', name: 'Nubank', connector: 'Pluggy Open Finance', color: '#820AD1' },
-        { key: 'inter', name: 'Banco Inter', connector: 'Pluggy Open Finance', color: '#FF7A00' },
-        { key: 'mercadopago', name: 'Mercado Pago', connector: 'Pluggy Open Finance', color: '#009EE3' },
-        { key: 'picpay', name: 'PicPay', connector: 'Pluggy Open Finance', color: '#11C76F' },
-      ],
+      accounts: sanitizedAccounts,
     });
   } catch (error: any) {
-    res.status(500).json({ message: 'Erro ao verificar status das contas bancárias', error: error.message });
+    console.error('Error in getBankAccounts:', error);
+    res.status(500).json({ message: 'Erro ao carregar contas bancárias', error: error.message });
   }
 }
 
 /**
- * 2. Get consolidated overview (Real Balances + Real Transactions - No Mocks)
+ * 2. Get transactions (Extrato) with filters
  */
-export async function getBankAccountsOverview(_req: AuthenticatedRequest, res: Response): Promise<void> {
+export async function getBankTransactions(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    const apiKey = await getPluggyApiKey();
-    const storedItems = getStoredItems();
-    const now = new Date();
-    const syncTimestamp = now.toLocaleDateString('pt-BR') + ' às ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const userId = req.userId!;
+    const { bankAccountId, type, limit } = req.query;
 
-    // If Pluggy is configured and we have connected items stored, query live data:
-    if (apiKey && storedItems.length > 0) {
-      const liveAccounts: any[] = [];
-      const liveTransactions: any[] = [];
+    const whereClause: any = { userId };
+    if (bankAccountId && typeof bankAccountId === 'string') {
+      whereClause.bankAccountId = bankAccountId;
+    }
+    if (type && type !== 'all') {
+      whereClause.type = type;
+    }
 
-      for (const itemId of storedItems) {
-        try {
-          // Fetch item details (to get connector name)
-          let connectorName = 'Conta Digital';
-          const itemRes = await fetch(`https://api.pluggy.ai/items/${itemId}`, {
-            headers: { 'X-API-KEY': apiKey },
-          });
-          if (itemRes.ok) {
-            const itemData = await itemRes.json();
-            connectorName = itemData.connector?.name || connectorName;
-          }
+    const maxLimit = limit ? parseInt(limit as string, 10) : 100;
 
-          const bankInfo = detectBankKey(connectorName);
+    const transactions = await prisma.bankTransaction.findMany({
+      where: whereClause,
+      include: {
+        bankAccount: {
+          select: { id: true, name: true, bankKey: true, color: true },
+        },
+      },
+      orderBy: { date: 'desc' },
+      take: maxLimit,
+    });
 
-          // Fetch accounts for this item
-          const accsRes = await fetch(`https://api.pluggy.ai/accounts?itemId=${itemId}`, {
-            headers: { 'X-API-KEY': apiKey },
-          });
+    res.json(transactions);
+  } catch (error: any) {
+    console.error('Error in getBankTransactions:', error);
+    res.status(500).json({ message: 'Erro ao carregar extrato de transações', error: error.message });
+  }
+}
 
-          if (accsRes.ok) {
-            const accsData = await accsRes.json();
-            const results = accsData.results || [];
+/**
+ * 3. Create a new bank account (API or OFX)
+ */
+export async function createBankAccount(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const userId = req.userId!;
+    const {
+      bankKey,
+      name,
+      accountType = 'Conta Corrente',
+      agency,
+      accountNumber,
+      color,
+      initialBalance = 0,
+      ofxContent,
+      statementContent,
+      fileType = 'ofx',
+    } = req.body;
 
-            for (const acc of results) {
-              const accountObj = {
-                id: acc.id,
-                itemId: itemId,
-                bankKey: bankInfo.bankKey,
-                bankName: bankInfo.officialName,
-                accountType: acc.subtype === 'CHECKING_ACCOUNT' ? 'Conta Corrente' : (acc.name || 'Conta Digital'),
-                agency: acc.agency || '0001',
-                accountNumber: acc.number || '***',
-                balance: typeof acc.balance === 'number' ? acc.balance : 0,
-                currency: acc.currencyCode || 'BRL',
-                brandColor: bankInfo.brandColor,
-                badgeBg: bankInfo.badgeBg,
-                status: 'connected',
-                lastSyncAt: syncTimestamp,
-                totalIn: 0,
-                totalOut: 0,
-              };
+    if (!name || !name.trim()) {
+      res.status(400).json({ message: 'O nome da conta bancária é obrigatório.' });
+      return;
+    }
 
-              // Fetch recent transactions for this account
-              try {
-                const txRes = await fetch(`https://api.pluggy.ai/transactions?accountId=${acc.id}&pageSize=30`, {
-                  headers: { 'X-API-KEY': apiKey },
-                });
-                if (txRes.ok) {
-                  const txData = await txRes.json();
-                  const txResults = txData.results || [];
+    const defaultColor = color || getDefaultColorForBank(bankKey || 'other');
+    let balance = parseFloat(initialBalance) || 0;
+    let initialTransactions: any[] = [];
 
-                  for (const tx of txResults) {
-                    const isIncome = tx.amount > 0 || tx.type === 'CREDIT';
-                    const absAmount = Math.abs(tx.amount || 0);
-
-                    if (isIncome) {
-                      accountObj.totalIn += absAmount;
-                    } else {
-                      accountObj.totalOut += absAmount;
-                    }
-
-                    liveTransactions.push({
-                      id: tx.id,
-                      bankKey: bankInfo.bankKey,
-                      bankName: bankInfo.officialName,
-                      type: isIncome ? 'income' : 'expense',
-                      amount: absAmount,
-                      description: tx.description || 'Movimentação Bancária',
-                      category: tx.category || 'Geral',
-                      date: tx.date || new Date().toISOString(),
-                      status: 'completed',
-                      paymentMethod: tx.paymentData?.paymentMethod || 'PIX',
-                    });
-                  }
-                }
-              } catch (_) {}
-
-              liveAccounts.push(accountObj);
-            }
-          }
-        } catch (itemErr) {
-          console.error(`Error querying item ${itemId}:`, itemErr);
+    // If initial statement (OFX, CSV, PDF) was provided during creation, parse it
+    const rawStatement = statementContent || ofxContent;
+    if (rawStatement && typeof rawStatement === 'string') {
+      try {
+        let detectedType: 'ofx' | 'csv' | 'pdf' = 'ofx';
+        if (fileType && ['ofx', 'csv', 'pdf'].includes(fileType.toLowerCase())) {
+          detectedType = fileType.toLowerCase() as any;
+        } else if (rawStatement.includes('<OFX') || rawStatement.includes('OFXHEADER')) {
+          detectedType = 'ofx';
+        } else if (rawStatement.startsWith('data:application/pdf') || (rawStatement.length > 50 && rawStatement.slice(0, 50).includes('JVBERi0'))) {
+          detectedType = 'pdf';
+        } else {
+          detectedType = 'csv';
         }
-      }
 
-      if (liveAccounts.length > 0) {
-        const totalBalance = liveAccounts.reduce((sum, a) => sum + a.balance, 0);
-        const totalIncomeMonth = liveTransactions
-          .filter((t) => t.type === 'income')
-          .reduce((sum, t) => sum + t.amount, 0);
-        const totalExpenseMonth = liveTransactions
-          .filter((t) => t.type === 'expense')
-          .reduce((sum, t) => sum + t.amount, 0);
-
-        res.json({
-          isLive: true,
-          hasLiveItems: true,
-          linkedItemsCount: storedItems.length,
-          summary: {
-            totalBalance: Math.round(totalBalance * 100) / 100,
-            totalIncomeMonth: Math.round(totalIncomeMonth * 100) / 100,
-            totalExpenseMonth: Math.round(totalExpenseMonth * 100) / 100,
-            connectedAccountsCount: liveAccounts.length,
-          },
-          accounts: liveAccounts,
-          transactions: liveTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+        const parsed = await parseStatementFile(rawStatement, detectedType);
+        if (typeof parsed.ledgerBalance === 'number') {
+          balance = parsed.ledgerBalance;
+        } else if (parsed.transactions.length > 0) {
+          const net = parsed.transactions.reduce(
+            (sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount),
+            0
+          );
+          balance += net;
+        }
+        initialTransactions = parsed.transactions;
+      } catch (e: any) {
+        console.error('Initial statement parse failed during bank creation:', e);
+        res.status(400).json({
+          message: `Erro ao processar o extrato (${fileType || 'arquivo'}): ${e.message || 'Verifique o formato do arquivo'}`
         });
         return;
       }
     }
 
-    // When no accounts are linked yet, return clean empty state (zero mocks)
-    res.json({
-      isLive: Boolean(apiKey),
-      hasLiveItems: false,
-      linkedItemsCount: 0,
-      summary: {
-        totalBalance: 0,
-        totalIncomeMonth: 0,
-        totalExpenseMonth: 0,
-        connectedAccountsCount: 0,
+    const newAccount = await prisma.bankAccount.create({
+      data: {
+        userId,
+        bankKey: bankKey || 'other',
+        name: name.trim(),
+        accountType: accountType.trim(),
+        agency: agency ? agency.trim() : null,
+        accountNumber: accountNumber ? accountNumber.trim() : null,
+        color: defaultColor,
+        connectionType: 'OFX',
+        balance: Math.round(balance * 100) / 100,
+        initialBalance: parseFloat(initialBalance) || 0,
+        lastSyncAt: new Date(),
       },
-      accounts: [],
-      transactions: [],
+    });
+
+    // Save initial transactions if any
+    if (initialTransactions.length > 0) {
+      await prisma.bankTransaction.createMany({
+        data: initialTransactions.map((t) => ({
+          bankAccountId: newAccount.id,
+          userId,
+          externalId: t.externalId,
+          type: t.type,
+          amount: t.amount,
+          description: t.description,
+          category: t.category || 'Geral',
+          date: t.date,
+          paymentMethod: t.paymentMethod || 'OUTROS',
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      message: initialTransactions.length > 0
+        ? `Conta cadastrada com sucesso! ${initialTransactions.length} movimentações importadas.`
+        : 'Conta bancária cadastrada com sucesso!',
+      account: newAccount,
+      importedCount: initialTransactions.length,
     });
   } catch (error: any) {
-    res.status(500).json({ message: 'Erro ao carregar visão geral das contas bancárias', error: error.message });
+    console.error('Error in createBankAccount:', error);
+    res.status(500).json({ message: 'Erro ao cadastrar conta bancária', error: error.message });
   }
 }
 
 /**
- * 3. Link an Item ID (from dashboard or connect widget)
+ * 4. Update bank account details
  */
-export async function addLinkedItem(req: AuthenticatedRequest, res: Response): Promise<void> {
+export async function updateBankAccount(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    const { itemId } = req.body;
-    if (!itemId || typeof itemId !== 'string' || !itemId.trim()) {
-      res.status(400).json({ message: 'itemId é obrigatório.' });
-      return;
-    }
-
-    const cleanId = itemId.trim();
-    const stored = getStoredItems();
-    if (!stored.includes(cleanId)) {
-      stored.push(cleanId);
-      saveStoredItems(stored);
-    }
-
-    res.json({ success: true, message: 'Item vinculado com sucesso!', items: stored });
-  } catch (error: any) {
-    res.status(500).json({ message: 'Erro ao vincular item', error: error.message });
-  }
-}
-
-/**
- * 4. Remove a linked Item ID
- */
-export async function removeLinkedItem(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
+    const userId = req.userId!;
     const { id } = req.params;
-    const apiKey = await getPluggyApiKey();
-    let stored = getStoredItems();
+    const {
+      name,
+      accountType,
+      agency,
+      accountNumber,
+      color,
+      initialBalance,
+      balance,
+    } = req.body;
 
-    if (stored.includes(id)) {
-      if (apiKey) {
-        await fetch('https://api.pluggy.ai/items/' + id, {
-          method: 'DELETE',
-          headers: { 'X-API-KEY': apiKey },
-        }).catch(() => {});
-      }
-      stored = stored.filter((item) => item !== id);
+    const existing = await prisma.bankAccount.findFirst({
+      where: { id, userId },
+    });
+
+    if (!existing) {
+      res.status(404).json({ message: 'Conta bancária não encontrada.' });
+      return;
+    }
+
+    const updateData: any = {};
+    if (name) updateData.name = name.trim();
+    if (accountType) updateData.accountType = accountType.trim();
+    if (agency !== undefined) updateData.agency = agency ? agency.trim() : null;
+    if (accountNumber !== undefined) updateData.accountNumber = accountNumber ? accountNumber.trim() : null;
+    if (color) updateData.color = color;
+    if (initialBalance !== undefined) updateData.initialBalance = parseFloat(initialBalance) || 0;
+    if (balance !== undefined) updateData.balance = parseFloat(balance) || 0;
+
+    const updated = await prisma.bankAccount.update({
+      where: { id },
+      data: updateData,
+    });
+
+    res.json({ success: true, message: 'Conta atualizada com sucesso!', account: updated });
+  } catch (error: any) {
+    console.error('Error in updateBankAccount:', error);
+    res.status(500).json({ message: 'Erro ao atualizar conta bancária', error: error.message });
+  }
+}
+
+/**
+ * 5. Delete a bank account
+ */
+export async function deleteBankAccount(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const userId = req.userId!;
+    const { id } = req.params;
+
+    const existing = await prisma.bankAccount.findFirst({
+      where: { id, userId },
+    });
+
+    if (!existing) {
+      res.status(404).json({ message: 'Conta bancária não encontrada.' });
+      return;
+    }
+
+    await prisma.bankAccount.delete({
+      where: { id },
+    });
+
+    res.json({ success: true, message: 'Conta bancária removida com sucesso.' });
+  } catch (error: any) {
+    console.error('Error in deleteBankAccount:', error);
+    res.status(500).json({ message: 'Erro ao excluir conta bancária', error: error.message });
+  }
+}
+
+/**
+ * 6. Import OFX file to an account
+ */
+export async function importOfxToAccount(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const userId = req.userId!;
+    const { id } = req.params;
+    const { statementContent, ofxContent, fileType = 'ofx' } = req.body;
+    const raw = statementContent || ofxContent;
+
+    if (!raw || typeof raw !== 'string') {
+      res.status(400).json({ message: 'O arquivo de extrato (OFX, CSV ou PDF) é obrigatório.' });
+      return;
+    }
+
+    const account = await prisma.bankAccount.findFirst({
+      where: { id, userId },
+    });
+
+    if (!account) {
+      res.status(404).json({ message: 'Conta bancária não encontrada.' });
+      return;
+    }
+
+    let detectedType: 'ofx' | 'csv' | 'pdf' = 'ofx';
+    if (fileType && ['ofx', 'csv', 'pdf'].includes(fileType.toLowerCase())) {
+      detectedType = fileType.toLowerCase() as any;
+    } else if (raw.includes('<OFX') || raw.includes('OFXHEADER')) {
+      detectedType = 'ofx';
+    } else if (raw.startsWith('data:application/pdf') || (raw.length > 50 && raw.slice(0, 50).includes('JVBERi0'))) {
+      detectedType = 'pdf';
     } else {
-      let foundItemId = null;
-      if (apiKey) {
-        for (const itId of stored) {
-          try {
-            const accsRes = await fetch('https://api.pluggy.ai/accounts?itemId=' + itId, {
-              headers: { 'X-API-KEY': apiKey },
-            });
-            if (accsRes.ok) {
-              const accsData = await accsRes.json();
-              if ((accsData.results || []).some((a: any) => a.id === id)) {
-                foundItemId = itId;
-                break;
-              }
-            }
-          } catch (_) {}
-        }
-      }
-
-      if (foundItemId) {
-        if (apiKey) {
-          await fetch('https://api.pluggy.ai/items/' + foundItemId, {
-            method: 'DELETE',
-            headers: { 'X-API-KEY': apiKey },
-          }).catch(() => {});
-        }
-        stored = stored.filter((item) => item !== foundItemId);
-      } else if (stored.length === 1) {
-        if (apiKey) {
-          await fetch('https://api.pluggy.ai/items/' + stored[0], {
-            method: 'DELETE',
-            headers: { 'X-API-KEY': apiKey },
-          }).catch(() => {});
-        }
-        stored = [];
-      }
+      detectedType = 'csv';
     }
 
-    saveStoredItems(stored);
-    res.json({ success: true, message: 'Conta desvinculada com sucesso!', items: stored });
-  } catch (error: any) {
-    res.status(500).json({ message: 'Erro ao desvincular item', error: error.message });
-  }
-}
+    const parsed = await parseStatementFile(raw, detectedType);
 
-export async function createConnectToken(_req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const apiKey = await getPluggyApiKey();
-    if (!apiKey) {
-      res.status(400).json({
-        message: 'Credenciais da Pluggy não configuradas ou inválidas no arquivo .env.',
+    // Save transactions with deduplication (skipDuplicates: true)
+    let importedCount = 0;
+    if (parsed.transactions.length > 0) {
+      const result = await prisma.bankTransaction.createMany({
+        data: parsed.transactions.map((t) => ({
+          bankAccountId: account.id,
+          userId,
+          externalId: t.externalId,
+          type: t.type,
+          amount: t.amount,
+          description: t.description,
+          category: t.category,
+          date: t.date,
+          paymentMethod: t.paymentMethod,
+        })),
+        skipDuplicates: true,
       });
-      return;
+      importedCount = result.count;
     }
 
-    const tokenRes = await fetch('https://api.pluggy.ai/connect_token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-KEY': apiKey,
+    // Determine new balance
+    let newBalance = account.balance;
+    if (typeof parsed.ledgerBalance === 'number') {
+      newBalance = parsed.ledgerBalance;
+    } else {
+      // Recalculate balance from all transactions
+      const allTx = await prisma.bankTransaction.findMany({
+        where: { bankAccountId: account.id },
+      });
+      const net = allTx.reduce((sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount), 0);
+      newBalance = (account.initialBalance || 0) + net;
+    }
+
+    await prisma.bankAccount.update({
+      where: { id },
+      data: {
+        balance: Math.round(newBalance * 100) / 100,
+        lastSyncAt: new Date(),
+        status: 'active',
       },
-      body: JSON.stringify({}),
     });
-
-    if (!tokenRes.ok) {
-      const tokenErr = await tokenRes.json().catch(() => ({}));
-      res.status(tokenRes.status).json({
-        message: 'Erro ao gerar Connect Token na Pluggy',
-        details: tokenErr,
-      });
-      return;
-    }
-
-    const tokenData = await tokenRes.json();
-    res.json({ accessToken: tokenData.accessToken });
-  } catch (error: any) {
-    res.status(500).json({ message: 'Erro interno ao conectar com a Pluggy', error: error.message });
-  }
-}
-
-/**
- * 6. Trigger manual or automatic sync
- */
-export async function syncBankAccounts(_req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const now = new Date();
-    const syncTimestamp = now.toLocaleDateString('pt-BR') + ' às ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
     res.json({
       success: true,
-      message: 'Sincronização de contas concluída com sucesso.',
-      syncedAt: syncTimestamp,
+      message: `${importedCount} novas transações importadas com sucesso!`,
+      importedCount,
+      totalParsed: parsed.transactions.length,
+      newBalance: Math.round(newBalance * 100) / 100,
     });
   } catch (error: any) {
-    res.status(500).json({ message: 'Erro durante a sincronização', error: error.message });
+    console.error('Error in importOfxToAccount:', error);
+    res.status(500).json({ message: `Erro ao importar arquivo OFX: ${error.message}` });
   }
 }
 
 /**
- * 7. Handle Pluggy Webhooks (item/created, item/updated, transactions/created, etc.)
- * Public endpoint (called by Pluggy servers)
+ * 7. Delete a specific transaction
  */
-export async function handlePluggyWebhook(req: Request, res: Response): Promise<void> {
+export async function deleteBankTransaction(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    const { event, eventId, itemId, accountId, error } = req.body || {};
+    const userId = req.userId!;
+    const { id } = req.params;
 
-    console.log(`[Pluggy Webhook] Event received: ${event}`, {
-      eventId,
-      itemId,
-      accountId,
-      hasError: Boolean(error),
+    const tx = await prisma.bankTransaction.findFirst({
+      where: { id, userId },
     });
 
-    // Automatically manage linked items
-    if (itemId && typeof itemId === 'string') {
-      const cleanItemId = itemId.trim();
-      const stored = getStoredItems();
-
-      if (event === 'item/created' || event === 'item/updated') {
-        if (!stored.includes(cleanItemId)) {
-          stored.push(cleanItemId);
-          saveStoredItems(stored);
-          console.log(`[Pluggy Webhook] Item auto-linked: ${cleanItemId}`);
-        }
-      } else if (event === 'item/deleted') {
-        if (stored.includes(cleanItemId)) {
-          const updated = stored.filter((id) => id !== cleanItemId);
-          saveStoredItems(updated);
-          console.log(`[Pluggy Webhook] Item auto-removed: ${cleanItemId}`);
-        }
-      }
-    }
-
-    // Always respond immediately with 200 OK so Pluggy knows it was received
-    res.status(200).json({
-      received: true,
-      event: event || 'unknown',
-      processedAt: new Date().toISOString(),
-    });
-  } catch (err: any) {
-    console.error('[Pluggy Webhook] Error processing event:', err);
-    // Still return 200 to prevent infinite webhook retries for malformed data
-    res.status(200).json({
-      received: true,
-      error: err.message,
-    });
-  }
-}
-
-/**
- * 8. Register Webhook in Pluggy API (Admin action)
- */
-export async function registerPluggyWebhook(req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const apiKey = await getPluggyApiKey();
-    if (!apiKey) {
-      res.status(400).json({ message: 'Credenciais da Pluggy não configuradas no .env' });
+    if (!tx) {
+      res.status(404).json({ message: 'Transação não encontrada.' });
       return;
     }
 
-    const webhookUrl = req.body.url || 'https://cashbank.onrender.com/api/bank-accounts/webhook';
-
-    const createRes = await fetch('https://api.pluggy.ai/webhooks', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-KEY': apiKey,
-      },
-      body: JSON.stringify({
-        event: 'all',
-        url: webhookUrl,
-      }),
+    await prisma.bankTransaction.delete({
+      where: { id },
     });
 
-    const data = await createRes.json();
-    if (!createRes.ok) {
-      res.status(createRes.status).json({
-        message: 'Erro ao registrar webhook na Pluggy',
-        details: data,
-      });
-      return;
-    }
-
-    res.json({
-      success: true,
-      message: 'Webhook registrado com sucesso na Pluggy!',
-      webhook: data,
-    });
+    res.json({ success: true, message: 'Transação excluída com sucesso.' });
   } catch (error: any) {
-    res.status(500).json({ message: 'Erro ao registrar webhook', error: error.message });
-  }
-}
-
-/**
- * 9. Get registered Webhooks in Pluggy API (Admin)
- */
-export async function getPluggyWebhooks(_req: AuthenticatedRequest, res: Response): Promise<void> {
-  try {
-    const apiKey = await getPluggyApiKey();
-    if (!apiKey) {
-      res.status(400).json({ message: 'Credenciais da Pluggy não configuradas no .env' });
-      return;
-    }
-
-    const whRes = await fetch('https://api.pluggy.ai/webhooks', {
-      headers: { 'X-API-KEY': apiKey },
-    });
-
-    const data = await whRes.json();
-    res.json(data);
-  } catch (error: any) {
-    res.status(500).json({ message: 'Erro ao listar webhooks', error: error.message });
+    console.error('Error in deleteBankTransaction:', error);
+    res.status(500).json({ message: 'Erro ao excluir transação', error: error.message });
   }
 }

@@ -21,7 +21,7 @@
   - [7. Contas a Receber (Receivables)](#7-contas-a-receber-receivables)
   - [8. Autenticação, Segurança e Multi-Tenancy](#8-autenticação-segurança-e-multi-tenancy)
   - [9. Assistente Virtual Inteligente (CashAI: RAG + MCP)](#9-assistente-virtual-inteligente-cashai-rag--mcp)
-  - [10. Contas Bancárias & Open Finance (Pluggy)](#10-contas-bancárias--open-finance-pluggy)
+  - [10. Contas Bancárias (API Oficial e Arquivos OFX)](#10-contas-bancárias-api-oficial-e-arquivos-ofx)
   - [11. Progressive Web App (PWA & Instalação Mobile)](#11-progressive-web-app-pwa--instalação-mobile)
 - [Estrutura do Projeto](#-estrutura-do-projeto)
 - [Instalação e Execução](#-instalação-e-execução)
@@ -66,7 +66,7 @@ O sistema opera com isolamento absoluto de dados por usuário (**Multi-Tenancy**
 - **JWT (JSON Web Tokens)**: Autenticação stateless segura via tokens de autorização Bearer.
 - **Bcryptjs**: Criptografia unidirecional com salt para proteção rigorosa de credenciais.
 - **Resend API & Nodemailer**: Envio confiável de links e códigos de redefinição de senha por e-mail com fallback em log formatado.
-- **Pluggy Open Finance API**: Integração para leitura e sincronização de contas bancárias e extratos via Open Finance.
+- **Integração Bancária Híbrida**: APIs oficiais diretas (Mercado Pago, Banco Inter) e parser nativo de extratos bancários em formato **OFX** (Nubank, PicPay e outros bancos).
 
 ---
 
@@ -217,11 +217,16 @@ Quando o CashAI executa uma ação MCP (ex: cadastrar despesa ou pagar conta), a
 
 ---
 
-### 10. Contas Bancárias & Open Finance (Pluggy)
+### 10. Contas Bancárias (API Oficial e Arquivos OFX)
 
-- Conexão e sincronização de contas digitais e tradicionais (Nubank, Inter, Itaú, Mercado Pago, etc.) através do **Pluggy Connect**.
-- Consulta consolidada de saldos reais e extratos bancários.
-- Opção para desconexão segura de contas a qualquer momento.
+- **Dois métodos de integração nativos e independentes de terceiros:**
+  - **⚡ Conexão via API Direta Oficial:** Integração direta com bancos que oferecem APIs públicas gratuitas para correntistas (como **Mercado Pago** e **Banco Inter**), com sincronização de saldo e transações em tempo real.
+  - **📁 Importação de Extratos OFX:** Compatível com **100% dos bancos brasileiros** (incluindo **Nubank**, **PicPay**, **Itaú**, **Bradesco**, **Santander**, **Caixa**, **C6 Bank**, etc.).
+- **Self-Service:** O cadastro e upload de extratos são feitos diretamente pelo próprio usuário dentro do aplicativo, sem necessidade de alteração de código ou arquivos `.env`.
+- **Anti-Duplicação Inteligente:** Utiliza o identificador único bancário (`FITID`) para ignorar automaticamente movimentações já existentes ao importar extratos repetidos.
+- **Extrato Consolidado:** Filtro por banco, tipo de transação (entradas/saídas) e busca textual unificada.
+- **Acesso Universal:** Módulo disponível para todos os usuários cadastrados, com total isolamento e privacidade por conta.
+- 📖 **Manual Completo:** Consulte o [Manual de Conexão Bancária & APIs Gratuitas](docs/MANUAL_CONEXAO_BANCARIA.md).
 
 ---
 
@@ -347,11 +352,7 @@ EMAIL_USER="seu-email@gmail.com"
 EMAIL_PASS="sua-senha-de-app"
 EMAIL_FROM="Suporte CashBank <seu-email@gmail.com>"
 
-# 4. OPEN FINANCE (INTEGRAÇÃO BANCÁRIA VIA PLUGGY - OPCIONAL)
-PLUGGY_CLIENT_ID="seu_client_id_pluggy"
-PLUGGY_CLIENT_SECRET="seu_client_secret_pluggy"
-
-# 5. INTELIGÊNCIA ARTIFICIAL GENERATIVA (RAG + MCP CASHAi)
+# 4. INTELIGÊNCIA ARTIFICIAL GENERATIVA (RAG + MCP CASHAi)
 # Obtenha sua chave gratuita em: https://aistudio.google.com/app/apikey
 GEMINI_API_KEY="sua_chave_gemini_aqui"
 ```

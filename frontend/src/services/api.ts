@@ -271,13 +271,28 @@ export const api = {
     return request<any>(`/admin/security-logs${query ? `?${query}` : ''}`);
   },
 
-  // Bank Accounts & Open Finance (Pluggy integration - Admin only)
-  getBankAccountsStatus: () => request<any>('/bank-accounts/status'),
-  getBankAccountsOverview: () => request<any>('/bank-accounts/overview'),
-  createBankConnectToken: () => request<any>('/bank-accounts/connect-token', { method: 'POST' }),
-  syncBankAccounts: () => request<any>('/bank-accounts/sync', { method: 'POST' }),
-  addBankLinkedItem: (itemId: string) => request<any>('/bank-accounts/items', { method: 'POST', body: JSON.stringify({ itemId }) }),
-  removeBankLinkedItem: (id: string) => request<any>('/bank-accounts/items/' + id, { method: 'DELETE' }),
+  // Bank Accounts (OFX, CSV and PDF statement file imports)
+  getBankAccounts: () => request<any>('/bank-accounts'),
+  getBankTransactions: (params?: { bankAccountId?: string; type?: string; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.bankAccountId) qs.set('bankAccountId', params.bankAccountId);
+    if (params?.type && params.type !== 'all') qs.set('type', params.type);
+    if (params?.limit) qs.set('limit', String(params.limit));
+    const query = qs.toString();
+    return request<any>(`/bank-accounts/transactions${query ? `?${query}` : ''}`);
+  },
+  createBankAccount: (data: any) =>
+    request<any>('/bank-accounts', { method: 'POST', body: JSON.stringify(data) }),
+  updateBankAccount: (id: string, data: any) =>
+    request<any>(`/bank-accounts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteBankAccount: (id: string) =>
+    request<any>(`/bank-accounts/${id}`, { method: 'DELETE' }),
+  importBankOfx: (id: string, ofxContent: string) =>
+    request<any>(`/bank-accounts/${id}/import-ofx`, { method: 'POST', body: JSON.stringify({ ofxContent }) }),
+  importBankStatement: (id: string, statementContent: string, fileType?: 'ofx' | 'csv' | 'pdf') =>
+    request<any>(`/bank-accounts/${id}/import-ofx`, { method: 'POST', body: JSON.stringify({ statementContent, fileType }) }),
+  deleteBankTransaction: (id: string) =>
+    request<any>(`/bank-accounts/transactions/${id}`, { method: 'DELETE' }),
 
   // Virtual AI Assistant & RAG / MCP
   chatWithAi: (message: string, history?: Array<{ role: 'user' | 'model'; text: string }>) =>

@@ -35,6 +35,8 @@ model User {
   receivables          Receivable[]
   receivableReceipts   ReceivableReceipt[]
   auditLogsTarget      AuditLog[]            @relation("AuditTargetUser")
+  bankAccounts         BankAccount[]
+  bankTransactions     BankTransaction[]
 }
 
 model FixedExpense {
@@ -333,4 +335,51 @@ model SecurityLog {
   @@index([createdAt])
 }
 
+model BankAccount {
+  id              String            @id @default(uuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankKey         String            // "inter", "mercadopago", "nubank", "picpay", "itau", "bradesco", "santander", "caixa", "c6", "other"
+  name            String            // Ex: "Banco Inter", "Nubank", "Mercado Pago"
+  accountType     String            @default("Conta Corrente") // "Conta Corrente", "Conta Pagamento", "Poupança"
+  agency          String?
+  accountNumber   String?
+  color           String            @default("#15803d")
+  connectionType  String            // "API" | "OFX"
+  balance         Float             @default(0.0)
+  initialBalance  Float             @default(0.0)
+  currency        String            @default("BRL")
+  status          String            @default("active") // "active" | "error" | "syncing"
+  lastSyncAt      DateTime?
+  apiClientId     String?
+  apiClientSecret String?
+  apiToken        String?
+  apiCert         String?
+  apiCertKey      String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  transactions    BankTransaction[]
 
+  @@index([userId])
+}
+
+model BankTransaction {
+  id            String      @id @default(uuid())
+  bankAccountId String
+  bankAccount   BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  externalId    String?     // FITID do OFX ou ID da transação na API
+  type          String      // "income" | "expense"
+  amount        Float
+  description   String
+  category      String      @default("Geral")
+  date          DateTime
+  paymentMethod String?     // "PIX", "TED", "DEBITO", "BOLETO", "TRANSFERENCIA", "OUTROS"
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([bankAccountId, externalId])
+  @@index([userId, date])
+  @@index([bankAccountId, date])
+}

@@ -43,7 +43,7 @@ export const App: React.FC = () => {
 
   // Security guard for admin tab
   useEffect(() => {
-    if ((currentTab === 'admin' || currentTab === 'bank-accounts') && user?.role !== 'admin') {
+    if (currentTab === 'admin' && user?.role !== 'admin') {
       setCurrentTab('dashboard');
     }
   }, [currentTab, user]);

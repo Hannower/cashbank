@@ -54,6 +54,12 @@ export interface UserFinancialContext {
       items: string[];
     }>;
   }>;
+  bankAccounts: Array<{
+    name: string;
+    bankKey: string;
+    balance: number;
+    connectionType: string;
+  }>;
   receivables: Array<{
     id: string;
     description: string;
@@ -255,7 +261,20 @@ export async function getUserFinancialContext(userId: string): Promise<UserFinan
     status: r.isReceived ? 'RECEBIDO' : 'PENDENTE',
   }));
 
-  // 8. Financial aggregates
+  // 8. Bank accounts
+  const bankAccounts = await prisma.bankAccount.findMany({
+    where: { userId },
+    orderBy: { name: 'asc' },
+  });
+
+  const formattedBankAccounts = bankAccounts.map((b) => ({
+    name: b.name,
+    bankKey: b.bankKey,
+    balance: b.balance,
+    connectionType: b.connectionType,
+  }));
+
+  // 9. Financial aggregates
   const paidFixedTotal = fixedList.filter((f) => f.isPaid).reduce((acc, curr) => acc + curr.amount, 0);
   const pendingFixedTotal = fixedList.filter((f) => !f.isPaid).reduce((acc, curr) => acc + curr.amount, 0);
 
@@ -287,6 +306,7 @@ export async function getUserFinancialContext(userId: string): Promise<UserFinan
     piggyBanks: piggyList,
     creditCardInvoices: cardInvoicesList,
     futureCreditCardInvoices,
+    bankAccounts: formattedBankAccounts,
     receivables: receivablesList,
   };
 }
@@ -308,6 +328,18 @@ Nome do Usuário: ${ctx.userName}
   * Despesas Pendentes a Pagar: ${formatBRL(ctx.totalPendingExpensesMonth)}
 - Saldo Total Guardado em Cofrinhos / Poupança: ${formatBRL(ctx.totalSavingsInPiggyBanks)}
 - Meta Global de Poupança: ${ctx.savingsGoal > 0 ? formatBRL(ctx.savingsGoal) : 'Não definida'}
+
+=== CONTAS BANCÁRIAS CONECTADAS ===
+${
+  ctx.bankAccounts && ctx.bankAccounts.length > 0
+    ? ctx.bankAccounts
+        .map(
+          (b) =>
+            `- ${b.name}: ${formatBRL(b.balance)} (${b.connectionType === 'API' ? 'API Direta' : 'Extrato OFX'})`
+        )
+        .join('\n')
+    : 'Nenhuma conta bancária conectada no momento.'
+}
 
 === FATURAS DE CARTÃO DE CRÉDITO DO MÊS ATUAL (${ctx.monthName.toUpperCase()}/${ctx.currentYear}) ===
 ${

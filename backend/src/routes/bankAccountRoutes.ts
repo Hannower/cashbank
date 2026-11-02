@@ -1,45 +1,39 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth';
-import { adminMiddleware } from '../middleware/admin';
 import {
-  handlePluggyWebhook,
-  getBankAccountsStatus,
-  getBankAccountsOverview,
-  createConnectToken,
-  syncBankAccounts,
-  addLinkedItem,
-  removeLinkedItem,
-  registerPluggyWebhook,
-  getPluggyWebhooks,
+  getBankAccounts,
+  getBankTransactions,
+  createBankAccount,
+  updateBankAccount,
+  deleteBankAccount,
+  importOfxToAccount,
+  deleteBankTransaction,
 } from '../controllers/bankAccountController';
 
 const router = Router();
 
-// Public Webhook route for Pluggy Open Finance events (No auth required)
-router.post('/webhook', handlePluggyWebhook);
-
-// Protect all remaining Open Finance routes: Authentication required + Admin role RBAC check
+// Authentication required for all bank account operations (accessible to all authenticated users)
 router.use(authMiddleware as any);
-router.use(adminMiddleware as any);
 
-// Check configuration status of Pluggy / bank credentials in .env
-router.get('/status', getBankAccountsStatus);
+// List accounts and consolidated summary
+router.get('/', getBankAccounts);
 
-// Webhook management (Admin)
-router.get('/webhooks', getPluggyWebhooks);
-router.post('/webhooks/register', registerPluggyWebhook);
+// List transactions (extrato) with filters
+router.get('/transactions', getBankTransactions);
 
-// Get balances, institutions and transactions
-router.get('/overview', getBankAccountsOverview);
+// Delete single transaction
+router.delete('/transactions/:id', deleteBankTransaction);
 
-// Link and unlink Item IDs
-router.post('/items', addLinkedItem);
-router.delete('/items/:id', removeLinkedItem);
+// Create account (OFX, CSV or PDF statement)
+router.post('/', createBankAccount);
 
-// Generate connect token for Pluggy Connect widget
-router.post('/connect-token', createConnectToken);
+// Update account
+router.put('/:id', updateBankAccount);
 
-// Trigger sync
-router.post('/sync', syncBankAccounts);
+// Delete account
+router.delete('/:id', deleteBankAccount);
+
+// Import statement (OFX, CSV or PDF) to account
+router.post('/:id/import-ofx', importOfxToAccount);
 
 export default router;

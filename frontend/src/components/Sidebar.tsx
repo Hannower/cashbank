@@ -102,13 +102,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Poupança',
       icon: <PiggyBank size={18} />,
     },
+    {
+      id: 'bank-accounts' as NavTab,
+      label: 'Contas bancárias',
+      icon: <Landmark size={18} />,
+    },
     ...(user?.role === 'admin'
       ? [
-          {
-            id: 'bank-accounts' as NavTab,
-            label: 'Contas bancárias',
-            icon: <Landmark size={18} />,
-          },
           {
             id: 'admin' as NavTab,
             label: 'Painel Admin',

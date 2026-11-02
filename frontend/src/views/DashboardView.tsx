@@ -465,6 +465,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
     )
     .reduce((acc, t) => acc + (t.amount || 0), 0);
 
+  const hasBankAccounts = Boolean(data?.bankAccountsSummary?.hasBankAccounts);
+  const totalBankBalance = data?.bankAccountsSummary?.totalBankBalance ?? 0;
+  const isBankNegative = totalBankBalance < 0;
   const saldoAtual = data?.kpis?.saldoAtual ?? data?.kpis?.saldoDisponivel ?? 0;
   const saldoPrevisto = data?.kpis?.saldoPrevisto ?? saldoAtual;
   const despesasPagas = data?.kpis?.despesasPagas ?? 0;
@@ -644,115 +647,108 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
 
       {/* KPI Cards Grid */}
       <div className="kpi-cards-grid">
-        {/* Card 1: Saldo em conta (Realizado) e Previsto pós-contas (Abordagem Híbrida) */}
-        <div
-          style={{
-            background: isNegative
-              ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
-              : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
-            borderRadius: 16,
-            padding: '20px 22px',
-            color: 'white',
-            position: 'relative',
-            overflow: 'hidden',
-            boxShadow: isNegative
-              ? '0 4px 12px rgba(220, 38, 38, 0.28)'
-              : '0 4px 12px rgba(21, 128, 61, 0.25)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            minHeight: 140,
-            transition: 'background 0.3s ease, box-shadow 0.3s ease',
-          }}
-        >
+        {/* Card 1: Saldo em conta (Exibido apenas se houver contas bancárias cadastradas) */}
+        {hasBankAccounts && (
           <div
             style={{
-              position: 'absolute',
-              right: -30,
-              bottom: -40,
-              width: 140,
-              height: 140,
-              borderRadius: '50%',
-              border: '24px solid rgba(255, 255, 255, 0.08)',
-              pointerEvents: 'none',
-            }}
-          />
-
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.95)', fontWeight: 600 }}>
-                Saldo em conta
-              </span>
-              <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: '0.4px',
-                  padding: '2px 7px',
-                  borderRadius: 6,
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  color: '#ffffff',
-                  textTransform: 'uppercase',
-                }}
-              >
-                Realizado
-              </span>
-            </div>
-            <button
-              onClick={() => setShowBalance(!showBalance)}
-              style={{
-                color: 'white',
-                opacity: 0.85,
-                padding: 4,
-                display: 'flex',
-                alignItems: 'center',
-              }}
-              title={showBalance ? 'Ocultar saldo' : 'Mostrar saldo'}
-            >
-              {showBalance ? <Eye size={18} /> : <EyeOff size={18} />}
-            </button>
-          </div>
-
-          <div style={{ margin: '10px 0 8px' }}>
-            <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.5px' }}>
-              {showBalance ? formatCurrency(saldoAtual) : '••••••'}
-            </span>
-          </div>
-
-          {/* Projeção Prevista pós-contas */}
-          <div
-            style={{
-              backgroundColor: 'rgba(0, 0, 0, 0.16)',
-              backdropFilter: 'blur(4px)',
-              border: '1px solid rgba(255, 255, 255, 0.16)',
-              borderRadius: 8,
-              padding: '6px 10px',
-              marginBottom: 8,
+              background: isBankNegative
+                ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
+                : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
+              borderRadius: 16,
+              padding: '20px 22px',
+              color: 'white',
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: isBankNegative
+                ? '0 4px 12px rgba(220, 38, 38, 0.28)'
+                : '0 4px 12px rgba(21, 128, 61, 0.25)',
               display: 'flex',
-              alignItems: 'center',
+              flexDirection: 'column',
               justifyContent: 'space-between',
-              gap: 8,
-              fontSize: 11,
+              minHeight: 140,
+              transition: 'background 0.3s ease, box-shadow 0.3s ease',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ opacity: 0.9, fontWeight: 500 }}>Previsto pós-contas:</span>
-              <strong style={{ fontWeight: 800, color: saldoPrevisto < 0 ? '#fca5a5' : '#ffffff' }}>
-                {showBalance ? formatCurrency(saldoPrevisto) : '••••••'}
-              </strong>
-            </div>
-            <span style={{ opacity: 0.85, fontSize: 10 }}>
-              {despesasPendentes > 0
-                ? `(${showBalance ? formatCurrency(despesasPendentes) : '••••'} a pagar)`
-                : '✓ Contas quitadas'}
-            </span>
-          </div>
+            <div
+              style={{
+                position: 'absolute',
+                right: -30,
+                bottom: -40,
+                width: 140,
+                height: 140,
+                borderRadius: '50%',
+                border: '24px solid rgba(255, 255, 255, 0.08)',
+                pointerEvents: 'none',
+              }}
+            />
 
-          <div style={{ fontSize: 11, color: isNegative ? '#fecaca' : '#86efac', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
-            <span>{data?.kpis?.saldoGrowthPct > 0 ? `↑ ${data.kpis.saldoGrowthPct}%` : '0.0%'}</span>
-            <span style={{ color: 'rgba(255, 255, 255, 0.8)', fontWeight: 400 }}>em relação ao mês anterior</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.95)', fontWeight: 600 }}>
+                  Saldo em conta
+                </span>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: '0.4px',
+                    padding: '2px 7px',
+                    borderRadius: 6,
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    color: '#ffffff',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Bancos
+                </span>
+              </div>
+              <button
+                onClick={() => setShowBalance(!showBalance)}
+                style={{
+                  color: 'white',
+                  opacity: 0.85,
+                  padding: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+                title={showBalance ? 'Ocultar saldo' : 'Mostrar saldo'}
+              >
+                {showBalance ? <Eye size={18} /> : <EyeOff size={18} />}
+              </button>
+            </div>
+
+            <div style={{ margin: '10px 0 8px' }}>
+              <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.5px' }}>
+                {showBalance ? formatCurrency(totalBankBalance) : '••••••'}
+              </span>
+            </div>
+
+            <div
+              style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.16)',
+                backdropFilter: 'blur(4px)',
+                border: '1px solid rgba(255, 255, 255, 0.16)',
+                borderRadius: 8,
+                padding: '6px 10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 8,
+                fontSize: 11,
+              }}
+            >
+              <span style={{ opacity: 0.9, fontWeight: 500 }}>
+                {data?.bankAccountsSummary?.accountsCount} {data?.bankAccountsSummary?.accountsCount === 1 ? 'conta conectada' : 'contas conectadas'}
+              </span>
+              <span style={{ opacity: 0.95, fontSize: 11, fontWeight: 700 }}>
+                Soma em bancos
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Card 2: Minha renda */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 140 }}>

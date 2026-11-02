@@ -474,7 +474,20 @@ export async function getDashboardOverview(req: AuthenticatedRequest, res: Respo
       }))
       .sort((a, b) => b.total - a.total);
 
+    // Query connected bank accounts for consolidated bank balance
+    const bankAccounts = await prisma.bankAccount.findMany({
+      where: { userId },
+      select: { id: true, balance: true },
+    });
+    const totalBankBalance = bankAccounts.reduce((acc, b) => acc + (b.balance || 0), 0);
+    const hasBankAccounts = bankAccounts.length > 0;
+
     res.json({
+      bankAccountsSummary: {
+        hasBankAccounts,
+        totalBankBalance: Math.round(totalBankBalance * 100) / 100,
+        accountsCount: bankAccounts.length,
+      },
       user: {
         name: user.name,
         email: user.email,
