@@ -1,5 +1,5 @@
 // CashBank Service Worker - PWA Offline Support & Asset Caching
-const CACHE_NAME = 'cashbank-cache-v2';
+const CACHE_NAME = 'cashbank-cache-v3';
 
 const STATIC_ASSETS = [
   '/',
