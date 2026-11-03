@@ -1,11 +1,12 @@
 // CashBank Service Worker - PWA Offline Support & Asset Caching
-const CACHE_NAME = 'cashbank-cache-v1';
+const CACHE_NAME = 'cashbank-cache-v2';
 
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/logo.svg',
+  '/cashbank-logo.png',
+  '/apple-touch-icon.png',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
   '/icons/icon-maskable-192x192.png',
