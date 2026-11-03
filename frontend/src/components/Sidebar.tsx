@@ -145,24 +145,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div
+            <img
+              src="/cashbank-logo.png"
+              alt="CashBank"
               style={{
                 width: 34,
                 height: 34,
                 borderRadius: 8,
-                backgroundColor: '#15803d',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                objectFit: 'cover',
                 boxShadow: '0 2px 5px rgba(21, 128, 61, 0.3)',
               }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <rect x="4" y="14" width="3.5" height="6" rx="1.5" fill="white" />
-                <rect x="10.25" y="9" width="3.5" height="11" rx="1.5" fill="white" />
-                <rect x="16.5" y="4" width="3.5" height="16" rx="1.5" fill="white" />
-              </svg>
-            </div>
+            />
             <span style={{ fontSize: 19, fontWeight: 800, color: 'var(--text-main, #0f172a)', letterSpacing: '-0.3px' }}>
               CashBank
             </span>

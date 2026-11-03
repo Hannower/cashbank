@@ -241,24 +241,18 @@ export const LoginView: React.FC = () => {
 
         {/* Top Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative', zIndex: 2 }}>
-          <div
+          <img
+            src="/cashbank-logo.png"
+            alt="CashBank"
             style={{
-              width: 36,
-              height: 36,
+              width: 38,
+              height: 38,
               borderRadius: 8,
-              backgroundColor: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              objectFit: 'cover',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
             }}
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <rect x="4" y="14" width="3.5" height="6" rx="1.5" fill="#15803d" />
-              <rect x="10.25" y="9" width="3.5" height="11" rx="1.5" fill="#15803d" />
-              <rect x="16.5" y="4" width="3.5" height="16" rx="1.5" fill="#15803d" />
-            </svg>
-          </div>
-          <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.3px' }}>CashBank</span>
+          />
+          <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.3px', color: '#ffffff' }}>CashBank</span>
         </div>
 
         {/* Center Text */}

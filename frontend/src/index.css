@@ -46,6 +46,13 @@
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
 
   --font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* KPI Accent Colors */
+  --kpi-bank-color: #2563eb;
+  --kpi-income-color: #16a34a;
+  --kpi-expense-color: #ea580c;
+  --kpi-savings-color: #7c3aed;
+  --kpi-negative-color: #dc2626;
 }
 
 body.dark-theme,
@@ -63,6 +70,13 @@ body.dark-theme,
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
   --text-white: #ffffff;
+
+  /* KPI Accent Colors (Dark Theme) */
+  --kpi-bank-color: #60a5fa;
+  --kpi-income-color: #4ade80;
+  --kpi-expense-color: #fb923c;
+  --kpi-savings-color: #c084fc;
+  --kpi-negative-color: #f87171;
 
   --border-color: #152037;
   --border-input: #1c2b4a;
@@ -2026,4 +2040,40 @@ body.dark-theme .cashai-chat-window {
   .bank-header-actions {
     flex-direction: column;
   }
+}
+
+
+/* KPI Cards Icon Badges */
+.kpi-icon-bank {
+  background-color: #eff6ff;
+  color: #2563eb;
+}
+.kpi-icon-income {
+  background-color: #ecfdf5;
+  color: #16a34a;
+}
+.kpi-icon-expense {
+  background-color: #ffedd5;
+  color: #ea580c;
+}
+.kpi-icon-savings {
+  background-color: #f3e8ff;
+  color: #7c3aed;
+}
+
+body.dark-theme .kpi-icon-bank {
+  background-color: rgba(37, 99, 235, 0.2) !important;
+  color: #60a5fa !important;
+}
+body.dark-theme .kpi-icon-income {
+  background-color: rgba(22, 163, 74, 0.2) !important;
+  color: #4ade80 !important;
+}
+body.dark-theme .kpi-icon-expense {
+  background-color: rgba(234, 88, 12, 0.2) !important;
+  color: #fb923c !important;
+}
+body.dark-theme .kpi-icon-savings {
+  background-color: rgba(124, 58, 237, 0.2) !important;
+  color: #c084fc !important;
 }

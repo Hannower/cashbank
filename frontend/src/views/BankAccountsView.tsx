@@ -72,7 +72,14 @@ const SUPPORTED_BANKS = [
   { key: 'other', name: 'Outro Banco', color: '#15803d' },
 ];
 
-export const BankAccountsView: React.FC = () => {
+interface BankAccountsViewProps {
+  showValues?: boolean;
+}
+
+export const BankAccountsView: React.FC<BankAccountsViewProps> = ({ showValues: propShowValues }) => {
+  const showBalance = propShowValues !== undefined
+    ? propShowValues
+    : (typeof window !== 'undefined' && localStorage.getItem('cashbank_show_balance') !== 'false');
   const [loading, setLoading] = useState(true);
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
   const [transactions, setTransactions] = useState<BankTransaction[]>([]);
@@ -357,6 +364,7 @@ export const BankAccountsView: React.FC = () => {
   };
 
   const formatCurrency = (val: number) => {
+    if (!showBalance) return '••••••';
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   };
 

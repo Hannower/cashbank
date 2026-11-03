@@ -160,21 +160,17 @@ export const ResetPasswordView: React.FC<ResetPasswordViewProps> = ({ token, onF
             marginBottom: 6,
           }}
         >
-          <div
+          <img
+            src="/cashbank-logo.png"
+            alt="CashBank"
             style={{
-              width: 40,
-              height: 40,
-              borderRadius: 12,
-              background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#ffffff',
-              boxShadow: '0 4px 12px rgba(21, 128, 61, 0.3)',
+              width: 42,
+              height: 42,
+              borderRadius: 10,
+              objectFit: 'cover',
+              boxShadow: '0 3px 8px rgba(21, 128, 61, 0.25)',
             }}
-          >
-            <ShieldCheck size={22} />
-          </div>
+          />
           <span
             style={{
               fontSize: 26,

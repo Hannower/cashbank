@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Eye,
-  EyeOff,
   Plus,
   ArrowDownLeft,
   ArrowUpRight,
@@ -22,6 +20,8 @@ import {
   Check,
   Pencil,
   Clock,
+  Landmark,
+  Wallet,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -33,6 +33,7 @@ import { MonthItem, getInitialMonthItem, FULL_MONTH_NAMES, MONTH_LABELS } from '
 interface DashboardViewProps {
   onNavigate: (tab: NavTab) => void;
   onOpenQuickLaunch: () => void;
+  showValues?: boolean;
 }
 
 const getCategoryColor = (category: string) => {
@@ -220,11 +221,17 @@ const extractTimeFromTransaction = (tx: any): string => {
   return '12:00';
 };
 
-export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpenQuickLaunch }) => {
+export const DashboardView: React.FC<DashboardViewProps> = ({
+  onNavigate,
+  onOpenQuickLaunch,
+  showValues: propShowValues,
+}) => {
   const { user } = useAuth();
   const [selectedMonth, setSelectedMonth] = useState<MonthItem>(() => getInitialMonthItem(user?.createdAt));
   const [data, setData] = useState<any>(null);
-  const [showBalance, setShowBalance] = useState(true);
+  const showBalance = propShowValues !== undefined
+    ? propShowValues
+    : (typeof window !== 'undefined' && localStorage.getItem('cashbank_show_balance') !== 'false');
   const [loading, setLoading] = useState(true);
   const [transactionFilter, setTransactionFilter] = useState<'all' | 'revenues' | 'expenses'>('all');
 
@@ -492,17 +499,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
           >
             {getFormattedDate()}
           </div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.5px', margin: 0 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-main, #0f172a)', letterSpacing: '-0.5px', margin: 0 }}>
             Olá, {firstName}.
           </h1>
-          <p style={{ fontSize: 14, color: '#64748b', marginTop: 4, margin: 0 }}>
+          <p style={{ fontSize: 14, color: 'var(--text-secondary, #64748b)', marginTop: 4, margin: 0 }}>
             Veja o resumo das suas finanças em {FULL_MONTH_NAMES[selectedMonth.month - 1].toLowerCase()} de {selectedMonth.year}.
           </p>
         </div>
 
         <div className="view-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {loading && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary, #64748b)' }}>
               <Loader2 size={16} className="animate-spin" color="#15803d" />
               <span>Atualizando...</span>
             </div>
@@ -649,42 +656,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
       <div className="kpi-cards-grid">
         {/* Card 1: Saldo em conta (Exibido apenas se houver contas bancárias cadastradas) */}
         {hasBankAccounts && (
-          <div
-            style={{
-              background: isBankNegative
-                ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
-                : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
-              borderRadius: 16,
-              padding: '20px 22px',
-              color: 'white',
-              position: 'relative',
-              overflow: 'hidden',
-              boxShadow: isBankNegative
-                ? '0 4px 12px rgba(220, 38, 38, 0.28)'
-                : '0 4px 12px rgba(21, 128, 61, 0.25)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              minHeight: 140,
-              transition: 'background 0.3s ease, box-shadow 0.3s ease',
-            }}
-          >
-            <div
-              style={{
-                position: 'absolute',
-                right: -30,
-                bottom: -40,
-                width: 140,
-                height: 140,
-                borderRadius: '50%',
-                border: '24px solid rgba(255, 255, 255, 0.08)',
-                pointerEvents: 'none',
-              }}
-            />
-
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 140 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.95)', fontWeight: 600 }}>
+                <span style={{ fontSize: 13, color: 'var(--text-muted, #64748b)', fontWeight: 500 }}>
                   Saldo em conta
                 </span>
                 <span
@@ -694,56 +669,47 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
                     letterSpacing: '0.4px',
                     padding: '2px 7px',
                     borderRadius: 6,
-                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                    color: '#ffffff',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    color: 'var(--kpi-bank-color, #2563eb)',
                     textTransform: 'uppercase',
                   }}
                 >
                   Bancos
                 </span>
               </div>
-              <button
-                onClick={() => setShowBalance(!showBalance)}
+              <div
+                className="kpi-icon-bank"
                 style={{
-                  color: 'white',
-                  opacity: 0.85,
-                  padding: 4,
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
                   display: 'flex',
                   alignItems: 'center',
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
+                  justifyContent: 'center',
                 }}
-                title={showBalance ? 'Ocultar saldo' : 'Mostrar saldo'}
               >
-                {showBalance ? <Eye size={18} /> : <EyeOff size={18} />}
-              </button>
+                <Landmark size={18} />
+              </div>
             </div>
 
-            <div style={{ margin: '10px 0 8px' }}>
-              <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.5px' }}>
+            <div style={{ margin: '14px 0 10px' }}>
+              <span
+                style={{
+                  fontSize: 26,
+                  fontWeight: 800,
+                  color: isBankNegative ? 'var(--kpi-negative-color, #dc2626)' : 'var(--kpi-bank-color, #2563eb)',
+                  letterSpacing: '-0.5px',
+                }}
+              >
                 {showBalance ? formatCurrency(totalBankBalance) : '••••••'}
               </span>
             </div>
 
-            <div
-              style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.16)',
-                backdropFilter: 'blur(4px)',
-                border: '1px solid rgba(255, 255, 255, 0.16)',
-                borderRadius: 8,
-                padding: '6px 10px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 8,
-                fontSize: 11,
-              }}
-            >
-              <span style={{ opacity: 0.9, fontWeight: 500 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary, #64748b)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>
                 {data?.bankAccountsSummary?.accountsCount} {data?.bankAccountsSummary?.accountsCount === 1 ? 'conta conectada' : 'contas conectadas'}
               </span>
-              <span style={{ opacity: 0.95, fontSize: 11, fontWeight: 700 }}>
+              <span style={{ fontSize: 11, color: 'var(--text-muted, #94a3b8)', fontWeight: 500 }}>
                 Soma em bancos
               </span>
             </div>
@@ -753,14 +719,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
         {/* Card 2: Minha renda */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 140 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>Minha renda</span>
+            <span style={{ fontSize: 13, color: 'var(--text-muted, #64748b)', fontWeight: 500 }}>Minha renda</span>
             <div
+              className="kpi-icon-income"
               style={{
                 width: 36,
                 height: 36,
                 borderRadius: 10,
-                backgroundColor: '#ecfdf5',
-                color: '#15803d',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -771,28 +736,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
           </div>
 
           <div style={{ margin: '14px 0 10px' }}>
-            <span style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.5px' }}>
+            <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--kpi-income-color, #16a34a)', letterSpacing: '-0.5px' }}>
               {showBalance ? formatCurrency(data?.kpis?.receitasTotais ?? 0) : '••••••'}
             </span>
           </div>
 
-          <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>
+          <div style={{ fontSize: 12, color: 'var(--kpi-income-color, #16a34a)', fontWeight: 600 }}>
             {data?.kpis?.receitasGrowthPct > 0 ? `+${data.kpis.receitasGrowthPct}%` : '0.0%'}{' '}
-            <span style={{ color: '#64748b', fontWeight: 400 }}>neste mês</span>
+            <span style={{ color: 'var(--text-muted, #64748b)', fontWeight: 400 }}>neste mês</span>
           </div>
         </div>
 
         {/* Card 3: Despesas Totais */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 140 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>Despesas totais</span>
+            <span style={{ fontSize: 13, color: 'var(--text-muted, #64748b)', fontWeight: 500 }}>Despesas totais</span>
             <div
+              className="kpi-icon-expense"
               style={{
                 width: 36,
                 height: 36,
                 borderRadius: 10,
-                backgroundColor: '#ffedd5',
-                color: '#ea580c',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -803,19 +767,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
           </div>
 
           <div style={{ margin: '14px 0 10px' }}>
-            <span style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.5px' }}>
+            <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--kpi-expense-color, #ea580c)', letterSpacing: '-0.5px' }}>
               {showBalance ? formatCurrency(despesasTotais) : '••••••'}
             </span>
           </div>
 
-          <div style={{ fontSize: 12, color: '#64748b' }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)' }}>
             {despesasPendentes > 0 ? (
               <span>
-                <strong style={{ color: '#16a34a' }}>{showBalance ? formatCurrency(despesasPagas) : '••••'}</strong> pagas •{' '}
-                <strong style={{ color: '#ea580c' }}>{showBalance ? formatCurrency(despesasPendentes) : '••••'}</strong> a pagar
+                <strong style={{ color: 'var(--kpi-income-color, #16a34a)' }}>{showBalance ? formatCurrency(despesasPagas) : '••••'}</strong> pagas •{' '}
+                <strong style={{ color: 'var(--kpi-expense-color, #ea580c)' }}>{showBalance ? formatCurrency(despesasPendentes) : '••••'}</strong> a pagar
               </span>
             ) : (
-              <span style={{ color: '#16a34a', fontWeight: 600 }}>
+              <span style={{ color: 'var(--kpi-income-color, #16a34a)', fontWeight: 600 }}>
                 ✓ Todas as despesas pagas
               </span>
             )}
@@ -825,14 +789,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
         {/* Card 4: Na Poupança */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 140 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>Na poupança</span>
+            <span style={{ fontSize: 13, color: 'var(--text-muted, #64748b)', fontWeight: 500 }}>Na poupança</span>
             <div
+              className="kpi-icon-savings"
               style={{
                 width: 36,
                 height: 36,
                 borderRadius: 10,
-                backgroundColor: '#f3e8ff',
-                color: '#7c3aed',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -843,12 +806,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
           </div>
 
           <div style={{ margin: '14px 0 10px' }}>
-            <span style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.5px' }}>
+            <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--kpi-savings-color, #7c3aed)', letterSpacing: '-0.5px' }}>
               {showBalance ? formatCurrency(data?.kpis?.naPoupanca ?? 0) : '••••••'}
             </span>
           </div>
 
-          <div style={{ fontSize: 12, color: '#15803d', fontWeight: 600 }}>
+          <div style={{ fontSize: 12, color: 'var(--kpi-savings-color, #7c3aed)', fontWeight: 600 }}>
             Total guardado acumulado
           </div>
         </div>
@@ -1366,45 +1329,42 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
         {/* Annual KPI Cards */}
         <div className="kpi-cards-grid" style={{ marginBottom: 24 }}>
           {/* Saldo Anual */}
-          <div
-            style={{
-              background: (annualData?.kpis?.saldoAnual ?? 0) < 0
-                ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'
-                : 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
-              borderRadius: 16,
-              padding: 24,
-              color: 'white',
-              position: 'relative',
-              overflow: 'hidden',
-              boxShadow: (annualData?.kpis?.saldoAnual ?? 0) < 0
-                ? '0 4px 12px rgba(220, 38, 38, 0.28)'
-                : '0 4px 12px rgba(21, 128, 61, 0.25)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              minHeight: 140,
-            }}
-          >
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 140 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.9)', fontWeight: 500 }}>
+              <span style={{ fontSize: 13, color: 'var(--text-muted, #64748b)', fontWeight: 500 }}>
                 Saldo acumulado no ano
               </span>
-              <button
-                onClick={() => setShowBalance(!showBalance)}
-                style={{ color: 'white', opacity: 0.85, padding: 4, display: 'flex', alignItems: 'center' }}
-                title={showBalance ? 'Ocultar saldo' : 'Mostrar saldo'}
+              <div
+                className="kpi-icon-bank"
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
-                {showBalance ? <Eye size={18} /> : <EyeOff size={18} />}
-              </button>
+                <Wallet size={18} />
+              </div>
             </div>
 
             <div style={{ margin: '14px 0 10px' }}>
-              <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.5px' }}>
+              <span
+                style={{
+                  fontSize: 26,
+                  fontWeight: 800,
+                  color: (annualData?.kpis?.saldoAnual ?? 0) < 0
+                    ? 'var(--kpi-negative-color, #dc2626)'
+                    : 'var(--kpi-bank-color, #2563eb)',
+                  letterSpacing: '-0.5px',
+                }}
+              >
                 {showBalance ? formatCurrency(annualData?.kpis?.saldoAnual ?? 0) : '••••••'}
               </span>
             </div>
 
-            <div style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.85)' }}>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary, #64748b)' }}>
               Balanço consolidado de {selectedAnnualYear}
             </div>
           </div>
@@ -1413,18 +1373,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
           <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 140 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 13, color: 'var(--text-muted, #64748b)', fontWeight: 500 }}>Renda do ano</span>
-              <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#ecfdf5', color: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div
+                className="kpi-icon-income"
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
                 <ArrowDownLeft size={18} />
               </div>
             </div>
 
             <div style={{ margin: '14px 0 10px' }}>
-              <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-main, #0f172a)', letterSpacing: '-0.5px' }}>
+              <span
+                style={{
+                  fontSize: 26,
+                  fontWeight: 800,
+                  color: 'var(--kpi-income-color, #16a34a)',
+                  letterSpacing: '-0.5px',
+                }}
+              >
                 {showBalance ? formatCurrency(annualData?.kpis?.totalAnnualRevenues ?? 0) : '••••••'}
               </span>
             </div>
 
-            <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>
+            <div style={{ fontSize: 12, color: 'var(--kpi-income-color, #16a34a)', fontWeight: 600 }}>
               Entradas de jan a dez
             </div>
           </div>
@@ -1433,13 +1410,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
           <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 140 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 13, color: 'var(--text-muted, #64748b)', fontWeight: 500 }}>Despesas do ano</span>
-              <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div
+                className="kpi-icon-expense"
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
                 <Calendar size={18} />
               </div>
             </div>
 
             <div style={{ margin: '14px 0 10px' }}>
-              <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-main, #0f172a)', letterSpacing: '-0.5px' }}>
+              <span
+                style={{
+                  fontSize: 26,
+                  fontWeight: 800,
+                  color: 'var(--kpi-expense-color, #ea580c)',
+                  letterSpacing: '-0.5px',
+                }}
+              >
                 {showBalance ? formatCurrency(annualData?.kpis?.totalAnnualExpenses ?? 0) : '••••••'}
               </span>
             </div>
@@ -1453,18 +1447,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate, onOpen
           <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 140 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 13, color: 'var(--text-muted, #64748b)', fontWeight: 500 }}>Poupança no ano</span>
-              <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#f3e8ff', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div
+                className="kpi-icon-savings"
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
                 <PiggyBank size={18} />
               </div>
             </div>
 
             <div style={{ margin: '14px 0 10px' }}>
-              <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-main, #0f172a)', letterSpacing: '-0.5px' }}>
+              <span
+                style={{
+                  fontSize: 26,
+                  fontWeight: 800,
+                  color: 'var(--kpi-savings-color, #7c3aed)',
+                  letterSpacing: '-0.5px',
+                }}
+              >
                 {showBalance ? formatCurrency(annualData?.kpis?.totalAnnualSavings ?? 0) : '••••••'}
               </span>
             </div>
 
-            <div style={{ fontSize: 12, color: '#15803d', fontWeight: 600 }}>
+            <div style={{ fontSize: 12, color: 'var(--kpi-savings-color, #7c3aed)', fontWeight: 600 }}>
               Reserva guardada no período
             </div>
           </div>

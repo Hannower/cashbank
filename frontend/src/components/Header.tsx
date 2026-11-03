@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Moon, Sun, Menu } from 'lucide-react';
+import { Settings, Moon, Sun, Menu, Eye, EyeOff } from 'lucide-react';
 import { NavTab } from './Sidebar';
 
 interface HeaderProps {
@@ -8,6 +8,8 @@ interface HeaderProps {
   onOpenSettings: () => void;
   isDark: boolean;
   onToggleTheme: () => void;
+  showValues?: boolean;
+  onToggleShowValues?: () => void;
 }
 
 const TAB_TITLES: Record<NavTab, { title: string; breadcrumb: string }> = {
@@ -28,6 +30,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
   isDark,
   onToggleTheme,
+  showValues = true,
+  onToggleShowValues,
 }) => {
   const current = TAB_TITLES[currentTab];
 
@@ -76,6 +80,30 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {/* Toggle Values Visibility (Eye) */}
+        {onToggleShowValues && (
+          <button
+            onClick={onToggleShowValues}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              border: '1px solid var(--border-input, #e2e8f0)',
+              backgroundColor: 'var(--bg-card, #ffffff)',
+              color: showValues ? '#15803d' : 'var(--text-muted, #94a3b8)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            title={showValues ? 'Ocultar valores' : 'Mostrar valores'}
+            aria-label={showValues ? 'Ocultar valores' : 'Mostrar valores'}
+          >
+            {showValues ? <Eye size={18} /> : <EyeOff size={18} />}
+          </button>
+        )}
+
         {/* Dark Mode Toggle Button */}
         <button
           onClick={onToggleTheme}

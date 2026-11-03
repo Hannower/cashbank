@@ -86,6 +86,20 @@ export const App: React.FC = () => {
     }
   }, [isDark]);
 
+  // Balance & values visibility state
+  const [showValues, setShowValues] = useState<boolean>(() => {
+    const saved = localStorage.getItem('cashbank_show_balance');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  const toggleShowValues = () => {
+    setShowValues((prev) => {
+      const next = !prev;
+      localStorage.setItem('cashbank_show_balance', String(next));
+      return next;
+    });
+  };
+
   // Global badges / indicators
   const [pendingFixedCount, setPendingFixedCount] = useState(0);
   const [organizedPct, setOrganizedPct] = useState(0);
@@ -183,6 +197,8 @@ export const App: React.FC = () => {
           onOpenSettings={() => setSettingsOpen(true)}
           isDark={isDark}
           onToggleTheme={toggleTheme}
+          showValues={showValues}
+          onToggleShowValues={toggleShowValues}
         />
 
         <main style={{ flex: 1, paddingTop: 70, paddingBottom: 40, width: '100%', boxSizing: 'border-box', minWidth: 0 }}>
@@ -190,6 +206,7 @@ export const App: React.FC = () => {
             <DashboardView
               onNavigate={(tab) => setCurrentTab(tab)}
               onOpenQuickLaunch={() => setQuickLaunchOpen(true)}
+              showValues={showValues}
             />
           )}
 
@@ -218,7 +235,7 @@ export const App: React.FC = () => {
           )}
 
           {currentTab === 'bank-accounts' && user?.role === 'admin' && (
-            <BankAccountsView />
+            <BankAccountsView showValues={showValues} />
           )}
 
           {currentTab === 'admin' && user?.role === 'admin' && (
