@@ -135,15 +135,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
-        {/* Brand */}
-        <div
-          style={{
-            padding: '24px 20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
+        {/* Brand Header (Fixed at top) */}
+        <div className="sidebar-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <img
               src="/cashbank-logo.png"
@@ -174,10 +167,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        {/* Section title */}
-        <div style={{ padding: '8px 24px 8px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.6px' }}>
-          PRINCIPAL
-        </div>
+        {/* Scrollable Middle Container (Never cuts off bottom footer) */}
+        <div className="sidebar-scroll-body">
+          {/* Section title */}
+          <div style={{ padding: '8px 24px 8px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.6px' }}>
+            PRINCIPAL
+          </div>
 
         {/* Nav Links */}
         <nav style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -279,7 +274,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         {/* Bottom Monthly Status Widget */}
-        <div style={{ padding: '0 16px 16px' }}>
+        <div className="sidebar-widget-container" style={{ padding: '0 16px 16px' }}>
           <div className="sidebar-status-widget">
             <div className="status-widget-icon">
               <Wallet size={16} />
@@ -295,16 +290,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* User profile footer */}
-        <div
-          style={{
-            padding: '16px 20px',
-            borderTop: '1px solid var(--border-color, #f1f5f9)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
+        </div>
+
+        {/* User profile footer (Locked at bottom, ALWAYS visible) */}
+        <div className="sidebar-footer">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
             <div
               style={{
@@ -369,7 +358,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <button
             onClick={logout}
-            title="Sair da conta"
+            title="Sair do aplicativo" aria-label="Sair da conta" className="sidebar-logout-btn"
             style={{
               color: '#94a3b8',
               padding: 6,

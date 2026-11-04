@@ -27,8 +27,16 @@ interface VariableExpense {
 
 const CATEGORIES = ['Alimentação', 'Transporte', 'Lazer', 'Streaming', 'Saúde', 'Educação', 'Moradia', 'Outros'];
 
-export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataChanged }) => {
+interface VariableExpensesViewProps {
+  onDataChanged?: () => void;
+  showValues?: boolean;
+}
+
+export const VariableExpensesView: React.FC<VariableExpensesViewProps> = ({ onDataChanged, showValues: propShowValues }) => {
   const { user } = useAuth();
+  const showBalance = propShowValues !== undefined
+    ? propShowValues
+    : (typeof window !== 'undefined' && localStorage.getItem('cashbank_show_balance') !== 'false');
   const [selectedMonth, setSelectedMonth] = useState<MonthItem>(() => getInitialMonthItem(user?.createdAt));
   const [expenses, setExpenses] = useState<VariableExpense[]>([]);
   const [totalAmount, setTotalAmount] = useState(0);
@@ -202,6 +210,7 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
   };
 
   const formatCurrency = (val: number) => {
+    if (!showBalance) return '••••••';
     return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
@@ -248,40 +257,43 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
         createdAt={user?.createdAt}
       />
 
-      {/* Hero Card */}
+      {/* Overview Card */}
       <div
-        className="hero-card-banner"
+        className="card"
         style={{
-          background: 'linear-gradient(135deg, #a4642f 0%, #884e1e 100%)',
-          boxShadow: '0 6px 16px rgba(136, 78, 30, 0.25)',
+          padding: '24px 28px',
+          marginBottom: 24,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 16,
         }}
       >
         <div>
-          <div style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.85)', marginBottom: 6 }}>
+          <div style={{ fontSize: 13, color: 'var(--text-muted, #64748b)', marginBottom: 6, fontWeight: 500 }}>
             Total gasto no mês de {selectedMonth.label}
           </div>
-          <div className="hero-amount" style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 6 }}>
+          <div className="hero-amount" style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 6, color: 'var(--kpi-expense-color, #ea580c)' }}>
             {formatCurrency(totalAmount)}
           </div>
-          <div style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.9)' }}>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary, #64748b)' }}>
             {expenses.length} lançamento{expenses.length !== 1 ? 's' : ''} registrado{expenses.length !== 1 ? 's' : ''} em {selectedMonth.label}.
           </div>
         </div>
 
-        {/* Translucent Card Icon */}
         <div
+          className="kpi-icon-expense"
           style={{
-            width: 68,
-            height: 68,
-            borderRadius: 16,
-            backgroundColor: 'rgba(255, 255, 255, 0.12)',
+            width: 52,
+            height: 52,
+            borderRadius: 14,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'white',
           }}
         >
-          <CreditCard size={32} />
+          <CreditCard size={26} />
         </div>
       </div>
 
@@ -351,16 +363,11 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
                       <td style={{ padding: '16px 24px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                           <div
+                            className="tx-icon-badge fixed"
                             style={{
                               width: 34,
                               height: 34,
                               borderRadius: 8,
-                              backgroundColor: '#ffedd5',
-                              color: '#ea580c',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0,
                             }}
                           >
                             <CreditCard size={17} />
@@ -469,16 +476,11 @@ export const VariableExpensesView: React.FC<{ onDataChanged?: () => void }> = ({
                 <div className="expense-mobile-header">
                   <div className="expense-mobile-main">
                     <div
+                      className="tx-icon-badge fixed"
                       style={{
                         width: 36,
                         height: 36,
                         borderRadius: 10,
-                        backgroundColor: '#ffedd5',
-                        color: '#ea580c',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
                       }}
                     >
                       <CreditCard size={18} />

@@ -98,7 +98,15 @@ const PIGGY_COLORS = [
   { hex: '#d97706', label: 'Âmbar Dourado', bg: 'rgba(217, 119, 6, 0.12)' },
 ];
 
-export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataChanged }) => {
+interface SavingsViewProps {
+  onDataChanged?: () => void;
+  showValues?: boolean;
+}
+
+export const SavingsView: React.FC<SavingsViewProps> = ({ onDataChanged, showValues: propShowValues }) => {
+  const showBalance = propShowValues !== undefined
+    ? propShowValues
+    : (typeof window !== 'undefined' && localStorage.getItem('cashbank_show_balance') !== 'false');
   const [piggyBanks, setPiggyBanks] = useState<PiggyBankItem[]>([]);
   const [savings, setSavings] = useState<SavingsItem[]>([]);
   const [totalSaved, setTotalSaved] = useState(0);
@@ -447,6 +455,7 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
   };
 
   const formatCurrency = (val: number) => {
+    if (!showBalance) return '••••••';
     return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
@@ -524,12 +533,10 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
         </div>
       </div>
 
-      {/* Hero Overview Banner */}
+      {/* Overview Card */}
       <div
-        className="hero-card-banner"
+        className="card"
         style={{
-          background: 'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)',
-          boxShadow: '0 8px 24px rgba(15, 23, 42, 0.35)',
           padding: '24px 28px',
           borderRadius: 20,
           position: 'relative',
@@ -546,32 +553,32 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
                   fontWeight: 800,
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                  backgroundColor: 'rgba(124, 58, 237, 0.12)',
                   padding: '3px 10px',
                   borderRadius: 20,
-                  color: '#ffffff',
+                  color: 'var(--kpi-savings-color, #7c3aed)',
                 }}
               >
                 Patrimônio Guardado
               </span>
-              <span style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.8)' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary, #64748b)' }}>
                 {piggyBanks.length} cofrinho{piggyBanks.length !== 1 ? 's' : ''} ativo{piggyBanks.length !== 1 ? 's' : ''}
               </span>
             </div>
 
-            <div className="hero-amount" style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-0.5px', color: '#ffffff', marginBottom: 8 }}>
+            <div className="hero-amount" style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--kpi-savings-color, #7c3aed)', marginBottom: 8 }}>
               {formatCurrency(totalSaved)}
             </div>
 
             {savingsGoal > 0 ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(255, 255, 255, 0.9)', fontSize: 13 }}>
-                <Target size={15} color="#4ade80" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary, #64748b)', fontSize: 13 }}>
+                <Target size={15} color="#16a34a" />
                 <span>
-                  Meta total acumulada: <strong>{formatCurrency(savingsGoal)}</strong> ({overallProgress}%)
+                  Meta total acumulada: <strong style={{ color: 'var(--text-main, #0f172a)' }}>{formatCurrency(savingsGoal)}</strong> ({overallProgress}%)
                 </span>
               </div>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(255, 255, 255, 0.8)', fontSize: 13 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted, #94a3b8)', fontSize: 13 }}>
                 <Target size={15} style={{ opacity: 0.65 }} />
                 <span>Sem metas determinadas</span>
               </div>
@@ -579,36 +586,34 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
           </div>
 
           <div
+            className="kpi-icon-savings"
             style={{
-              width: 64,
-              height: 64,
-              borderRadius: 18,
-              backgroundColor: 'rgba(255, 255, 255, 0.12)',
-              backdropFilter: 'blur(8px)',
+              width: 56,
+              height: 56,
+              borderRadius: 16,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#ffffff',
               flexShrink: 0,
             }}
           >
-            <PiggyBank size={32} />
+            <PiggyBank size={28} />
           </div>
         </div>
 
         {/* Global Progress Bar */}
         {savingsGoal > 0 && (
           <div style={{ marginTop: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(255, 255, 255, 0.85)', marginBottom: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-secondary, #64748b)', marginBottom: 6 }}>
               <span>Progresso geral dos cofrinhos</span>
-              <strong>{overallProgress}%</strong>
+              <strong style={{ color: 'var(--text-main, #0f172a)' }}>{overallProgress}%</strong>
             </div>
-            <div style={{ width: '100%', height: 8, backgroundColor: 'rgba(255, 255, 255, 0.15)', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{ width: '100%', height: 8, backgroundColor: 'rgba(0, 0, 0, 0.06)', borderRadius: 4, overflow: 'hidden' }}>
               <div
                 style={{
                   width: `${Math.min(overallProgress, 100)}%`,
                   height: '100%',
-                  background: 'linear-gradient(90deg, #22c55e 0%, #4ade80 100%)',
+                  background: 'linear-gradient(90deg, #16a34a 0%, #22c55e 100%)',
                   borderRadius: 4,
                   transition: 'width 0.5s ease',
                 }}
@@ -709,14 +714,12 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
                           </h3>
                           {pb.isOngoing && (
                             <span
+                              className="badge-ongoing"
                               style={{
                                 fontSize: 10,
                                 fontWeight: 700,
                                 padding: '1px 6px',
                                 borderRadius: 4,
-                                backgroundColor: '#ecfdf5',
-                                color: '#15803d',
-                                border: '1px solid #bbf7d0',
                               }}
                               title="Cofrinho em andamento (saldo inicial existente)"
                             >
@@ -1077,21 +1080,18 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
                                 <span
+                                  className={
+                                    item.isInitialBalance
+                                      ? 'badge-initial-balance'
+                                      : isWithdrawal
+                                      ? 'badge-savings-withdraw'
+                                      : 'badge-savings-deposit'
+                                  }
                                   style={{
                                     fontSize: 11,
                                     fontWeight: 700,
                                     padding: '1px 8px',
                                     borderRadius: 6,
-                                    backgroundColor: item.isInitialBalance
-                                      ? '#ede9fe'
-                                      : isWithdrawal
-                                      ? '#fee2e2'
-                                      : '#ecfdf5',
-                                    color: item.isInitialBalance
-                                      ? '#7c3aed'
-                                      : isWithdrawal
-                                      ? '#b91c1c'
-                                      : '#15803d',
                                   }}
                                 >
                                   {item.isInitialBalance ? 'Saldo inicial' : isWithdrawal ? 'Resgate' : 'Depósito'}
@@ -1101,8 +1101,8 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
                                     style={{
                                       fontSize: 10,
                                       fontWeight: 600,
-                                      color: '#7c3aed',
-                                      backgroundColor: 'rgba(124, 58, 237, 0.08)',
+                                      color: 'var(--kpi-savings-color, #7c3aed)',
+                                      backgroundColor: 'rgba(124, 58, 237, 0.12)',
                                       padding: '1px 6px',
                                       borderRadius: 4,
                                     }}
@@ -1243,21 +1243,18 @@ export const SavingsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataCh
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                           <span className="expense-mobile-title">{item.description}</span>
                           <span
+                            className={
+                              item.isInitialBalance
+                                ? 'badge-initial-balance'
+                                : isWithdrawal
+                                ? 'badge-savings-withdraw'
+                                : 'badge-savings-deposit'
+                            }
                             style={{
                               fontSize: 10,
                               fontWeight: 700,
                               padding: '1px 6px',
                               borderRadius: 4,
-                              backgroundColor: item.isInitialBalance
-                                ? '#ede9fe'
-                                : isWithdrawal
-                                ? '#fee2e2'
-                                : '#ecfdf5',
-                              color: item.isInitialBalance
-                                ? '#7c3aed'
-                                : isWithdrawal
-                                ? '#b91c1c'
-                                : '#15803d',
                             }}
                           >
                             {item.isInitialBalance ? 'Saldo inicial' : isWithdrawal ? 'Resgate' : 'Depósito'}

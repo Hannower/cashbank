@@ -389,20 +389,19 @@ export const BankAccountsView: React.FC<BankAccountsViewProps> = ({ showValues: 
   });
 
   return (
-    <div className="bank-accounts-container">
+    <div className="content-container animate-fade-in bank-accounts-container">
       {/* Top Header */}
       <div className="bank-header-row">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div
+            className="kpi-icon-income"
             style={{
               width: 44,
               height: 44,
               borderRadius: 12,
-              backgroundColor: 'rgba(21, 128, 61, 0.12)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#15803d',
               flexShrink: 0,
             }}
           >
@@ -504,12 +503,12 @@ export const BankAccountsView: React.FC<BankAccountsViewProps> = ({ showValues: 
             </span>
             <div
               className="bank-kpi-val"
-              style={{ color: summary.totalBalance >= 0 ? '#15803d' : '#ef4444' }}
+              style={{ color: summary.totalBalance >= 0 ? 'var(--kpi-income-color, #16a34a)' : 'var(--kpi-expense-color, #ea580c)' }}
             >
               {formatCurrency(summary.totalBalance)}
             </div>
           </div>
-          <div className="bank-kpi-icon" style={{ backgroundColor: 'rgba(21, 128, 61, 0.1)', color: '#15803d' }}>
+          <div className="bank-kpi-icon kpi-icon-income">
             <Wallet size={20} />
           </div>
         </div>
@@ -519,11 +518,11 @@ export const BankAccountsView: React.FC<BankAccountsViewProps> = ({ showValues: 
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary, #64748b)' }}>
               Entradas no Mês
             </span>
-            <div className="bank-kpi-val" style={{ color: '#15803d' }}>
+            <div className="bank-kpi-val" style={{ color: 'var(--kpi-income-color, #16a34a)' }}>
               {formatCurrency(summary.totalIncomeMonth)}
             </div>
           </div>
-          <div className="bank-kpi-icon" style={{ backgroundColor: 'rgba(21, 128, 61, 0.1)', color: '#15803d' }}>
+          <div className="bank-kpi-icon kpi-icon-income">
             <ArrowDownLeft size={20} />
           </div>
         </div>
@@ -533,11 +532,11 @@ export const BankAccountsView: React.FC<BankAccountsViewProps> = ({ showValues: 
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary, #64748b)' }}>
               Saídas no Mês
             </span>
-            <div className="bank-kpi-val" style={{ color: '#ef4444' }}>
+            <div className="bank-kpi-val" style={{ color: 'var(--kpi-expense-color, #ea580c)' }}>
               {formatCurrency(summary.totalExpenseMonth)}
             </div>
           </div>
-          <div className="bank-kpi-icon" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>
+          <div className="bank-kpi-icon kpi-icon-expense">
             <ArrowUpRight size={20} />
           </div>
         </div>
@@ -551,7 +550,7 @@ export const BankAccountsView: React.FC<BankAccountsViewProps> = ({ showValues: 
               {summary.accountsCount} {summary.accountsCount === 1 ? 'conta' : 'contas'}
             </div>
           </div>
-          <div className="bank-kpi-icon" style={{ backgroundColor: 'rgba(37, 99, 235, 0.1)', color: '#2563eb' }}>
+          <div className="bank-kpi-icon kpi-icon-bank">
             <Building2 size={20} />
           </div>
         </div>
@@ -980,7 +979,7 @@ export const BankAccountsView: React.FC<BankAccountsViewProps> = ({ showValues: 
                             padding: '12px 12px',
                             textAlign: 'right',
                             fontWeight: 700,
-                            color: isIncome ? '#15803d' : '#ef4444',
+                            color: isIncome ? 'var(--kpi-income-color, #16a34a)' : 'var(--kpi-expense-color, #ea580c)',
                             whiteSpace: 'nowrap',
                           }}
                         >
@@ -1049,7 +1048,7 @@ export const BankAccountsView: React.FC<BankAccountsViewProps> = ({ showValues: 
                         style={{
                           fontSize: 14,
                           fontWeight: 700,
-                          color: isIncome ? '#15803d' : '#ef4444',
+                          color: isIncome ? 'var(--kpi-income-color, #16a34a)' : 'var(--kpi-expense-color, #ea580c)',
                         }}
                       >
                         {isIncome ? `+${formatCurrency(tx.amount)}` : `-${formatCurrency(tx.amount)}`}

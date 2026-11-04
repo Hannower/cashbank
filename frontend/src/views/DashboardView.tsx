@@ -29,6 +29,7 @@ import { NavTab } from '../components/Sidebar';
 import { MonthSelector } from '../components/MonthSelector';
 import { Modal } from '../components/Modal';
 import { MonthItem, getInitialMonthItem, FULL_MONTH_NAMES, MONTH_LABELS } from '../utils/dateUtils';
+import { getCardBrandInfo } from '../utils/cardUtils';
 
 interface DashboardViewProps {
   onNavigate: (tab: NavTab) => void;
@@ -409,6 +410,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   const formatCurrency = (val?: number) => {
+    if (!showBalance) return '••••••';
     if (val === undefined || isNaN(val)) return 'R$ 0,00';
     return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
@@ -998,7 +1000,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             ) : (
               filteredTransactions.map((tx: any) => {
                 const isRevenue = tx.type === 'revenue';
-                const isCreditCard = tx.type === 'credit_card_payment' || tx.isCreditCard || tx.originalId?.startsWith('card-invoice-') || tx.category === 'Cartão de Crédito';
+                const isCreditCard = tx.type === 'credit_card_payment' || tx.isCreditCard || tx.originalId?.startsWith('card-invoice-') || tx.category === 'Cartão de Crédito' || tx.description?.toLowerCase().startsWith('fatura');
+                const cardBrand = isCreditCard ? getCardBrandInfo(tx.description) : null;
                 const isFixed = tx.type === 'fixed_expense' && !isCreditCard;
                 const isSavingsDeposit = tx.type === 'savings_deposit';
                 const isSavingsWithdraw = tx.type === 'savings_withdraw';
@@ -1013,44 +1016,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     {/* Left: Icon and Details */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                       <div
-                        style={{
-                          width: 38,
-                          height: 38,
-                          borderRadius: 10,
-                          backgroundColor: isSavings
-                            ? (isSavingsDeposit ? '#ecfdf5' : '#f3e8ff')
-                            : isRevenue
-                            ? '#ecfdf5'
+                        className={`tx-icon-badge ${
+                          isRevenue || isSavingsDeposit
+                            ? 'income'
                             : isCreditCard
-                            ? '#eff6ff'
+                            ? `card ${cardBrand?.badgeClass || ''}`
                             : isFixed
-                            ? '#ffedd5'
-                            : '#f3e8ff',
-                          color: isSavings
-                            ? (isSavingsDeposit ? '#15803d' : '#7c3aed')
-                            : isRevenue
-                            ? '#15803d'
-                            : isCreditCard
-                            ? '#2563eb'
-                            : isFixed
-                            ? '#ea580c'
-                            : '#7c3aed',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
+                            ? 'fixed'
+                            : isSavings
+                            ? 'savings'
+                            : 'variable'
+                        }`}
                       >
                         {isSavings ? (
-                          <PiggyBank size={18} />
+                          <PiggyBank size={18} strokeWidth={2.2} />
                         ) : isRevenue ? (
-                          <ArrowDownLeft size={18} />
+                          <ArrowDownLeft size={18} strokeWidth={2.2} />
                         ) : isCreditCard ? (
-                          <CreditCard size={18} />
+                          <CreditCard size={18} strokeWidth={2.2} />
                         ) : isFixed ? (
-                          <Calendar size={18} />
+                          <Calendar size={18} strokeWidth={2.2} />
                         ) : (
-                          <ShoppingBag size={18} />
+                          <ShoppingBag size={18} strokeWidth={2.2} />
                         )}
                       </div>
 
@@ -1060,34 +1047,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                             {tx.description}
                           </span>
                           <span
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              padding: '1px 6px',
-                              borderRadius: 4,
-                              backgroundColor: isSavingsDeposit
-                                ? '#dcfce7'
-                                : isSavingsWithdraw
-                                ? '#ede9fe'
-                                : isRevenue
-                                ? '#dcfce7'
+                            className={`tx-tag ${
+                              isRevenue || isSavingsDeposit
+                                ? 'income'
                                 : isCreditCard
-                                ? '#dbeafe'
+                                ? `card ${cardBrand?.badgeClass || ''}`
                                 : isFixed
-                                ? '#ffedd5'
-                                : '#f3e8ff',
-                              color: isSavingsDeposit
-                                ? '#15803d'
-                                : isSavingsWithdraw
-                                ? '#7c3aed'
-                                : isRevenue
-                                ? '#15803d'
-                                : isCreditCard
-                                ? '#1d4ed8'
-                                : isFixed
-                                ? '#ea580c'
-                                : '#7c3aed',
-                            }}
+                                ? 'fixed'
+                                : isSavings
+                                ? 'savings'
+                                : 'variable'
+                            }`}
                           >
                             {isSavingsDeposit
                               ? 'Cofrinho'
@@ -1096,20 +1066,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                               : isRevenue
                               ? 'Minha renda'
                               : isCreditCard
-                              ? 'Cartão'
+                              ? (cardBrand?.name || 'Cartão')
                               : isFixed
                               ? 'Fixa'
                               : 'Variável'}
                           </span>
                           {isFixed && tx.hasCustomAmount && (
                             <span
+                              className="tx-badge-adjusted"
                               style={{
                                 fontSize: 10,
                                 fontWeight: 700,
                                 padding: '1px 6px',
                                 borderRadius: 4,
-                                backgroundColor: '#fef3c7',
-                                color: '#b45309',
                               }}
                               title="Valor ajustado especificamente para este mês"
                             >
@@ -1261,25 +1230,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <span>Nenhum vencimento pendente em {FULL_MONTH_NAMES[selectedMonth.month - 1].toLowerCase()} de {selectedMonth.year}. Tudo em dia!</span>
               </div>
             ) : (
-              data.upcomingBills.map((bill: any) => (
+              data.upcomingBills.map((bill: any) => {
+                const isCardBill = bill.isCreditCard || bill.id?.startsWith('card-') || bill.description?.toLowerCase().startsWith('fatura');
+                const billCard = isCardBill ? getCardBrandInfo(bill.description) : null;
+                return (
                 <div
                   key={bill.id}
                   className="dashboard-list-item"
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div
+                      className={isCardBill ? `tx-icon-badge card ${billCard?.badgeClass || ''}` : 'kpi-icon-expense'}
                       style={{
                         width: 36,
                         height: 36,
                         borderRadius: 10,
-                        backgroundColor: '#ffedd5',
-                        color: '#ea580c',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
+                        flexShrink: 0,
                       }}
                     >
-                      <Calendar size={18} />
+                      {isCardBill ? <CreditCard size={18} strokeWidth={2.2} /> : <Calendar size={18} />}
                     </div>
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>
@@ -1311,7 +1283,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     )}
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

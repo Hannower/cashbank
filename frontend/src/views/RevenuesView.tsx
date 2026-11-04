@@ -30,8 +30,16 @@ const formatRevenueDescription = (desc: string) => {
   return cleaned || desc;
 };
 
-export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataChanged }) => {
+interface RevenuesViewProps {
+  onDataChanged?: () => void;
+  showValues?: boolean;
+}
+
+export const RevenuesView: React.FC<RevenuesViewProps> = ({ onDataChanged, showValues: propShowValues }) => {
   const { user } = useAuth();
+  const showBalance = propShowValues !== undefined
+    ? propShowValues
+    : (typeof window !== 'undefined' && localStorage.getItem('cashbank_show_balance') !== 'false');
   const [selectedMonth, setSelectedMonth] = useState<MonthItem>(() => getInitialMonthItem(user?.createdAt));
   const [revenues, setRevenues] = useState<Revenue[]>([]);
   const [totalAmount, setTotalAmount] = useState(0);
@@ -157,6 +165,7 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
   };
 
   const formatCurrency = (val: number) => {
+    if (!showBalance) return '••••••';
     return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
@@ -203,40 +212,43 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
         createdAt={user?.createdAt}
       />
 
-      {/* Hero Banner */}
+      {/* Overview Card */}
       <div
-        className="hero-card-banner"
+        className="card"
         style={{
-          background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
-          boxShadow: '0 6px 16px rgba(21, 128, 61, 0.25)',
+          padding: '24px 28px',
+          marginBottom: 24,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 16,
         }}
       >
         <div>
-          <div style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.85)', marginBottom: 6 }}>
+          <div style={{ fontSize: 13, color: 'var(--text-muted, #64748b)', marginBottom: 6, fontWeight: 500 }}>
             Renda acumulada em {selectedMonth.label}
           </div>
-          <div className="hero-amount" style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 6 }}>
+          <div className="hero-amount" style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 6, color: 'var(--kpi-income-color, #16a34a)' }}>
             {formatCurrency(totalAmount)}
           </div>
-          <div style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.9)' }}>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary, #64748b)' }}>
             {revenues.length} entrada{revenues.length !== 1 ? 's' : ''} registrada{revenues.length !== 1 ? 's' : ''} neste período.
           </div>
         </div>
 
-        {/* Translucent Download Icon */}
         <div
+          className="kpi-icon-income"
           style={{
-            width: 68,
-            height: 68,
-            borderRadius: 16,
-            backgroundColor: 'rgba(255, 255, 255, 0.15)',
+            width: 52,
+            height: 52,
+            borderRadius: 14,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'white',
           }}
         >
-          <ArrowDownLeft size={34} />
+          <ArrowDownLeft size={26} />
         </div>
       </div>
 
@@ -308,16 +320,11 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
                       <td style={{ padding: '16px 24px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                           <div
+                            className="tx-icon-badge income"
                             style={{
                               width: 34,
                               height: 34,
                               borderRadius: 8,
-                              backgroundColor: '#ecfdf5',
-                              color: '#15803d',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0,
                             }}
                           >
                             <ArrowDownLeft size={17} />
@@ -429,16 +436,11 @@ export const RevenuesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataC
                 <div className="expense-mobile-header">
                   <div className="expense-mobile-main">
                     <div
+                      className="tx-icon-badge income"
                       style={{
                         width: 36,
                         height: 36,
                         borderRadius: 10,
-                        backgroundColor: '#ecfdf5',
-                        color: '#15803d',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
                       }}
                     >
                       <ArrowDownLeft size={18} />

@@ -211,30 +211,30 @@ export const App: React.FC = () => {
           )}
 
           {currentTab === 'fixed-expenses' && (
-            <FixedExpensesView key={dataVersion} onDataChanged={handleDataChanged} />
+            <FixedExpensesView key={dataVersion} onDataChanged={handleDataChanged} showValues={showValues} />
           )}
 
           {currentTab === 'variable-expenses' && (
-            <VariableExpensesView key={dataVersion} onDataChanged={handleDataChanged} />
+            <VariableExpensesView key={dataVersion} onDataChanged={handleDataChanged} showValues={showValues} />
           )}
 
           {currentTab === 'credit-cards' && (
-            <CreditCardsView key={dataVersion} onDataChanged={handleDataChanged} />
+            <CreditCardsView key={dataVersion} onDataChanged={handleDataChanged} showValues={showValues} />
           )}
 
           {currentTab === 'receivables' && (
-            <ReceivablesView key={dataVersion} onDataChanged={handleDataChanged} />
+            <ReceivablesView key={dataVersion} onDataChanged={handleDataChanged} showValues={showValues} />
           )}
 
           {currentTab === 'revenues' && (
-            <RevenuesView key={dataVersion} onDataChanged={handleDataChanged} />
+            <RevenuesView key={dataVersion} onDataChanged={handleDataChanged} showValues={showValues} />
           )}
 
           {currentTab === 'savings' && (
-            <SavingsView key={dataVersion} onDataChanged={handleDataChanged} />
+            <SavingsView key={dataVersion} onDataChanged={handleDataChanged} showValues={showValues} />
           )}
 
-          {currentTab === 'bank-accounts' && user?.role === 'admin' && (
+          {currentTab === 'bank-accounts' && (
             <BankAccountsView showValues={showValues} />
           )}
 

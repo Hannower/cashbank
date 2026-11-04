@@ -19,6 +19,7 @@
   --banner-green: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
 
   --bg-app: #f8fafc;
+  --bg-main: #f8fafc;
   --bg-sidebar: #ffffff;
   --bg-card: #ffffff;
   --bg-card-subtle: #f8fafc;
@@ -58,6 +59,7 @@
 body.dark-theme,
 .dark-theme {
   --bg-app: #060911;
+  --bg-main: #060911;
   --bg-sidebar: #090e1b;
   --bg-card: #0c1424;
   --bg-card-subtle: #060911;
@@ -65,6 +67,10 @@ body.dark-theme,
   --bg-item: #070b16;
   --bg-item-hover: #0c1326;
   --bg-modal-overlay: rgba(0, 0, 0, 0.82);
+
+  --accent-amber-text: #fbbf24;
+  --accent-amber-icon-bg: rgba(217, 119, 6, 0.2);
+  --accent-amber-icon: #fbbf24;
 
   --text-main: #f8fafc;
   --text-secondary: #94a3b8;
@@ -186,9 +192,110 @@ a {
   top: 0;
   bottom: 0;
   left: 0;
+  height: 100vh;
+  height: 100dvh;
   z-index: 40;
   transition: transform 0.3s ease;
   box-sizing: border-box;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  padding: 20px 20px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.sidebar-scroll-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Subtle, polished scrollbar */
+.sidebar-scroll-body::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-scroll-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scroll-body::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 4px;
+}
+.sidebar-scroll-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.45);
+}
+body.dark-theme .sidebar-scroll-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+body.dark-theme .sidebar-scroll-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.sidebar-footer {
+  padding: 14px 18px;
+  padding-bottom: max(14px, env(safe-area-inset-bottom, 14px));
+  border-top: 1px solid var(--border-color, #f1f5f9);
+  background-color: var(--bg-sidebar);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  z-index: 2;
+}
+
+.sidebar-logout-btn {
+  color: var(--text-secondary, #94a3b8);
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.sidebar-logout-btn:hover {
+  color: #ef4444 !important;
+  background-color: rgba(239, 68, 68, 0.1) !important;
+}
+
+/* Height-responsive adjustments for compact screens / laptops */
+@media (max-height: 740px) {
+  .sidebar-header {
+    padding: 16px 18px 12px;
+  }
+  .sidebar-status-widget {
+    padding: 10px 12px;
+  }
+  .sidebar-status-widget .status-widget-desc {
+    display: none;
+  }
+  .sidebar-footer {
+    padding: 10px 14px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 10px));
+  }
+}
+
+@media (max-height: 600px) {
+  .sidebar-widget-container {
+    display: none;
+  }
+  .sidebar-header {
+    padding: 12px 16px 8px;
+  }
 }
 
 .main-wrapper {
@@ -791,6 +898,17 @@ body.dark-theme .btn-secondary:hover {
 body.dark-theme .month-carousel-container {
   background-color: var(--bg-card) !important;
   border-color: var(--border-color) !important;
+}
+
+body.dark-theme .month-carousel-icon {
+  background-color: rgba(22, 163, 74, 0.18) !important;
+  color: #4ade80 !important;
+}
+
+body.dark-theme .month-carousel-badge {
+  background-color: rgba(22, 163, 74, 0.18) !important;
+  color: #4ade80 !important;
+  border: 1px solid rgba(74, 222, 128, 0.25) !important;
 }
 
 body.dark-theme .month-carousel-label {
@@ -1857,8 +1975,8 @@ body.dark-theme .cashai-chat-window {
 .bank-accounts-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding-bottom: 40px;
+  gap: 24px;
+  padding-bottom: 48px;
 }
 
 .bank-header-row {
@@ -1879,7 +1997,7 @@ body.dark-theme .cashai-chat-window {
 .bank-kpis-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 .bank-kpi-card {
@@ -1913,8 +2031,8 @@ body.dark-theme .cashai-chat-window {
 
 .bank-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
 }
 
 .bank-filters-wrapper {
@@ -2060,6 +2178,14 @@ body.dark-theme .cashai-chat-window {
   background-color: #f3e8ff;
   color: #7c3aed;
 }
+.kpi-icon-amber {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+.kpi-icon-indigo {
+  background-color: #e0e7ff;
+  color: #4338ca;
+}
 
 body.dark-theme .kpi-icon-bank {
   background-color: rgba(37, 99, 235, 0.2) !important;
@@ -2076,4 +2202,292 @@ body.dark-theme .kpi-icon-expense {
 body.dark-theme .kpi-icon-savings {
   background-color: rgba(124, 58, 237, 0.2) !important;
   color: #c084fc !important;
+}
+body.dark-theme .kpi-icon-amber {
+  background-color: rgba(217, 119, 6, 0.2) !important;
+  color: #fbbf24 !important;
+}
+body.dark-theme .kpi-icon-indigo {
+  background-color: rgba(99, 102, 241, 0.2) !important;
+  color: #818cf8 !important;
+}
+
+/* Transaction List Icons & Tags */
+.tx-icon-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.tx-icon-badge.income { background-color: #ecfdf5; color: #16a34a; }
+.tx-icon-badge.card { background-color: #eff6ff; color: #2563eb; }
+.tx-icon-badge.fixed { background-color: #ffedd5; color: #ea580c; }
+.tx-icon-badge.savings { background-color: #f3e8ff; color: #7c3aed; }
+.tx-icon-badge.variable { background-color: #f3e8ff; color: #7c3aed; }
+
+.tx-icon-badge svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+body.dark-theme .tx-icon-badge.income { background-color: rgba(34, 197, 94, 0.2) !important; color: #4ade80 !important; }
+body.dark-theme .tx-icon-badge.card { background-color: rgba(59, 130, 246, 0.22) !important; color: #60a5fa !important; }
+body.dark-theme .tx-icon-badge.fixed { background-color: rgba(249, 115, 22, 0.2) !important; color: #fb923c !important; }
+body.dark-theme .tx-icon-badge.savings { background-color: rgba(168, 85, 247, 0.2) !important; color: #c084fc !important; }
+body.dark-theme .tx-icon-badge.variable { background-color: rgba(168, 85, 247, 0.2) !important; color: #c084fc !important; }
+
+/* Card Brand Specific Badges (Nubank, Mercado Pago, Inter, Itaú, PicPay, etc.) */
+.tx-icon-badge.card.card-nubank { background-color: rgba(130, 10, 209, 0.12); color: #820ad1; border: 1px solid rgba(130, 10, 209, 0.25); }
+body.dark-theme .tx-icon-badge.card.card-nubank { background-color: rgba(130, 10, 209, 0.22) !important; color: #c084fc !important; border-color: rgba(192, 132, 252, 0.35) !important; }
+
+.tx-icon-badge.card.card-mercadopago { background-color: rgba(0, 158, 227, 0.12); color: #009ee3; border: 1px solid rgba(0, 158, 227, 0.25); }
+body.dark-theme .tx-icon-badge.card.card-mercadopago { background-color: rgba(0, 158, 227, 0.22) !important; color: #38bdf8 !important; border-color: rgba(56, 189, 248, 0.35) !important; }
+
+.tx-icon-badge.card.card-inter,
+.tx-icon-badge.card.card-itau { background-color: rgba(255, 122, 0, 0.12); color: #ff7a00; border: 1px solid rgba(255, 122, 0, 0.25); }
+body.dark-theme .tx-icon-badge.card.card-inter,
+body.dark-theme .tx-icon-badge.card.card-itau { background-color: rgba(255, 122, 0, 0.22) !important; color: #fb923c !important; border-color: rgba(251, 146, 60, 0.35) !important; }
+
+.tx-icon-badge.card.card-picpay { background-color: rgba(17, 199, 111, 0.12); color: #11c76f; border: 1px solid rgba(17, 199, 111, 0.25); }
+body.dark-theme .tx-icon-badge.card.card-picpay { background-color: rgba(17, 199, 111, 0.22) !important; color: #4ade80 !important; border-color: rgba(74, 222, 128, 0.35) !important; }
+
+.tx-icon-badge.card.card-red { background-color: rgba(204, 9, 47, 0.12); color: #cc092f; border: 1px solid rgba(204, 9, 47, 0.25); }
+body.dark-theme .tx-icon-badge.card.card-red { background-color: rgba(204, 9, 47, 0.22) !important; color: #f87171 !important; border-color: rgba(248, 113, 113, 0.35) !important; }
+
+.tx-tag.card.card-nubank { background-color: rgba(130, 10, 209, 0.12); color: #820ad1; }
+body.dark-theme .tx-tag.card.card-nubank { background-color: rgba(130, 10, 209, 0.22) !important; color: #c084fc !important; }
+
+.tx-tag.card.card-mercadopago { background-color: rgba(0, 158, 227, 0.12); color: #009ee3; }
+body.dark-theme .tx-tag.card.card-mercadopago { background-color: rgba(0, 158, 227, 0.22) !important; color: #38bdf8 !important; }
+
+.tx-tag.card.card-inter,
+.tx-tag.card.card-itau { background-color: rgba(255, 122, 0, 0.12); color: #ff7a00; }
+body.dark-theme .tx-tag.card.card-inter,
+body.dark-theme .tx-tag.card.card-itau { background-color: rgba(255, 122, 0, 0.22) !important; color: #fb923c !important; }
+
+.tx-tag.card.card-picpay { background-color: rgba(17, 199, 111, 0.12); color: #11c76f; }
+body.dark-theme .tx-tag.card.card-picpay { background-color: rgba(17, 199, 111, 0.22) !important; color: #4ade80 !important; }
+
+.tx-tag.card.card-red { background-color: rgba(204, 9, 47, 0.12); color: #cc092f; }
+body.dark-theme .tx-tag.card.card-red { background-color: rgba(204, 9, 47, 0.22) !important; color: #f87171 !important; }
+
+.tx-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.tx-tag.income { background-color: #dcfce7; color: #15803d; }
+.tx-tag.card { background-color: #dbeafe; color: #1d4ed8; }
+.tx-tag.fixed { background-color: #ffedd5; color: #ea580c; }
+.tx-tag.savings { background-color: #f3e8ff; color: #7c3aed; }
+.tx-tag.variable { background-color: #f3e8ff; color: #7c3aed; }
+
+body.dark-theme .tx-tag.income { background-color: rgba(34, 197, 94, 0.2) !important; color: #4ade80 !important; }
+body.dark-theme .tx-tag.card { background-color: rgba(59, 130, 246, 0.2) !important; color: #60a5fa !important; }
+body.dark-theme .tx-tag.fixed { background-color: rgba(249, 115, 22, 0.2) !important; color: #fb923c !important; }
+body.dark-theme .tx-tag.savings { background-color: rgba(168, 85, 247, 0.2) !important; color: #c084fc !important; }
+body.dark-theme .tx-tag.variable { background-color: rgba(168, 85, 247, 0.2) !important; color: #c084fc !important; }
+
+/* Status, Category & Adjustment Badges in Dark Theme */
+.badge-streaming {
+  background-color: #f3e8ff;
+  color: #7c3aed;
+  border: 1px solid #d8b4fe;
+}
+body.dark-theme .badge-streaming {
+  background-color: rgba(124, 58, 237, 0.2) !important;
+  color: #c084fc !important;
+  border-color: rgba(192, 132, 252, 0.3) !important;
+}
+
+.badge-ongoing {
+  background-color: #ecfdf5;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+body.dark-theme .badge-ongoing {
+  background-color: rgba(34, 197, 94, 0.18) !important;
+  color: #4ade80 !important;
+  border-color: rgba(74, 222, 128, 0.3) !important;
+}
+
+.badge-initial-balance {
+  background-color: #ede9fe;
+  color: #7c3aed;
+}
+body.dark-theme .badge-initial-balance {
+  background-color: rgba(124, 58, 237, 0.2) !important;
+  color: #c084fc !important;
+  border: 1px solid rgba(192, 132, 252, 0.3) !important;
+}
+
+.badge-savings-deposit {
+  background-color: #ecfdf5;
+  color: #15803d;
+}
+body.dark-theme .badge-savings-deposit {
+  background-color: rgba(34, 197, 94, 0.2) !important;
+  color: #4ade80 !important;
+  border: 1px solid rgba(74, 222, 128, 0.3) !important;
+}
+
+.badge-savings-withdraw {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+body.dark-theme .badge-savings-withdraw {
+  background-color: rgba(239, 68, 68, 0.2) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(248, 113, 113, 0.3) !important;
+}
+
+.tx-badge-adjusted {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+body.dark-theme .tx-badge-adjusted {
+  background-color: rgba(217, 119, 6, 0.2) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(251, 191, 36, 0.3) !important;
+}
+
+.btn-adjust-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-adjust-tag.adjustment {
+  background-color: #ecfdf5;
+  color: #15803d;
+  border: 1px solid #a7f3d0;
+}
+.btn-adjust-tag.custom-amount {
+  background-color: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+.btn-adjust-tag.estimated {
+  background-color: #f0f9ff;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+}
+.btn-adjust-tag.normal {
+  background-color: var(--bg-item, #f8fafc);
+  color: #475569;
+  border: 1px solid var(--border-color, #e2e8f0);
+}
+
+body.dark-theme .btn-adjust-tag.adjustment {
+  background-color: rgba(34, 197, 94, 0.18) !important;
+  color: #4ade80 !important;
+  border-color: rgba(74, 222, 128, 0.3) !important;
+}
+body.dark-theme .btn-adjust-tag.custom-amount {
+  background-color: rgba(217, 119, 6, 0.18) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(251, 191, 36, 0.3) !important;
+}
+body.dark-theme .btn-adjust-tag.estimated {
+  background-color: rgba(14, 165, 233, 0.18) !important;
+  color: #38bdf8 !important;
+  border-color: rgba(56, 189, 248, 0.3) !important;
+}
+body.dark-theme .btn-adjust-tag.normal {
+  background-color: var(--bg-input, #111a2f) !important;
+  color: var(--text-secondary, #94a3b8) !important;
+  border-color: var(--border-color, #1e293b) !important;
+}
+
+/* CashAI Floating Assistant - Enhanced Dark Mode */
+body.dark-theme .cashai-header {
+  background: linear-gradient(135deg, #0f4625 0%, #15803d 100%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+body.dark-theme .cashai-messages-body {
+  background-color: var(--bg-app, #060911) !important;
+}
+body.dark-theme .cashai-welcome-card {
+  background-color: var(--bg-card, #0c1424) !important;
+  border-color: var(--border-color, #152037) !important;
+  color: var(--text-secondary, #94a3b8) !important;
+}
+body.dark-theme .cashai-welcome-card strong {
+  color: var(--text-main, #f8fafc) !important;
+}
+body.dark-theme .cashai-welcome-sparkle {
+  background-color: rgba(34, 197, 94, 0.15) !important;
+  color: #4ade80 !important;
+}
+body.dark-theme .cashai-msg-assistant {
+  background-color: var(--bg-card, #0c1424) !important;
+  color: var(--text-main, #f8fafc) !important;
+  border-color: var(--border-color, #152037) !important;
+}
+body.dark-theme .cashai-msg-assistant .bullet-dot {
+  color: #4ade80 !important;
+}
+body.dark-theme .cashai-action-card.success {
+  background-color: rgba(34, 197, 94, 0.12) !important;
+  border-color: rgba(34, 197, 94, 0.3) !important;
+}
+body.dark-theme .cashai-action-card.success .action-title {
+  color: #4ade80 !important;
+}
+body.dark-theme .cashai-action-card.error {
+  background-color: rgba(239, 68, 68, 0.12) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+body.dark-theme .cashai-action-card.error .action-title {
+  color: #f87171 !important;
+}
+body.dark-theme .cashai-rate-limit {
+  background-color: rgba(234, 88, 12, 0.15) !important;
+  border-color: rgba(234, 88, 12, 0.35) !important;
+}
+body.dark-theme .cashai-rate-limit .rate-limit-title {
+  color: #fb923c !important;
+}
+body.dark-theme .cashai-rate-limit .rate-limit-desc {
+  color: #e2e8f0 !important;
+}
+body.dark-theme .cashai-thinking {
+  background-color: var(--bg-card, #0c1424) !important;
+  border-color: var(--border-color, #152037) !important;
+  color: var(--text-secondary, #94a3b8) !important;
+}
+body.dark-theme .cashai-prompts-bar {
+  background-color: var(--bg-card, #0c1424) !important;
+  border-top-color: var(--border-color, #152037) !important;
+}
+body.dark-theme .cashai-quick-prompt {
+  background-color: var(--bg-input, #111a2f) !important;
+  color: var(--text-secondary, #94a3b8) !important;
+  border-color: var(--border-input, #1c2b4a) !important;
+}
+body.dark-theme .cashai-quick-prompt:hover {
+  background-color: rgba(34, 197, 94, 0.18) !important;
+  color: #4ade80 !important;
+  border-color: rgba(34, 197, 94, 0.4) !important;
+}
+body.dark-theme .cashai-input-footer {
+  background-color: var(--bg-card, #0c1424) !important;
+  border-top-color: var(--border-color, #152037) !important;
+}
+body.dark-theme .cashai-input-field {
+  background-color: var(--bg-input, #111a2f) !important;
+  color: var(--text-main, #f8fafc) !important;
+  border-color: var(--border-input, #1c2b4a) !important;
+}
+body.dark-theme .cashai-input-field:focus {
+  border-color: #22c55e !important;
 }

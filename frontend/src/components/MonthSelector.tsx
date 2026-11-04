@@ -277,6 +277,17 @@ export const MonthSelector: React.FC<MonthSelectorProps> = ({
           white-space: nowrap;
         }
 
+        body.dark-theme .month-carousel-icon {
+          background-color: rgba(22, 163, 74, 0.18) !important;
+          color: #4ade80 !important;
+        }
+
+        body.dark-theme .month-carousel-badge {
+          background-color: rgba(22, 163, 74, 0.18) !important;
+          color: #4ade80 !important;
+          border: 1px solid rgba(74, 222, 128, 0.25) !important;
+        }
+
         .month-carousel-actions {
           display: flex;
           align-items: center;

@@ -94,8 +94,16 @@ const CATEGORIES = [
   'Outros',
 ];
 
-export const ReceivablesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataChanged }) => {
+interface ReceivablesViewProps {
+  onDataChanged?: () => void;
+  showValues?: boolean;
+}
+
+export const ReceivablesView: React.FC<ReceivablesViewProps> = ({ onDataChanged, showValues: propShowValues }) => {
   const { user } = useAuth();
+  const showBalance = propShowValues !== undefined
+    ? propShowValues
+    : (typeof window !== 'undefined' && localStorage.getItem('cashbank_show_balance') !== 'false');
   const [selectedMonth, setSelectedMonth] = useState<MonthItem>(() => getInitialMonthItem(user?.createdAt));
   const [receivables, setReceivables] = useState<ReceivableItem[]>([]);
   const [summary, setSummary] = useState<ReceivablesSummary>({
@@ -139,6 +147,7 @@ export const ReceivablesView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
   const formatCurrency = (val: number) => {
+    if (!showBalance) return '••••••';
     return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
@@ -461,41 +470,45 @@ export const ReceivablesView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
         createdAt={user?.createdAt}
       />
 
-      {/* Hero Banner with Integrated Info */}
+      {/* Overview Card */}
       <div
-        className="hero-card-banner"
+        className="card"
         style={{
-          background: 'linear-gradient(135deg, #4338ca 0%, #312e81 100%)',
-          boxShadow: '0 6px 18px rgba(67, 56, 202, 0.25)',
+          padding: '24px 28px',
+          marginBottom: 24,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 16,
         }}
       >
         <div>
-          <div style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.85)', marginBottom: 6 }}>
+          <div style={{ fontSize: 13, color: 'var(--text-muted, #64748b)', marginBottom: 6, fontWeight: 500 }}>
             Total pendente a receber em {selectedMonth.label}
           </div>
-          <div className="hero-amount" style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 6 }}>
+          <div className="hero-amount" style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 6, color: 'var(--kpi-bank-color, #2563eb)' }}>
             {formatCurrency(summary.totalPending)}
           </div>
-          <div style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.9)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary, #64748b)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             <span>{summary.pendingCount} conta(s) pendente(s)</span>
             <span>•</span>
-            <span>{formatCurrency(summary.totalReceived)} já recebidos</span>
+            <span style={{ color: 'var(--kpi-income-color, #16a34a)', fontWeight: 600 }}>{formatCurrency(summary.totalReceived)} já recebidos</span>
           </div>
         </div>
 
         <div
+          className="kpi-icon-bank"
           style={{
-            width: 68,
-            height: 68,
-            borderRadius: 16,
-            backgroundColor: 'rgba(255, 255, 255, 0.15)',
+            width: 52,
+            height: 52,
+            borderRadius: 14,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'white',
           }}
         >
-          <HandCoins size={36} />
+          <HandCoins size={28} />
         </div>
       </div>
 
@@ -508,12 +521,11 @@ export const ReceivablesView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
               Pendente no mês
             </span>
             <div
+              className="kpi-icon-amber"
               style={{
                 width: 38,
                 height: 38,
                 borderRadius: 10,
-                backgroundColor: 'rgba(217, 119, 6, 0.1)',
-                color: '#d97706',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -522,7 +534,7 @@ export const ReceivablesView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
               <Clock size={20} />
             </div>
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: '#d97706', marginTop: 12 }}>
+          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--accent-amber-text, #d97706)', marginTop: 12 }}>
             {formatCurrency(summary.totalPending)}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', marginTop: 4 }}>
@@ -537,12 +549,11 @@ export const ReceivablesView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
               Já recebido em {selectedMonth.label}
             </span>
             <div
+              className="kpi-icon-income"
               style={{
                 width: 38,
                 height: 38,
                 borderRadius: 10,
-                backgroundColor: 'rgba(22, 163, 74, 0.1)',
-                color: '#16a34a',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -551,7 +562,7 @@ export const ReceivablesView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
               <CheckCircle2 size={20} />
             </div>
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: '#16a34a', marginTop: 12 }}>
+          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--kpi-income-color, #16a34a)', marginTop: 12 }}>
             {formatCurrency(summary.totalReceived)}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', marginTop: 4 }}>
@@ -566,12 +577,11 @@ export const ReceivablesView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
               Previsão total do mês
             </span>
             <div
+              className="kpi-icon-bank"
               style={{
                 width: 38,
                 height: 38,
                 borderRadius: 10,
-                backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                color: '#2563eb',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -901,14 +911,15 @@ export const ReceivablesView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
                         {/* Categoria */}
                         <td style={{ padding: '14px 20px' }}>
                           <span
+                            className={item.category === 'Streaming' ? 'badge-streaming' : ''}
                             style={{
                               fontSize: 11,
                               fontWeight: 700,
                               padding: '3px 8px',
                               borderRadius: 6,
-                              backgroundColor: item.category === 'Streaming' ? '#f3e8ff' : 'var(--bg-card, #ffffff)',
-                              color: item.category === 'Streaming' ? '#7c3aed' : 'var(--text-secondary, #475569)',
-                              border: item.category === 'Streaming' ? '1px solid #d8b4fe' : '1px solid var(--border-color, #e2e8f0)',
+                              backgroundColor: item.category === 'Streaming' ? undefined : 'var(--bg-card-subtle, rgba(255, 255, 255, 0.05))',
+                              color: item.category === 'Streaming' ? undefined : 'var(--text-secondary, #64748b)',
+                              border: item.category === 'Streaming' ? undefined : '1px solid var(--border-color, #e2e8f0)',
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: 4,
@@ -949,19 +960,9 @@ export const ReceivablesView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
                               type="button"
                               onClick={() => openAdjustModal(item)}
                               title="Ajustar valor desta conta"
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                fontSize: 11,
-                                padding: '4px 8px',
-                                borderRadius: 6,
-                                backgroundColor: item.hasAdjustment ? '#ecfdf5' : item.hasCustomAmount ? '#fef3c7' : 'transparent',
-                                color: item.hasAdjustment ? '#15803d' : item.hasCustomAmount ? '#b45309' : 'var(--text-muted, #64748b)',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                border: '1px solid var(--border-input, #cbd5e1)',
-                              }}
+                              className={`btn-adjust-tag ${
+                                item.hasAdjustment ? 'adjustment' : item.hasCustomAmount ? 'custom-amount' : 'normal'
+                              }`}
                             >
                               <SlidersHorizontal size={12} />
                               Ajustar
@@ -1089,24 +1090,17 @@ export const ReceivablesView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
                   <div className="receivables-mobile-header">
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 0, flex: 1 }}>
                       <div
+                        className={
+                          item.category === 'Streaming'
+                            ? 'tx-icon-badge savings'
+                            : item.isReceived
+                            ? 'tx-icon-badge income'
+                            : 'tx-icon-badge fixed'
+                        }
                         style={{
                           width: 38,
                           height: 38,
                           borderRadius: 10,
-                          backgroundColor: item.category === 'Streaming'
-                            ? '#f3e8ff'
-                            : item.isReceived
-                            ? 'rgba(21, 128, 61, 0.15)'
-                            : 'rgba(217, 119, 6, 0.15)',
-                          color: item.category === 'Streaming'
-                            ? '#7c3aed'
-                            : item.isReceived
-                            ? '#15803d'
-                            : '#d97706',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
                           marginTop: 2,
                         }}
                       >
@@ -1135,13 +1129,14 @@ export const ReceivablesView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
 
                           {/* Category */}
                           <span
+                            className={item.category === 'Streaming' ? 'badge-streaming' : ''}
                             style={{
                               fontSize: 10,
                               fontWeight: 600,
                               padding: '2px 6px',
                               borderRadius: 4,
-                              backgroundColor: 'var(--bg-app, #f1f5f9)',
-                              color: 'var(--text-secondary, #64748b)',
+                              backgroundColor: item.category === 'Streaming' ? undefined : 'var(--bg-app, #f1f5f9)',
+                              color: item.category === 'Streaming' ? undefined : 'var(--text-secondary, #64748b)',
                             }}
                           >
                             {item.category}
@@ -1150,14 +1145,7 @@ export const ReceivablesView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
                           {/* Venda Badge */}
                           {item.isSale && (
                             <span
-                              style={{
-                                fontSize: 10,
-                                fontWeight: 700,
-                                padding: '2px 6px',
-                                borderRadius: 4,
-                                backgroundColor: '#dcfce7',
-                                color: '#15803d',
-                              }}
+                              className="tx-tag income"
                             >
                               🏷️ Venda
                             </span>

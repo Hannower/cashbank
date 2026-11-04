@@ -166,7 +166,7 @@ export const AiAssistantWidget: React.FC<AiAssistantWidgetProps> = ({ onDataChan
       if (line.trim().startsWith('* ') || line.trim().startsWith('- ')) {
         return (
           <div key={idx} style={{ display: 'flex', gap: 6, margin: '3px 0' }}>
-            <span style={{ color: '#15803d' }}>•</span>
+            <span className="bullet-dot" style={{ color: '#15803d' }}>•</span>
             <span>{formattedParts}</span>
           </div>
         );
@@ -207,6 +207,7 @@ export const AiAssistantWidget: React.FC<AiAssistantWidgetProps> = ({ onDataChan
         <div className="cashai-chat-window">
           {/* Header */}
           <div
+            className="cashai-header"
             style={{
               padding: '16px 20px',
               backgroundColor: '#15803d',
@@ -312,6 +313,7 @@ export const AiAssistantWidget: React.FC<AiAssistantWidgetProps> = ({ onDataChan
 
           {/* Messages Body */}
           <div
+            className="cashai-messages-body"
             style={{
               flex: 1,
               padding: '16px 18px',
@@ -336,6 +338,7 @@ export const AiAssistantWidget: React.FC<AiAssistantWidgetProps> = ({ onDataChan
                 }}
               >
                 <div
+                  className="cashai-welcome-sparkle"
                   style={{
                     width: 52,
                     height: 52,
@@ -375,6 +378,7 @@ export const AiAssistantWidget: React.FC<AiAssistantWidgetProps> = ({ onDataChan
                   }}
                 >
                   <div
+                    className="cashai-welcome-card"
                     style={{
                       padding: '10px 12px',
                       backgroundColor: 'var(--bg-card, #ffffff)',
@@ -390,6 +394,7 @@ export const AiAssistantWidget: React.FC<AiAssistantWidgetProps> = ({ onDataChan
                     <span><strong>RAG Financeiro:</strong> Sabe seus saldos e contas em tempo real</span>
                   </div>
                   <div
+                    className="cashai-welcome-card"
                     style={{
                       padding: '10px 12px',
                       backgroundColor: 'var(--bg-card, #ffffff)',
@@ -424,6 +429,7 @@ export const AiAssistantWidget: React.FC<AiAssistantWidgetProps> = ({ onDataChan
                       }}
                     >
                       <div
+                        className="cashai-rate-limit"
                         style={{
                           maxWidth: '92%',
                           padding: '12px 14px',
@@ -441,10 +447,10 @@ export const AiAssistantWidget: React.FC<AiAssistantWidgetProps> = ({ onDataChan
                       >
                         <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: 2, color: '#ea580c' }} />
                         <div>
-                          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2, color: '#ea580c' }}>
+                          <div className="rate-limit-title" style={{ fontWeight: 700, fontSize: 13, marginBottom: 2, color: '#ea580c' }}>
                             Limite de requisições atingido
                           </div>
-                          <div style={{ fontSize: 12, color: 'var(--text-main, #334155)', lineHeight: 1.4 }}>
+                          <div className="rate-limit-desc" style={{ fontSize: 12, color: 'var(--text-main, #334155)', lineHeight: 1.4 }}>
                             A cota gratuita da IA foi atingida temporariamente. Por favor, aguarde alguns instantes e tente novamente.
                           </div>
                         </div>
@@ -476,6 +482,7 @@ export const AiAssistantWidget: React.FC<AiAssistantWidgetProps> = ({ onDataChan
                     }}
                   >
                     <div
+                      className={isUser ? '' : 'cashai-msg-assistant'}
                       style={{
                         maxWidth: '85%',
                         padding: '12px 16px',
@@ -496,6 +503,7 @@ export const AiAssistantWidget: React.FC<AiAssistantWidgetProps> = ({ onDataChan
                       {/* Action Execution Card (MCP Confirmation) */}
                       {msg.actionExecuted && (
                         <div
+                          className={`cashai-action-card ${msg.actionExecuted.success ? 'success' : 'error'}`}
                           style={{
                             marginTop: 10,
                             padding: '10px 12px',
@@ -524,6 +532,7 @@ export const AiAssistantWidget: React.FC<AiAssistantWidgetProps> = ({ onDataChan
                           </div>
                           <div>
                             <div
+                              className="action-title"
                               style={{
                                 fontWeight: 700,
                                 color: msg.actionExecuted.success ? '#15803d' : '#ef4444',
@@ -562,6 +571,7 @@ export const AiAssistantWidget: React.FC<AiAssistantWidgetProps> = ({ onDataChan
             {/* Thinking / Loading Indicator */}
             {isLoading && (
               <div
+                className="cashai-thinking"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -586,6 +596,7 @@ export const AiAssistantWidget: React.FC<AiAssistantWidgetProps> = ({ onDataChan
           {/* Quick Prompts Carousel */}
           {quickPrompts.length > 0 && (
             <div
+              className="cashai-prompts-bar"
               style={{
                 padding: '8px 14px',
                 backgroundColor: 'var(--bg-card, #ffffff)',
@@ -601,27 +612,18 @@ export const AiAssistantWidget: React.FC<AiAssistantWidgetProps> = ({ onDataChan
                   key={i}
                   disabled={isLoading}
                   onClick={() => handleSendMessage(prompt)}
+                  className="cashai-quick-prompt"
                   style={{
                     padding: '5px 11px',
                     borderRadius: 14,
                     fontSize: 11,
                     fontWeight: 600,
-                    backgroundColor: 'var(--bg-main, #f1f5f9)',
+                    backgroundColor: 'var(--bg-app, #f1f5f9)',
                     color: 'var(--text-secondary, #475569)',
                     border: '1px solid var(--border-color, #e2e8f0)',
                     cursor: 'pointer',
                     flexShrink: 0,
                     transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(21, 128, 61, 0.1)';
-                    e.currentTarget.style.color = '#15803d';
-                    e.currentTarget.style.borderColor = 'rgba(21, 128, 61, 0.3)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--bg-main, #f1f5f9)';
-                    e.currentTarget.style.color = 'var(--text-secondary, #475569)';
-                    e.currentTarget.style.borderColor = 'var(--border-color, #e2e8f0)';
                   }}
                 >
                   {prompt}
@@ -632,6 +634,7 @@ export const AiAssistantWidget: React.FC<AiAssistantWidgetProps> = ({ onDataChan
 
           {/* Input Footer */}
           <div
+            className="cashai-input-footer"
             style={{
               padding: '12px 16px',
               backgroundColor: 'var(--bg-card, #ffffff)',
@@ -649,6 +652,7 @@ export const AiAssistantWidget: React.FC<AiAssistantWidgetProps> = ({ onDataChan
               onKeyDown={handleKeyDown}
               disabled={isLoading}
               placeholder="Pergunte algo ou peça para cadastrar um gasto..."
+              className="cashai-input-field"
               style={{
                 flex: 1,
                 padding: '11px 14px',

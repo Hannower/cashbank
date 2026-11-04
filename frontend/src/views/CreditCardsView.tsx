@@ -109,8 +109,16 @@ const CATEGORIES = [
   'Outros',
 ];
 
-export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDataChanged }) => {
+interface CreditCardsViewProps {
+  onDataChanged?: () => void;
+  showValues?: boolean;
+}
+
+export const CreditCardsView: React.FC<CreditCardsViewProps> = ({ onDataChanged, showValues: propShowValues }) => {
   const { user } = useAuth();
+  const showBalance = propShowValues !== undefined
+    ? propShowValues
+    : (typeof window !== 'undefined' && localStorage.getItem('cashbank_show_balance') !== 'false');
   const [selectedMonth, setSelectedMonth] = useState<MonthItem>(() => getInitialMonthItem(user?.createdAt));
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -176,6 +184,7 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
 
   // Format currency helper
   const formatCurrency = (val: number) => {
+    if (!showBalance) return '••••••';
     return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
@@ -541,12 +550,11 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
               Fatura Total ({selectedMonth.label}/{selectedMonth.year})
             </span>
             <div
+              className="kpi-icon-bank"
               style={{
                 width: 38,
                 height: 38,
                 borderRadius: 10,
-                backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                color: '#2563eb',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -570,12 +578,11 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
               Valor do titular
             </span>
             <div
+              className="kpi-icon-bank"
               style={{
                 width: 38,
                 height: 38,
                 borderRadius: 10,
-                backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                color: '#2563eb',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -584,7 +591,7 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
               <UserCheck size={20} />
             </div>
           </div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#2563eb', marginTop: 12 }}>
+          <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--kpi-bank-color, #2563eb)', marginTop: 12 }}>
             {formatCurrency(overview?.summary?.holderTotalAllCards ?? Math.max(0, (overview?.summary?.totalAllCards || 0) - (overview?.summary?.thirdPartyTotalAllCards || 0)))}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', marginTop: 4 }}>
@@ -599,12 +606,11 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
               Valor de terceiros
             </span>
             <div
+              className="kpi-icon-amber"
               style={{
                 width: 38,
                 height: 38,
                 borderRadius: 10,
-                backgroundColor: 'rgba(217, 119, 6, 0.1)',
-                color: '#d97706',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -613,7 +619,7 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
               <Users size={20} />
             </div>
           </div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#d97706', marginTop: 12 }}>
+          <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--accent-amber-text, #d97706)', marginTop: 12 }}>
             {formatCurrency(overview?.summary?.thirdPartyTotalAllCards || 0)}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', marginTop: 4 }}>
@@ -628,12 +634,11 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
               Faturas em aberto
             </span>
             <div
+              className="kpi-icon-expense"
               style={{
                 width: 38,
                 height: 38,
                 borderRadius: 10,
-                backgroundColor: 'rgba(234, 88, 12, 0.1)',
-                color: '#ea580c',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -642,7 +647,7 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
               <Clock size={20} />
             </div>
           </div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#ea580c', marginTop: 12 }}>
+          <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--kpi-expense-color, #ea580c)', marginTop: 12 }}>
             {formatCurrency(overview?.summary?.pendingAllCards || 0)}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', marginTop: 4 }}>
@@ -657,12 +662,11 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
               Faturas já pagas
             </span>
             <div
+              className="kpi-icon-income"
               style={{
                 width: 38,
                 height: 38,
                 borderRadius: 10,
-                backgroundColor: 'rgba(22, 163, 74, 0.1)',
-                color: '#16a34a',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -671,7 +675,7 @@ export const CreditCardsView: React.FC<{ onDataChanged?: () => void }> = ({ onDa
               <Check size={20} />
             </div>
           </div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#16a34a', marginTop: 12 }}>
+          <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--kpi-income-color, #16a34a)', marginTop: 12 }}>
             {formatCurrency(overview?.summary?.paidAllCards || 0)}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', marginTop: 4 }}>

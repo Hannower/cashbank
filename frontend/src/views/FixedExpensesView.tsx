@@ -20,6 +20,7 @@ import { Modal } from '../components/Modal';
 import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 import { MonthSelector } from '../components/MonthSelector';
 import { MonthItem, getInitialMonthItem } from '../utils/dateUtils';
+import { getCardBrandInfo } from '../utils/cardUtils';
 
 interface FixedExpenseAdjustmentItem {
   id: string;
@@ -50,6 +51,7 @@ interface FixedExpense {
   pixKey?: string | null;
   isVariable?: boolean;
   variableType?: string | null;
+  isCreditCard?: boolean;
   isPaid: boolean;
   paidAt: string | null;
 }
@@ -67,8 +69,16 @@ const CATEGORIES = [
   'Outros',
 ];
 
-export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ onDataChanged }) => {
+interface FixedExpensesViewProps {
+  onDataChanged?: () => void;
+  showValues?: boolean;
+}
+
+export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({ onDataChanged, showValues: propShowValues }) => {
   const { user } = useAuth();
+  const showBalance = propShowValues !== undefined
+    ? propShowValues
+    : (typeof window !== 'undefined' && localStorage.getItem('cashbank_show_balance') !== 'false');
   const [selectedMonth, setSelectedMonth] = useState<MonthItem>(() => getInitialMonthItem(user?.createdAt));
   const [expenses, setExpenses] = useState<FixedExpense[]>([]);
   const [summary, setSummary] = useState({ totalAmount: 0, pendingAmount: 0, paidCount: 0, totalCount: 0 });
@@ -332,6 +342,7 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
   };
 
   const formatCurrency = (val: number) => {
+    if (!showBalance) return '••••••';
     return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
@@ -397,7 +408,7 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
           <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', fontWeight: 500, marginBottom: 8 }}>
             Pendente
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: summary.pendingAmount > 0 ? '#b45309' : 'var(--text-main, #0f172a)' }}>
+          <div style={{ fontSize: 26, fontWeight: 800, color: summary.pendingAmount > 0 ? 'var(--kpi-expense-color, #ea580c)' : 'var(--text-main, #0f172a)' }}>
             {formatCurrency(summary.pendingAmount)}
           </div>
         </div>
@@ -497,7 +508,10 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
                     </td>
                   </tr>
                 ) : (
-                  expenses.map((exp) => (
+                  expenses.map((exp) => {
+                    const isCard = exp.isVariable || exp.isCreditCard || exp.variableType === 'credit_card' || exp.category === 'Cartão de Crédito' || exp.description?.toLowerCase().startsWith('fatura');
+                    const cardBrand = isCard ? getCardBrandInfo(exp.description) : null;
+                    return (
                     <tr
                       key={exp.id}
                       className="data-table-row"
@@ -506,41 +520,35 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
                       <td style={{ padding: '16px 24px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                           <div
+                            className={`tx-icon-badge ${isCard ? `card ${cardBrand?.badgeClass || ''}` : 'fixed'}`}
                             style={{
                               width: 34,
                               height: 34,
                               borderRadius: 8,
-                              backgroundColor: exp.isVariable ? '#dbeafe' : '#ffedd5',
-                              color: exp.isVariable ? '#2563eb' : '#ea580c',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0,
                             }}
                           >
-                            {exp.isVariable ? <CreditCard size={17} /> : <CalendarCheck2 size={17} />}
+                            {isCard ? <CreditCard size={17} strokeWidth={2.2} /> : <CalendarCheck2 size={17} />}
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                               <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>
                                 {exp.description}
                               </span>
-                              {exp.isVariable && (
+                              {isCard ? (
                                 <span
-                                  style={{
-                                    fontSize: 10,
-                                    fontWeight: 700,
-                                    padding: '2px 7px',
-                                    borderRadius: 12,
-                                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                                    color: '#2563eb',
-                                    border: '1px solid rgba(37, 99, 235, 0.25)',
-                                  }}
+                                  className={`tx-tag card ${cardBrand?.badgeClass || ''}`}
+                                  title="Fatura de cartão de crédito"
+                                >
+                                  {cardBrand?.name || 'Cartão'}
+                                </span>
+                              ) : exp.isVariable ? (
+                                <span
+                                  className="tx-tag card"
                                   title="Despesa com valor que oscila mensalmente (fatura ou consumo)"
                                 >
                                   Variável
                                 </span>
-                              )}
+                              ) : null}
                             </div>
 
                             {exp.pixKey && (
@@ -585,38 +593,15 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
                           <button
                             onClick={() => openAdjustMonthModal(exp)}
                             title="Ajustar fatura deste mês ou reajustar para todos os meses futuros (Netflix, Aluguel...)"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 4,
-                              fontSize: 11,
-                              padding: '3px 8px',
-                              borderRadius: 6,
-                              backgroundColor: exp.hasAdjustment
-                                ? '#ecfdf5'
+                            className={`btn-adjust-tag ${
+                              exp.hasAdjustment
+                                ? 'adjustment'
                                 : exp.hasCustomAmount
-                                ? '#fef3c7'
+                                ? 'custom-amount'
                                 : exp.isEstimated
-                                ? '#f0f9ff'
-                                : 'var(--bg-item, #f8fafc)',
-                              color: exp.hasAdjustment
-                                ? '#15803d'
-                                : exp.hasCustomAmount
-                                ? '#b45309'
-                                : exp.isEstimated
-                                ? '#0284c7'
-                                : '#475569',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              border: exp.hasAdjustment
-                                ? '1px solid #a7f3d0'
-                                : exp.hasCustomAmount
-                                ? '1px solid #fde68a'
-                                : exp.isEstimated
-                                ? '1px solid #bae6fd'
-                                : '1px solid var(--border-color, #e2e8f0)',
-                              transition: 'all 0.15s ease',
-                            }}
+                                ? 'estimated'
+                                : 'normal'
+                            }`}
                           >
                             <Pencil size={11} />
                             {exp.hasAdjustment
@@ -705,7 +690,8 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
                         </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -724,24 +710,22 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
               Nenhuma conta a pagar cadastrada para este mês.
             </div>
           ) : (
-            expenses.map((exp) => (
+            expenses.map((exp) => {
+              const isCard = exp.isVariable || exp.isCreditCard || exp.variableType === 'credit_card' || exp.category === 'Cartão de Crédito' || exp.description?.toLowerCase().startsWith('fatura');
+              const cardBrand = isCard ? getCardBrandInfo(exp.description) : null;
+              return (
               <div key={exp.id} className="expense-mobile-item">
                 <div className="expense-mobile-header">
                   <div className="expense-mobile-main">
                     <div
+                      className={`tx-icon-badge ${isCard ? `card ${cardBrand?.badgeClass || ''}` : 'fixed'}`}
                       style={{
                         width: 36,
                         height: 36,
                         borderRadius: 8,
-                        backgroundColor: exp.isVariable ? '#dbeafe' : '#ffedd5',
-                        color: exp.isVariable ? '#2563eb' : '#ea580c',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
                       }}
                     >
-                      {exp.isVariable ? <CreditCard size={18} /> : <CalendarCheck2 size={18} />}
+                      {isCard ? <CreditCard size={18} strokeWidth={2.2} /> : <CalendarCheck2 size={18} />}
                     </div>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -758,44 +742,31 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
                         >
                           {exp.category}
                         </span>
-                        {exp.isVariable && (
+                        {isCard ? (
                           <span
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              padding: '1px 6px',
-                              borderRadius: 4,
-                              backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                              color: '#2563eb',
-                            }}
+                            className={`tx-tag card ${cardBrand?.badgeClass || ''}`}
+                          >
+                            {cardBrand?.name || 'Cartão'}
+                          </span>
+                        ) : exp.isVariable ? (
+                          <span
+                            className="tx-tag card"
                           >
                             Variável
                           </span>
-                        )}
+                        ) : null}
                         {exp.hasAdjustment && (
                           <span
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              padding: '1px 6px',
-                              borderRadius: 4,
-                              backgroundColor: '#ecfdf5',
-                              color: '#15803d',
-                            }}
+                            className="btn-adjust-tag adjustment"
+                            style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4 }}
                           >
                             Reajustado
                           </span>
                         )}
                         {exp.hasCustomAmount && (
                           <span
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              padding: '1px 6px',
-                              borderRadius: 4,
-                              backgroundColor: '#fef3c7',
-                              color: '#b45309',
-                            }}
+                            className="btn-adjust-tag custom-amount"
+                            style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4 }}
                             title="Valor ajustado no mês"
                           >
                             Fechada
@@ -937,8 +908,9 @@ export const FixedExpensesView: React.FC<{ onDataChanged?: () => void }> = ({ on
                   </div>
                 </div>
               </div>
-            ))
-          )}
+            );
+          })
+        )}
         </div>
       </div>
 
