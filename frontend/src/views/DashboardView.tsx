@@ -1020,7 +1020,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           isRevenue || isSavingsDeposit
                             ? 'income'
                             : isCreditCard
-                            ? `card ${cardBrand?.badgeClass || ''}`
+                            ? `tag-card ${cardBrand?.badgeClass || ''}`
                             : isFixed
                             ? 'fixed'
                             : isSavings
@@ -1051,7 +1051,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                               isRevenue || isSavingsDeposit
                                 ? 'income'
                                 : isCreditCard
-                                ? `card ${cardBrand?.badgeClass || ''}`
+                                ? `tag-card ${cardBrand?.badgeClass || ''}`
                                 : isFixed
                                 ? 'fixed'
                                 : isSavings
@@ -1240,7 +1240,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div
-                      className={isCardBill ? `tx-icon-badge card ${billCard?.badgeClass || ''}` : 'kpi-icon-expense'}
+                      className={isCardBill ? `tx-icon-badge tag-card ${billCard?.badgeClass || ''}` : 'kpi-icon-expense'}
                       style={{
                         width: 36,
                         height: 36,
