@@ -520,7 +520,7 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({ onDataChan
                       <td style={{ padding: '16px 24px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                           <div
-                            className={`tx-icon-badge ${isCard ? `card ${cardBrand?.badgeClass || ''}` : 'fixed'}`}
+                            className={`tx-icon-badge ${isCard ? `tag-card ${cardBrand?.badgeClass || ''}` : 'fixed'}`}
                             style={{
                               width: 34,
                               height: 34,
@@ -536,14 +536,14 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({ onDataChan
                               </span>
                               {isCard ? (
                                 <span
-                                  className={`tx-tag card ${cardBrand?.badgeClass || ''}`}
+                                  className={`tx-tag tag-card ${cardBrand?.badgeClass || ''}`}
                                   title="Fatura de cartão de crédito"
                                 >
                                   {cardBrand?.name || 'Cartão'}
                                 </span>
                               ) : exp.isVariable ? (
                                 <span
-                                  className="tx-tag card"
+                                  className="tx-tag variable"
                                   title="Despesa com valor que oscila mensalmente (fatura ou consumo)"
                                 >
                                   Variável
@@ -718,7 +718,7 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({ onDataChan
                 <div className="expense-mobile-header">
                   <div className="expense-mobile-main">
                     <div
-                      className={`tx-icon-badge ${isCard ? `card ${cardBrand?.badgeClass || ''}` : 'fixed'}`}
+                      className={`tx-icon-badge ${isCard ? `tag-card ${cardBrand?.badgeClass || ''}` : 'fixed'}`}
                       style={{
                         width: 36,
                         height: 36,
@@ -744,13 +744,13 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({ onDataChan
                         </span>
                         {isCard ? (
                           <span
-                            className={`tx-tag card ${cardBrand?.badgeClass || ''}`}
+                            className={`tx-tag tag-card ${cardBrand?.badgeClass || ''}`}
                           >
                             {cardBrand?.name || 'Cartão'}
                           </span>
                         ) : exp.isVariable ? (
                           <span
-                            className="tx-tag card"
+                            className="tx-tag variable"
                           >
                             Variável
                           </span>
