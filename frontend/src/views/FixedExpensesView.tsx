@@ -5,6 +5,7 @@ import {
   Trash2,
   CalendarCheck2,
   Check,
+  CheckCircle2,
   Clock,
   Loader2,
   Copy,
@@ -395,30 +396,84 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({ onDataChan
 
       {/* 3 Summary Cards */}
       <div className="summary-cards-grid">
-        <div className="card" style={{ padding: 22 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', fontWeight: 500, marginBottom: 8 }}>
-            Total do mês
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted, #64748b)' }}>
+              Total do mês
+            </span>
+            <div
+              className="kpi-icon-bank"
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <CalendarCheck2 size={20} />
+            </div>
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
+          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--kpi-bank-color, #2563eb)', marginTop: 12 }}>
             {formatCurrency(summary.totalAmount)}
           </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', marginTop: 4 }}>
+            {summary.totalCount} conta{summary.totalCount !== 1 ? 's' : ''} cadastrada{summary.totalCount !== 1 ? 's' : ''}
+          </div>
         </div>
 
-        <div className="card" style={{ padding: 22 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', fontWeight: 500, marginBottom: 8 }}>
-            Pendente
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted, #64748b)' }}>
+              Pendente
+            </span>
+            <div
+              className="kpi-icon-expense"
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Clock size={20} />
+            </div>
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: summary.pendingAmount > 0 ? 'var(--kpi-expense-color, #ea580c)' : 'var(--text-main, #0f172a)' }}>
+          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--kpi-expense-color, #ea580c)', marginTop: 12 }}>
             {formatCurrency(summary.pendingAmount)}
           </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', marginTop: 4 }}>
+            {summary.totalCount - summary.paidCount} conta{summary.totalCount - summary.paidCount !== 1 ? 's' : ''} a pagar
+          </div>
         </div>
 
-        <div className="card" style={{ padding: 22 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', fontWeight: 500, marginBottom: 8 }}>
-            Pagas
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted, #64748b)' }}>
+              Pagas
+            </span>
+            <div
+              className="kpi-icon-income"
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <CheckCircle2 size={20} />
+            </div>
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
+          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--kpi-income-color, #16a34a)', marginTop: 12 }}>
             {summary.paidCount} de {summary.totalCount}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', marginTop: 4 }}>
+            {summary.totalCount > 0 ? Math.round((summary.paidCount / summary.totalCount) * 100) : 0}% concluído
           </div>
         </div>
       </div>

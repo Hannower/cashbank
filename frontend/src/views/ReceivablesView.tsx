@@ -470,51 +470,37 @@ export const ReceivablesView: React.FC<ReceivablesViewProps> = ({ onDataChanged,
         createdAt={user?.createdAt}
       />
 
-      {/* Overview Card */}
-      <div
-        className="card"
-        style={{
-          padding: '24px 28px',
-          marginBottom: 24,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: 16,
-        }}
-      >
-        <div>
-          <div style={{ fontSize: 13, color: 'var(--text-muted, #64748b)', marginBottom: 6, fontWeight: 500 }}>
-            Total pendente a receber em {selectedMonth.label}
+      {/* 3 Summary Cards */}
+      <div className="summary-cards-grid">
+        {/* KPI 1: Previsão Total */}
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted, #64748b)' }}>
+              Previsão total do mês
+            </span>
+            <div
+              className="kpi-icon-bank"
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <HandCoins size={20} />
+            </div>
           </div>
-          <div className="hero-amount" style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 6, color: 'var(--kpi-bank-color, #2563eb)' }}>
-            {formatCurrency(summary.totalPending)}
+          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--kpi-bank-color, #2563eb)', marginTop: 12 }}>
+            {formatCurrency(summary.totalExpected)}
           </div>
-          <div style={{ fontSize: 13, color: 'var(--text-secondary, #64748b)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <span>{summary.pendingCount} conta(s) pendente(s)</span>
-            <span>•</span>
-            <span style={{ color: 'var(--kpi-income-color, #16a34a)', fontWeight: 600 }}>{formatCurrency(summary.totalReceived)} já recebidos</span>
+          <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', marginTop: 4 }}>
+            {summary.totalCount} conta(s) no total em {selectedMonth.label}/{selectedMonth.year}
           </div>
         </div>
 
-        <div
-          className="kpi-icon-bank"
-          style={{
-            width: 52,
-            height: 52,
-            borderRadius: 14,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <HandCoins size={28} />
-        </div>
-      </div>
-
-      {/* Quick Summary Cards (KPIs) */}
-      <div className="stats-grid" style={{ marginTop: 24 }}>
-        {/* KPI 1: Pendentes */}
+        {/* KPI 2: Pendentes */}
         <div className="card" style={{ padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted, #64748b)' }}>
@@ -542,7 +528,7 @@ export const ReceivablesView: React.FC<ReceivablesViewProps> = ({ onDataChanged,
           </div>
         </div>
 
-        {/* KPI 2: Já Recebido no Mês */}
+        {/* KPI 3: Já Recebido no Mês */}
         <div className="card" style={{ padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted, #64748b)' }}>
@@ -567,34 +553,6 @@ export const ReceivablesView: React.FC<ReceivablesViewProps> = ({ onDataChanged,
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', marginTop: 4 }}>
             {summary.receivedCount} conta(s) recebida(s)
-          </div>
-        </div>
-
-        {/* KPI 3: Previsão Total */}
-        <div className="card" style={{ padding: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted, #64748b)' }}>
-              Previsão total do mês
-            </span>
-            <div
-              className="kpi-icon-bank"
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: 10,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <HandCoins size={20} />
-            </div>
-          </div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-main, #0f172a)', marginTop: 12 }}>
-            {formatCurrency(summary.totalExpected)}
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted, #64748b)', marginTop: 4 }}>
-            {summary.totalCount} conta(s) no total em {selectedMonth.label}/{selectedMonth.year}
           </div>
         </div>
       </div>
